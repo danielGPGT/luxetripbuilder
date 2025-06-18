@@ -46,8 +46,21 @@ export function IntakeForm({ onSubmit }: { onSubmit: (data: IntakeFormValues) =>
   });
 
   const handleNext = async () => {
-    const valid = await form.trigger();
-    if (valid) setStep((s) => s + 1);
+    // Get all field names up to the current step
+    const fieldsToValidate: (keyof IntakeFormValues)[] = [];
+    if (step === 0) {
+      fieldsToValidate.push('destination', 'startDate', 'endDate');
+    } else if (step === 1) {
+      fieldsToValidate.push('interests');
+    } else if (step === 2) {
+      fieldsToValidate.push('tone', 'travelType');
+    }
+
+    // Validate only the fields for the current step
+    const valid = await form.trigger(fieldsToValidate);
+    if (valid) {
+      setStep((s) => s + 1);
+    }
   };
   const handlePrev = () => setStep((s) => s - 1);
 
@@ -90,14 +103,29 @@ export function IntakeForm({ onSubmit }: { onSubmit: (data: IntakeFormValues) =>
         <div className="space-y-4">
           <div>
             <div className="mb-2 font-medium">Interests</div>
-            <div className="flex flex-wrap gap-2">
-              {interestsList.map((interest) => (
-                <label key={interest} className="flex items-center gap-2">
-                  <Checkbox value={interest} {...form.register("interests")} />
-                  {interest.charAt(0).toUpperCase() + interest.slice(1)}
-                </label>
-              ))}
-            </div>
+            <Controller
+              control={form.control}
+              name="interests"
+              render={({ field }) => (
+                <div className="flex flex-wrap gap-2">
+                  {interestsList.map((interest) => (
+                    <label key={interest} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={field.value?.includes(interest)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            field.onChange([...(field.value || []), interest]);
+                          } else {
+                            field.onChange((field.value || []).filter((i) => i !== interest));
+                          }
+                        }}
+                      />
+                      {interest.charAt(0).toUpperCase() + interest.slice(1)}
+                    </label>
+                  ))}
+                </div>
+              )}
+            />
             {form.formState.errors.interests && (
               <p className="text-red-500 text-sm mt-2">{form.formState.errors.interests.message}</p>
             )}

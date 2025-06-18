@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import type { TripPreferences } from '@/lib/gemini';
 
 const tripPreferencesSchema = z.object({
   clientName: z.string().min(2, 'Client name is required'),
@@ -17,7 +16,7 @@ const tripPreferencesSchema = z.object({
   budget: z.object({
     min: z.number().min(0, 'Minimum budget is required'),
     max: z.number().min(0, 'Maximum budget is required'),
-    currency: z.string().default('USD'),
+    currency: z.string().min(1, 'Currency is required'),
   }),
   preferences: z.object({
     luxuryLevel: z.enum(['ultra-luxury', 'luxury', 'premium']),
@@ -29,6 +28,8 @@ const tripPreferencesSchema = z.object({
   specialRequests: z.string().optional(),
 });
 
+type TripPreferences = z.infer<typeof tripPreferencesSchema>;
+
 interface IntakeFormProps {
   onSubmit: (data: TripPreferences) => void;
   isLoading?: boolean;
@@ -38,7 +39,14 @@ export function IntakeForm({ onSubmit, isLoading }: IntakeFormProps) {
   const form = useForm<TripPreferences>({
     resolver: zodResolver(tripPreferencesSchema),
     defaultValues: {
+      clientName: '',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      numberOfTravelers: 1,
       budget: {
+        min: 0,
+        max: 0,
         currency: 'USD',
       },
       preferences: {
@@ -48,6 +56,7 @@ export function IntakeForm({ onSubmit, isLoading }: IntakeFormProps) {
         accommodationType: [],
         diningPreferences: [],
       },
+      specialRequests: '',
     },
   });
 

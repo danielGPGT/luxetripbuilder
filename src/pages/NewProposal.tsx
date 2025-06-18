@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { IntakeForm } from '@/components/forms/IntakeForm';
 import { generateItineraryWithGemini, GeminiItineraryDay } from '@/lib/geminiClient';
-import { ItineraryCard } from '@/components/ItineraryCard';
+import { ItineraryCard, ItineraryCardProps } from '@/components/ItineraryCard';
 import {
   DndContext,
   closestCenter,
@@ -17,8 +17,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-function SortableItineraryCard({ day, onChange, onRegenerate, id }: any) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+function SortableItineraryCard(props: ItineraryCardProps & { id: number }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: props.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -26,7 +26,7 @@ function SortableItineraryCard({ day, onChange, onRegenerate, id }: any) {
   };
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <ItineraryCard day={day} onChange={onChange} onRegenerate={onRegenerate} />
+      <ItineraryCard {...props} />
     </div>
   );
 }
