@@ -1,0 +1,69 @@
+import { z } from 'zod';
+
+export const travelTypeEnum = z.enum(['solo', 'couple', 'family', 'group']);
+export const transportTypeEnum = z.enum(['plane', 'train', 'car', 'ship']);
+export const toneEnum = z.enum(['romantic', 'luxury', 'wellness', 'cultural', 'adventure', 'celebration']);
+export const paceEnum = z.enum(['relaxed', 'balanced', 'packed']);
+export const accommodationEnum = z.enum(['boutique', 'resort', 'villa', 'eco']);
+export const travelClassEnum = z.enum(['economy', 'business', 'first']);
+export const experienceTypeEnum = z.enum(['exclusive', 'value']);
+
+export const interestsEnum = z.enum([
+  'fine-dining',
+  'wine',
+  'art',
+  'history',
+  'nature',
+  'shopping',
+  'beaches',
+  'nightlife',
+  'sports',
+  'spa',
+  'local-culture'
+]);
+
+export const tripIntakeSchema = z.object({
+  // Step 1: Traveler Overview
+  travelerInfo: z.object({
+    name: z.string().min(2, 'Name is required'),
+    travelType: travelTypeEnum,
+    transportType: transportTypeEnum,
+    startDate: z.string().min(1, 'Start date is required'),
+    endDate: z.string().min(1, 'End date is required'),
+    travelers: z.object({
+      adults: z.number().min(1, 'At least one adult is required'),
+      children: z.number().min(0).default(0),
+    }),
+  }),
+
+  // Step 2: Destination Preferences
+  destinations: z.object({
+    from: z.string().min(2, 'From location is required'),
+    primary: z.string().min(2, 'Primary destination is required'),
+    additional: z.array(z.string()).default([]),
+    duration: z.number().default(0),
+  }),
+
+  // Step 3: Trip Style
+  style: z.object({
+    tone: toneEnum,
+    interests: z.array(interestsEnum).min(1, 'Select at least one interest'),
+  }),
+
+  // Step 4: Experience Preferences
+  experience: z.object({
+    pace: paceEnum,
+    accommodation: accommodationEnum,
+    specialRequests: z.string().optional(),
+  }),
+
+  // Step 5: Budget
+  budget: z.object({
+    amount: z.number().min(1, 'Budget amount is required'),
+    currency: z.string().min(3, 'Currency is required'),
+    experienceType: experienceTypeEnum,
+    travelClass: travelClassEnum,
+  }),
+});
+
+export type TripIntake = z.infer<typeof tripIntakeSchema>; 

@@ -2,13 +2,20 @@ import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { gemini } from './gemini';
 import type { TripPreferences, GeneratedItinerary } from './gemini';
+import { supabase } from './supabase';
+import type { TripIntake } from '@/types/trip';
 
-export interface SavedItinerary extends GeneratedItinerary {
+export interface SavedItinerary {
   id: string;
-  user_id: string;
+  title: string;
+  client_name: string;
+  destination: string;
+  generated_by: string;
+  date_created: string;
+  preferences: TripIntake;
+  days: GeneratedItinerary['days'];
   created_at: string;
   updated_at: string;
-  status: 'draft' | 'published';
 }
 
 export class ItineraryService {
@@ -201,4 +208,143 @@ export const itineraryService = {
 
     if (error) throw error;
   },
-}; 
+};
+
+export async function saveItinerary(
+  itinerary: GeneratedItinerary,
+  preferences: TripIntake,
+  userId: string
+): Promise<SavedItinerary | null> {
+  try {
+    const { data, error } = await supabase
+      .from('itineraries')
+      .insert({
+        title: itinerary.title,
+        client_name: itinerary.clientName,
+        destination: itinerary.destination,
+        generated_by: userId,
+        date_created: new Date().toISOString(),
+        preferences: preferences as any,
+        days: itinerary.days as any,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving itinerary:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to save itinerary:', error);
+    throw error;
+  }
+}
+
+export async function loadItineraries(userId: string): Promise<SavedItinerary[]> {
+  try {
+    const { data, error } = await supabase
+      .from('itineraries')
+      .select('*')
+      .eq('generated_by', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading itineraries:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Failed to load itineraries:', error);
+    throw error;
+  }
+}
+
+export async function loadAllItineraries(): Promise<SavedItinerary[]> {
+  try {
+    const { data, error } = await supabase
+      .from('itineraries')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading all itineraries:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Failed to load all itineraries:', error);
+    throw error;
+  }
+}
+
+export async function loadItinerary(id: string): Promise<SavedItinerary | null> {
+  try {
+    const { data, error } = await supabase
+      .from('itineraries')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error loading itinerary:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to load itinerary:', error);
+    throw error;
+  }
+}
+
+export async function updateItinerary(
+  id: string,
+  updates: Partial<{
+    title: string;
+    days: GeneratedItinerary['days'];
+    preferences: TripIntake;
+  }>
+): Promise<SavedItinerary | null> {
+  try {
+    const { data, error } = await supabase
+      .from('itineraries')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating itinerary:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to update itinerary:', error);
+    throw error;
+  }
+}
+
+export async function deleteItinerary(id: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('itineraries')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting itinerary:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Failed to delete itinerary:', error);
+    throw error;
+  }
+} 

@@ -15,6 +15,10 @@ module.exports = {
         "2xl": "1400px",
       },
     },
+    fontFamily: {
+      sans: ['Poppins', 'Inter', 'ui-sans-serif', 'system-ui'],
+      serif: ['Playfair Display', 'ui-serif', 'Georgia'],
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",

@@ -9,7 +9,7 @@ export function RootLayout() {
       <Navbar />
       <div className="flex flex-1">
         <Sidebar className="hidden md:block" />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-[var(--background)]">
           <Outlet />
         </main>
       </div>

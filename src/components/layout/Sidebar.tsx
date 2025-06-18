@@ -59,7 +59,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div
       className={cn(
-        'relative flex h-full flex-col border-r bg-background',
+        'relative flex h-full flex-col border-r bg-background ',
         isCollapsed ? 'w-16' : 'w-64',
         className
       )}

@@ -13,13 +13,16 @@ export interface TripPreferences {
     currency: string;
   };
   preferences: {
-    luxuryLevel: 'ultra-luxury' | 'luxury' | 'premium';
+    tone: string;
     pace: 'relaxed' | 'moderate' | 'active';
     interests: string[];
     accommodationType: string[];
     diningPreferences: string[];
   };
   specialRequests?: string;
+  transportType?: string;
+  fromLocation?: string;
+  travelType?: string;
 }
 
 export interface ItineraryDay {
@@ -29,7 +32,73 @@ export interface ItineraryDay {
     description: string;
     location?: string;
     notes?: string;
+    estimatedCost?: number;
+    costType?: 'per-person' | 'total';
   }[];
+  imageUrl?: string;
+}
+
+export interface HotelRecommendation {
+  name: string;
+  location: string;
+  pricePerNight: number;
+  rating: string;
+  amenities: string[];
+}
+
+export interface TransportBreakdown {
+  type: string;
+  description: string;
+  cost: number;
+}
+
+export interface ActivityBreakdown {
+  name: string;
+  cost: number;
+  type: string;
+}
+
+export interface DiningRecommendation {
+  name: string;
+  cuisine: string;
+  priceRange: string;
+  location: string;
+}
+
+export interface BudgetBreakdown {
+  accommodation: {
+    total: number;
+    perNight: number;
+    hotelRecommendations: HotelRecommendation[];
+  };
+  transportation: {
+    total: number;
+    breakdown: TransportBreakdown[];
+  };
+  activities: {
+    total: number;
+    breakdown: ActivityBreakdown[];
+  };
+  dining: {
+    total: number;
+    perDay: number;
+    recommendations: DiningRecommendation[];
+  };
+  miscellaneous: {
+    total: number;
+    description: string;
+  };
+}
+
+export interface LuxuryHighlight {
+  title: string;
+  description: string;
+  whyLuxury: string;
+}
+
+export interface TravelTip {
+  category: string;
+  tips: string[];
 }
 
 export interface GeneratedItinerary {
@@ -42,6 +111,9 @@ export interface GeneratedItinerary {
     amount: number;
     currency: string;
   };
+  budgetBreakdown: BudgetBreakdown;
+  luxuryHighlights: LuxuryHighlight[];
+  travelTips: TravelTip[];
 }
 
 class GeminiService {
@@ -68,28 +140,26 @@ class GeminiService {
   async generateItinerary(preferences: TripPreferences): Promise<GeneratedItinerary> {
     try {
       const prompt = this.buildPrompt(preferences);
-      
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
+
       // Debug log to see raw response
       console.log('Raw Gemini Response:', text);
-      
+
       try {
-        // Try to clean the response if it contains markdown code blocks
-        const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
-        console.log('Cleaned Response:', cleanedText);
-        
+        // Remove all code block markers and trim whitespace
+        const cleanedText = text.replace(/```json|```/gi, '').trim();
+        console.log('Cleaned Response:', cleanedText.slice(0, 500));
         const itinerary = JSON.parse(cleanedText);
         toast.success('Itinerary generated successfully');
         return itinerary;
       } catch (error) {
         console.error('Parse Error:', error);
-        toast.error('Failed to parse AI response. Checking response format...');
-        
-        // If parsing failed, show the error and response for debugging
-        throw new Error(`Failed to parse Gemini response as JSON. Raw response: ${text.substring(0, 200)}...`);
+        toast.error('Failed to parse AI response. The response may be too long or incomplete. Try a shorter trip or fewer details.');
+        // Show a snippet for debugging
+        throw new Error(
+          `Failed to parse Gemini response as JSON.\n\nFirst 500 chars of response:\n${text.slice(0, 500)}...`);
       }
     } catch (error) {
       console.error('Generation Error:', error);
@@ -99,21 +169,43 @@ class GeminiService {
   }
 
   private buildPrompt(preferences: TripPreferences): string {
-    return `You are a luxury travel itinerary planning assistant. Generate a detailed luxury travel itinerary based on the following preferences. Your response must be ONLY valid JSON without any additional text or markdown formatting.
+    const duration = Math.ceil((new Date(preferences.endDate).getTime() - new Date(preferences.startDate).getTime()) / (1000 * 60 * 60 * 24));
+    const budgetPerDay = preferences.budget.max / duration;
+    const budgetPerPerson = preferences.budget.max / preferences.numberOfTravelers;
 
-Client: ${preferences.clientName}
-Destination: ${preferences.destination}
-Dates: ${preferences.startDate} to ${preferences.endDate}
-Number of Travelers: ${preferences.numberOfTravelers}
-Budget: ${preferences.budget.min}-${preferences.budget.max} ${preferences.budget.currency}
+    return `You are a luxury travel itinerary planning assistant specializing in creating detailed, premium travel experiences. Generate a comprehensive luxury travel itinerary with detailed pricing breakdowns and recommendations.
 
-Preferences:
-- Luxury Level: ${preferences.preferences.luxuryLevel}
+CLIENT INFORMATION:
+- Name: ${preferences.clientName}
+- Travel Type: ${preferences.travelType || 'Not specified'}
+- From: ${preferences.fromLocation || 'Not specified'}
+- To: ${preferences.destination}
+- Preferred Transport: ${preferences.transportType || 'Not specified'}
+- Dates: ${preferences.startDate} to ${preferences.endDate} (${duration} days)
+- Number of Travelers: ${preferences.numberOfTravelers}
+- Total Budget: ${preferences.budget.min}-${preferences.budget.max} ${preferences.budget.currency}
+- Budget per Day: ~${budgetPerDay.toFixed(0)} ${preferences.budget.currency}
+- Budget per Person: ~${budgetPerPerson.toFixed(0)} ${preferences.budget.currency}
+
+PREFERENCES:
+- Tone: ${preferences.preferences.tone}
 - Pace: ${preferences.preferences.pace}
 - Interests: ${preferences.preferences.interests.join(', ')}
 - Accommodation Types: ${preferences.preferences.accommodationType.join(', ')}
 - Dining Preferences: ${preferences.preferences.diningPreferences.join(', ')}
-${preferences.specialRequests ? `\nSpecial Requests: ${preferences.specialRequests}` : ''}
+${preferences.specialRequests ? `- Special Requests: ${preferences.specialRequests}` : ''}
+
+INSTRUCTIONS:
+1. Create a detailed daily itinerary with specific times, locations, and activities
+2. Include realistic pricing for all components (accommodation, transport, activities, dining)
+3. Recommend specific luxury hotels/resorts with nightly rates
+4. Include transport costs between destinations
+5. Suggest premium activities and experiences with pricing
+6. Recommend fine dining establishments with price ranges
+7. Consider the tone and interests when selecting activities
+8. Ensure the total cost stays within budget
+9. Include insider tips and luxury touches
+10. Add special experiences that match the traveler's preferences
 
 Respond with ONLY a JSON object in this exact format, with no additional text or formatting:
 {
@@ -128,7 +220,9 @@ Respond with ONLY a JSON object in this exact format, with no additional text or
           "time": string,
           "description": string,
           "location": string,
-          "notes": string
+          "notes": string,
+          "estimatedCost": number,
+          "costType": "per-person" | "total"
         }
       ]
     }
@@ -137,7 +231,71 @@ Respond with ONLY a JSON object in this exact format, with no additional text or
   "totalBudget": {
     "amount": number,
     "currency": string
-  }
+  },
+  "budgetBreakdown": {
+    "accommodation": {
+      "total": number,
+      "perNight": number,
+      "hotelRecommendations": [
+        {
+          "name": string,
+          "location": string,
+          "pricePerNight": number,
+          "rating": string,
+          "amenities": string[]
+        }
+      ]
+    },
+    "transportation": {
+      "total": number,
+      "breakdown": [
+        {
+          "type": string,
+          "description": string,
+          "cost": number
+        }
+      ]
+    },
+    "activities": {
+      "total": number,
+      "breakdown": [
+        {
+          "name": string,
+          "cost": number,
+          "type": string
+        }
+      ]
+    },
+    "dining": {
+      "total": number,
+      "perDay": number,
+      "recommendations": [
+        {
+          "name": string,
+          "cuisine": string,
+          "priceRange": string,
+          "location": string
+        }
+      ]
+    },
+    "miscellaneous": {
+      "total": number,
+      "description": string
+    }
+  },
+  "luxuryHighlights": [
+    {
+      "title": string,
+      "description": string,
+      "whyLuxury": string
+    }
+  ],
+  "travelTips": [
+    {
+      "category": string,
+      "tips": string[]
+    }
+  ]
 }`;
   }
 }
