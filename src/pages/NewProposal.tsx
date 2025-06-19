@@ -246,22 +246,10 @@ export default function NewProposal() {
     const handleRegenerateDay = (index: number) => {
       // TODO: Implement AI regeneration for a single day
       alert('Regenerate Day with AI coming soon!');
-  };
+    };
 
-  // Steps array with events as final step
-  const steps = [
-    <Step1TravelerInfo key="step1" />, // 0
-    <Step2Destinations key="step2" />, // 1
-    <Step3TripStyle key="step3" />,    // 2
-    <Step4Experience key="step4" />,   // 3
-    <Step5Budget key="step5" />,       // 4
-    <Step6Events key="step6" />,       // 5 - Final step
-  ];
-
-  return (
+    return (
       <div className="relative w-full min-h-screen flex items-center justify-center">
-        {/* Background image with gradient overlay */}
-        
         {/* Itinerary Display */}
         <div className="relative z-10 w-full max-w-6xl mx-auto p-6">
           <Card className="w-full bg-white/80 backdrop-blur-2xl shadow-2xl border-0">
@@ -421,8 +409,8 @@ export default function NewProposal() {
                             ))}
                           </ul>
                         </div>
-              ))}
-            </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -433,119 +421,149 @@ export default function NewProposal() {
     );
   }
 
+  // Steps array with events as final step
+  const steps = [
+    <Step1TravelerInfo key="step1" />, // 0
+    <Step2Destinations key="step2" />, // 1
+    <Step3TripStyle key="step3" />,    // 2
+    <Step4Experience key="step4" />,   // 3
+    <Step5Budget key="step5" />,       // 4
+    <Step6Events key="step6" />,       // 5 - Final step
+  ];
+
   return (
-    <div className="relative w-full min-h-screen flex items-center justify-center">
-      {/* Background image with gradient overlay */}
-      <div className="absolute inset-0 z-0"></div>
-      {/* Responsive grid: sticky stepper left, wide form right */}
-      <div className="relative z-10 w-full grid grid-cols-1 md:grid-cols-[260px_1fr] gap-0 min-h-screen py-8 px-2 md:px-8">
-        {/* Sticky Stepper (left) */}
-        <div className="hidden md:block pr-8">
-          <div className="sticky top-28">
-            <Stepper currentStep={currentStep} totalSteps={totalSteps} labels={["Traveler Info", "Destinations", "Trip Style", "Experience", "Budget", "Events"]} vertical />
-      </div>
-        </div>
-        {/* Form Card (right) */}
-        <div className="w-full max-w-3xl mx-auto">
-          <Card className="w-full bg-white/60 backdrop-blur-2xl shadow-2xl border-0">
-            <FormProvider {...form}>
-              <form
-                onSubmit={e => {
-                  e.preventDefault();
-                  if (isLastStep && allowSubmit) {
-                    setAllowSubmit(false); // reset
-                    form.handleSubmit(onSubmit)();
-                  } else if (!isLastStep) {
-                    nextStep();
-                  }
-                }}
-              >
-                <CardHeader className="px-8 md:px-12 border-b-0">
-                  <CardTitle className="text-4xl font-bold text-[var(--foreground)] mb-4 tracking-tight font-sans">
-                    {currentStep === 1 && <span>Traveler Information</span>}
-                    {currentStep === 2 && <span>Destinations</span>}
-                    {currentStep === 3 && <span>Trip Style</span>}
-                    {currentStep === 4 && <span>Experience Preferences</span>}
-                    {currentStep === 5 && <span>Budget & Preferences</span>}
-                    {currentStep === 6 && <span>Events</span>}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-8 md:px-12 py-8 space-y-8">
-                  {generationError && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{generationError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <StepTransition step={1} currentStep={currentStep}>
-                    <Step1TravelerInfo />
-                  </StepTransition>
-                  <StepTransition step={2} currentStep={currentStep}>
-                    <Step2Destinations disabled={!isLoaded} />
-                  </StepTransition>
-                  <StepTransition step={3} currentStep={currentStep}>
-                    <Step3TripStyle />
-                  </StepTransition>
-                  <StepTransition step={4} currentStep={currentStep}>
-                    <Step4Experience />
-                  </StepTransition>
-                  <StepTransition step={5} currentStep={currentStep}>
-                    <Step5Budget />
-                  </StepTransition>
-                  <StepTransition step={6} currentStep={currentStep}>
-                    <Step6Events />
-                  </StepTransition>
-                </CardContent>
-                <CardFooter className="flex flex-row gap-4 px-8 md:px-12 pb-8 pt-6 w-full justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={prevStep}
-                    disabled={isFirstStep || isGenerating}
-                    className="border-[var(--border)] bg-[var(--card)]/80 hover:bg-[var(--muted)] text-[var(--foreground)]"
-                  >
-                    <ChevronLeft className="h-5 w-5 mr-0" />
-                    Back
-                  </Button>
-                  {isLastStep ? (
-                    <Button
-                      type="button"
-                      disabled={isGenerating}
-                      className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-[var(--primary-foreground)] font-bold shadow-md border-0"
-                      onClick={() => {
-                        setAllowSubmit(true);
-                        // Programmatically submit the form
-                        setTimeout(() => {
-                          document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                        }, 0);
-                      }}
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Generating...
-                        </>
+    <div className="relative w-full min-h-screen">
+      {/* Compact Layout */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto py-6 px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8">
+          {/* Sticky Stepper (left) */}
+          <div className="lg:block">
+            <div className="sticky top-6">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-border/50">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Create Your Trip</h2>
+                <Stepper 
+                  currentStep={currentStep} 
+                  totalSteps={totalSteps} 
+                  labels={["Traveler Info", "Destinations", "Trip Style", "Experience", "Budget", "Events"]} 
+                  vertical 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Form Card (right) */}
+          <div className="w-full">
+            <Card className="w-full bg-white/90 backdrop-blur-sm shadow-xl border border-border/50">
+              <FormProvider {...form}>
+                <form
+                  onSubmit={e => {
+                    e.preventDefault();
+                    if (isLastStep && allowSubmit) {
+                      setAllowSubmit(false);
+                      form.handleSubmit(onSubmit)();
+                    } else if (!isLastStep) {
+                      nextStep();
+                    }
+                  }}
+                  className="min-h-[600px] flex flex-col"
+                >
+                  <CardHeader className="px-8 py-6 border-b border-border/30">
+                    <CardTitle className="text-2xl font-bold text-foreground">
+                      {currentStep === 1 && "Traveler Information"}
+                      {currentStep === 2 && "Destinations"}
+                      {currentStep === 3 && "Trip Style"}
+                      {currentStep === 4 && "Experience Preferences"}
+                      {currentStep === 5 && "Budget & Preferences"}
+                      {currentStep === 6 && "Events"}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Step {currentStep} of {totalSteps}
+                    </p>
+                  </CardHeader>
+
+                  <CardContent className="px-8 py-6 flex-1">
+                    {generationError && (
+                      <Alert variant="destructive" className="mb-6">
+                        <AlertDescription>{generationError}</AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <div className="space-y-6">
+                      <StepTransition step={1} currentStep={currentStep}>
+                        <Step1TravelerInfo />
+                      </StepTransition>
+                      <StepTransition step={2} currentStep={currentStep}>
+                        <Step2Destinations disabled={!isLoaded} />
+                      </StepTransition>
+                      <StepTransition step={3} currentStep={currentStep}>
+                        <Step3TripStyle />
+                      </StepTransition>
+                      <StepTransition step={4} currentStep={currentStep}>
+                        <Step4Experience />
+                      </StepTransition>
+                      <StepTransition step={5} currentStep={currentStep}>
+                        <Step5Budget />
+                      </StepTransition>
+                      <StepTransition step={6} currentStep={currentStep}>
+                        <Step6Events />
+                      </StepTransition>
+                    </div>
+                  </CardContent>
+
+                  <CardFooter className="px-8 py-6 border-t border-border/30 bg-muted/20">
+                    <div className="flex justify-between items-center w-full">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={prevStep}
+                        disabled={isFirstStep || isGenerating}
+                        className="border-border/50 bg-background hover:bg-muted"
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-2" />
+                        Back
+                      </Button>
+                      
+                      {isLastStep ? (
+                        <Button
+                          type="button"
+                          disabled={isGenerating}
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md"
+                          onClick={() => {
+                            setAllowSubmit(true);
+                            setTimeout(() => {
+                              document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                            }, 0);
+                          }}
+                        >
+                          {isGenerating ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Generate Itinerary
+                            </>
+                          )}
+                        </Button>
                       ) : (
-                        <>
-                          <Sparkles className="h-5 w-5 mr-2" />
-                          Generate Itinerary
-                        </>
+                        <Button
+                          type="button"
+                          onClick={nextStep}
+                          disabled={isGenerating}
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-2" />
+                        </Button>
                       )}
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={nextStep}
-                      disabled={isGenerating}
-                      className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-[var(--primary-foreground)] font-bold shadow-md border-0"
-                    >
-                      <ChevronRight className="h-5 w-5 ml-0" />
-                      Next
-                    </Button>
-                  )}
-                </CardFooter>
-              </form>
-            </FormProvider>
-          </Card>
+                    </div>
+                  </CardFooter>
+                </form>
+              </FormProvider>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

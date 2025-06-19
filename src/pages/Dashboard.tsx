@@ -122,7 +122,7 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="px-4 py-8 space-y-8">
         <div className="space-y-4">
           <Skeleton className="h-12 w-64" />
           <Skeleton className="h-6 w-96" />
@@ -142,76 +142,66 @@ export function Dashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <div className="px-4 py-8 space-y-8">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--primary)] via-[var(--primary)]/90 to-[var(--primary)]/70 p-8 text-white shadow-2xl">
-        <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12 blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--primary)] via-[var(--primary)]/95 to-[var(--primary)]/90 p-8 text-white shadow-xl">
+        <div className="absolute inset-0 bg-black/5" />
         <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-6">
-            <Avatar className="h-20 w-20 border-4 border-white/20 shadow-lg">
+          <div className="flex items-center gap-6 mb-8">
+            <Avatar className="h-16 w-16 border-2 border-white/20 shadow-lg">
               <AvatarImage src={user?.user_metadata?.avatar_url} />
-              <AvatarFallback className="text-xl font-semibold bg-white/20">
+              <AvatarFallback className="text-lg font-semibold bg-white/10">
                 {user?.email?.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-5 w-5 text-yellow-300" />
-                <span className="text-sm font-medium text-white/80">Premium Member</span>
-              </div>
-              <h1 className="text-4xl font-bold">Welcome back, {user?.email?.split('@')[0]}! 👋</h1>
-              <p className="text-white/80 text-lg">Ready to create your next luxury adventure?</p>
+              <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.email?.split('@')[0]}</h1>
+              <p className="text-white/80">Manage your luxury travel itineraries</p>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
-            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:bg-white/20 transition-all duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/10">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/20 rounded-lg">
+                <div className="p-2 bg-white/15 rounded-lg">
                   <Globe className="h-5 w-5" />
                 </div>
                 <span className="text-sm font-medium">Total Trips</span>
               </div>
-              <div className="text-3xl font-bold">{itineraries.length}</div>
-              <div className="text-xs text-white/60 mt-1">Luxury experiences</div>
+              <div className="text-2xl font-bold">{itineraries.length}</div>
             </div>
-            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:bg-white/20 transition-all duration-300">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/10">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/20 rounded-lg">
+                <div className="p-2 bg-white/15 rounded-lg">
                   <DollarSign className="h-5 w-5" />
                 </div>
                 <span className="text-sm font-medium">Avg Budget</span>
               </div>
-              <div className="text-3xl font-bold">${averageBudget.toLocaleString()}</div>
-              <div className="text-xs text-white/60 mt-1">Per itinerary</div>
+              <div className="text-2xl font-bold">${averageBudget.toLocaleString()}</div>
             </div>
-            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:bg-white/20 transition-all duration-300">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/10">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/20 rounded-lg">
+                <div className="p-2 bg-white/15 rounded-lg">
                   <TrendingUp className="h-5 w-5" />
                 </div>
                 <span className="text-sm font-medium">This Month</span>
               </div>
-              <div className="text-3xl font-bold">
+              <div className="text-2xl font-bold">
                 {itineraries.filter(it => {
                   const date = new Date(it.date_created);
                   const now = new Date();
                   return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
                 }).length}
               </div>
-              <div className="text-xs text-white/60 mt-1">New adventures</div>
             </div>
-            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:bg-white/20 transition-all duration-300">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/10">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <Crown className="h-5 w-5" />
+                <div className="p-2 bg-white/15 rounded-lg">
+                  <Star className="h-5 w-5" />
                 </div>
                 <span className="text-sm font-medium">Success Rate</span>
               </div>
-              <div className="text-3xl font-bold">98%</div>
-              <div className="text-xs text-white/60 mt-1">Client satisfaction</div>
+              <div className="text-2xl font-bold">98%</div>
             </div>
           </div>
         </div>
@@ -222,27 +212,20 @@ export function Dashboard() {
         <HoverCard>
           <HoverCardTrigger asChild>
             <Link to="/new-proposal">
-              <Card className="hover:shadow-2xl transition-all duration-300 cursor-pointer group border-0 bg-gradient-to-br from-[var(--primary)]/5 to-[var(--primary)]/10">
+              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border border-border/50 bg-card">
                 <CardContent className="p-6 text-center">
-                  <div className="mx-auto w-16 h-16 bg-gradient-to-br from-[var(--primary)] to-[var(--primary)]/80 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <Plus className="h-8 w-8 text-white" />
+                  <div className="mx-auto w-12 h-12 bg-[var(--primary)]/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-[var(--primary)]/20 transition-colors">
+                    <Plus className="h-6 w-6 text-[var(--primary)]" />
                   </div>
-                  <h3 className="font-bold text-lg mb-2 group-hover:text-[var(--primary)] transition-colors">Create New Trip</h3>
+                  <h3 className="font-semibold mb-2">Create New Trip</h3>
                   <p className="text-sm text-muted-foreground">Start planning your next adventure</p>
-                  <div className="mt-3 flex items-center justify-center gap-1 text-xs text-[var(--primary)] opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Zap className="h-3 w-3" />
-                    <span>AI Powered</span>
-                  </div>
                 </CardContent>
               </Card>
             </Link>
           </HoverCardTrigger>
           <HoverCardContent className="w-80">
             <div className="space-y-2">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Create New Trip
-              </h4>
+              <h4 className="font-semibold">Create New Trip</h4>
               <p className="text-sm text-muted-foreground">
                 Use our AI-powered planner to create a personalized luxury itinerary in minutes.
               </p>
@@ -252,26 +235,19 @@ export function Dashboard() {
 
         <HoverCard>
           <HoverCardTrigger asChild>
-            <Card className="hover:shadow-2xl transition-all duration-300 cursor-pointer group border-0 bg-gradient-to-br from-blue-500/5 to-blue-500/10">
+            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border border-border/50 bg-card">
               <CardContent className="p-6 text-center">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                  <Search className="h-8 w-8 text-white" />
+                <div className="mx-auto w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
+                  <Search className="h-6 w-6 text-blue-500" />
                 </div>
-                <h3 className="font-bold text-lg mb-2 group-hover:text-blue-600 transition-colors">Browse Templates</h3>
+                <h3 className="font-semibold mb-2">Browse Templates</h3>
                 <p className="text-sm text-muted-foreground">Explore curated travel templates</p>
-                <div className="mt-3 flex items-center justify-center gap-1 text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Compass className="h-3 w-3" />
-                  <span>Curated</span>
-                </div>
               </CardContent>
             </Card>
           </HoverCardTrigger>
           <HoverCardContent className="w-80">
             <div className="space-y-2">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Compass className="h-4 w-4" />
-                Browse Templates
-              </h4>
+              <h4 className="font-semibold">Browse Templates</h4>
               <p className="text-sm text-muted-foreground">
                 Get inspired with our collection of premium travel templates for popular destinations.
               </p>
@@ -281,26 +257,19 @@ export function Dashboard() {
 
         <HoverCard>
           <HoverCardTrigger asChild>
-            <Card className="hover:shadow-2xl transition-all duration-300 cursor-pointer group border-0 bg-gradient-to-br from-green-500/5 to-green-500/10">
+            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border border-border/50 bg-card">
               <CardContent className="p-6 text-center">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                  <Download className="h-8 w-8 text-white" />
+                <div className="mx-auto w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-500/20 transition-colors">
+                  <Download className="h-6 w-6 text-green-500" />
                 </div>
-                <h3 className="font-bold text-lg mb-2 group-hover:text-green-600 transition-colors">Export PDF</h3>
+                <h3 className="font-semibold mb-2">Export PDF</h3>
                 <p className="text-sm text-muted-foreground">Download your itineraries</p>
-                <div className="mt-3 flex items-center justify-center gap-1 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Trophy className="h-3 w-3" />
-                  <span>Premium Quality</span>
-                </div>
               </CardContent>
             </Card>
           </HoverCardTrigger>
           <HoverCardContent className="w-80">
             <div className="space-y-2">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Trophy className="h-4 w-4" />
-                Export PDF
-              </h4>
+              <h4 className="font-semibold">Export PDF</h4>
               <p className="text-sm text-muted-foreground">
                 Download your itineraries as beautiful PDF documents to share with clients.
               </p>
@@ -310,26 +279,19 @@ export function Dashboard() {
 
         <HoverCard>
           <HoverCardTrigger asChild>
-            <Card className="hover:shadow-2xl transition-all duration-300 cursor-pointer group border-0 bg-gradient-to-br from-purple-500/5 to-purple-500/10">
+            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border border-border/50 bg-card">
               <CardContent className="p-6 text-center">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                  <Award className="h-8 w-8 text-white" />
+                <div className="mx-auto w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-500/20 transition-colors">
+                  <Award className="h-6 w-6 text-purple-500" />
                 </div>
-                <h3 className="font-bold text-lg mb-2 group-hover:text-purple-600 transition-colors">Premium Features</h3>
+                <h3 className="font-semibold mb-2">Premium Features</h3>
                 <p className="text-sm text-muted-foreground">Unlock advanced tools</p>
-                <div className="mt-3 flex items-center justify-center gap-1 text-xs text-purple-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Crown className="h-3 w-3" />
-                  <span>Exclusive</span>
-                </div>
               </CardContent>
             </Card>
           </HoverCardTrigger>
           <HoverCardContent className="w-80">
             <div className="space-y-2">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Crown className="h-4 w-4" />
-                Premium Features
-              </h4>
+              <h4 className="font-semibold">Premium Features</h4>
               <p className="text-sm text-muted-foreground">
                 Upgrade to unlock advanced features like AI image generation and priority support.
               </p>
@@ -340,20 +302,20 @@ export function Dashboard() {
 
       {/* Main Content */}
       <Tabs defaultValue="itineraries" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-2xl">
-          <TabsTrigger value="itineraries" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-md">
+        <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-xl">
+          <TabsTrigger value="itineraries" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Globe className="h-4 w-4 mr-2" />
             My Itineraries
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-md">
+          <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <BarChart3 className="h-4 w-4 mr-2" />
             Analytics
           </TabsTrigger>
-          <TabsTrigger value="activity" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-md">
+          <TabsTrigger value="activity" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Activity className="h-4 w-4 mr-2" />
             Activity
           </TabsTrigger>
-          <TabsTrigger value="usage" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-md">
+          <TabsTrigger value="usage" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Target className="h-4 w-4 mr-2" />
             Usage & Plans
           </TabsTrigger>
@@ -369,10 +331,10 @@ export function Dashboard() {
                 placeholder="Search your luxury itineraries..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-input rounded-2xl bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
+                className="w-full pl-12 pr-4 py-3 border border-input rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
               />
             </div>
-            <Button variant="outline" className="flex items-center gap-2 px-6 py-3 rounded-2xl">
+            <Button variant="outline" className="flex items-center gap-2 px-6 py-3 rounded-xl">
               <Filter className="h-4 w-4" />
               Filter
             </Button>
@@ -380,17 +342,17 @@ export function Dashboard() {
 
           {/* Itineraries Grid */}
           {filteredItineraries.length === 0 ? (
-            <Card className="text-center py-16 border-0 bg-gradient-to-br from-muted/30 to-muted/10">
+            <Card className="text-center py-16 border border-border/50 bg-card">
               <CardContent>
-                <div className="mx-auto w-20 h-20 bg-gradient-to-br from-[var(--primary)]/20 to-[var(--primary)]/10 rounded-3xl flex items-center justify-center mb-6">
-                  <Plane className="h-10 w-10 text-[var(--primary)]" />
+                <div className="mx-auto w-16 h-16 bg-muted rounded-xl flex items-center justify-center mb-6">
+                  <Plane className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-xl font-bold mb-3">No itineraries found</h3>
+                <h3 className="text-lg font-semibold mb-3">No itineraries found</h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                   {searchTerm ? 'Try adjusting your search terms' : 'Start by creating your first luxury itinerary'}
                 </p>
                 <Link to="/new-proposal">
-                  <Button className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 px-8 py-3 rounded-2xl shadow-lg">
+                  <Button className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 px-6 py-3 rounded-xl">
                     <Plus className="h-4 w-4 mr-2" />
                     Create New Itinerary
                   </Button>
@@ -402,15 +364,15 @@ export function Dashboard() {
               {filteredItineraries.map((itinerary) => {
                 const heroImage = itinerary.days?.[0]?.imageUrl;
                 return (
-                  <Card key={itinerary.id} className="group hover:shadow-2xl transition-all duration-500 overflow-hidden border-0 bg-gradient-to-br from-white to-muted/20 hover:scale-[1.02]">
+                  <Card key={itinerary.id} className="group hover:shadow-lg transition-all duration-300 overflow-hidden border border-border/50 bg-card">
                     <div className="relative">
                       {/* Hero Image */}
-                      <div className="h-48 bg-gradient-to-br from-blue-500/20 to-purple-500/20 relative overflow-hidden">
+                      <div className="h-40 bg-gradient-to-br from-muted/50 to-muted/30 relative overflow-hidden">
                         {heroImage ? (
                           <img 
                             src={heroImage} 
                             alt={itinerary.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                             }}
@@ -418,29 +380,29 @@ export function Dashboard() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <div className="text-center">
-                              <MapPin className="h-12 w-12 mx-auto mb-3 text-[var(--primary)]/60" />
+                              <MapPin className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                               <p className="text-sm font-medium text-muted-foreground">{itinerary.destination}</p>
                             </div>
                           </div>
                         )}
                         {/* Gradient overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                         
                         {/* Badge */}
-                        <div className="absolute top-4 left-4">
-                          <Badge className="bg-white/90 backdrop-blur-sm text-black font-semibold border-0 shadow-lg">
+                        <div className="absolute top-3 left-3">
+                          <Badge className="bg-background/90 backdrop-blur-sm text-foreground font-medium border border-border/50">
                             <Calendar className="h-3 w-3 mr-1" />
                             {itinerary.days?.length || 0} days
                           </Badge>
                         </div>
                         
                         {/* Action buttons */}
-                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteItinerary(itinerary.id)}
-                            className="bg-white/90 hover:bg-red-100 text-red-600 hover:text-red-700 rounded-full p-2 shadow-lg"
+                            className="bg-background/90 hover:bg-destructive/10 text-destructive hover:text-destructive rounded-full p-2 shadow-sm"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -450,13 +412,13 @@ export function Dashboard() {
                     
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start mb-4">
-                        <h3 className="font-bold text-lg line-clamp-2 group-hover:text-[var(--primary)] transition-colors">
+                        <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-[var(--primary)] transition-colors">
                           {itinerary.title}
                         </h3>
                       </div>
                       
                       <div className="space-y-3 mb-6">
-                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                           <div className="w-8 h-8 bg-[var(--primary)]/10 rounded-lg flex items-center justify-center">
                             <User className="h-4 w-4 text-[var(--primary)]" />
                           </div>
@@ -465,7 +427,7 @@ export function Dashboard() {
                             <p className="text-sm font-semibold truncate">{itinerary.client_name}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                           <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
                             <MapPin className="h-4 w-4 text-blue-500" />
                           </div>
@@ -474,7 +436,7 @@ export function Dashboard() {
                             <p className="text-sm font-semibold">{itinerary.destination}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                           <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
                             <DollarSign className="h-4 w-4 text-green-500" />
                           </div>
@@ -486,12 +448,12 @@ export function Dashboard() {
                       </div>
 
                       <div className="flex gap-3">
-                        <Button variant="outline" size="sm" className="flex-1 group/btn rounded-xl">
+                        <Button variant="outline" size="sm" className="flex-1 group/btn rounded-lg">
                           <Eye className="h-4 w-4 mr-2 group-hover/btn:text-[var(--primary)]" />
                           View
                         </Button>
                         <Link to={`/edit-itinerary/${itinerary.id}`} className="flex-1">
-                          <Button variant="outline" size="sm" className="w-full group/btn rounded-xl">
+                          <Button variant="outline" size="sm" className="w-full group/btn rounded-lg">
                             <Edit className="h-4 w-4 mr-2 group-hover/btn:text-[var(--primary)]" />
                             Edit
                           </Button>
@@ -507,7 +469,7 @@ export function Dashboard() {
 
         <TabsContent value="analytics" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-0 bg-gradient-to-br from-white to-muted/20 shadow-xl">
+            <Card className="border border-border/50 bg-card shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="p-2 bg-[var(--primary)]/10 rounded-lg">
@@ -522,7 +484,7 @@ export function Dashboard() {
                     <span className="text-sm font-medium">Total Trips Created</span>
                     <span className="text-sm text-muted-foreground font-semibold">{itineraries.length}</span>
                   </div>
-                  <Progress value={Math.min((itineraries.length / 10) * 100, 100)} className="h-3" />
+                  <Progress value={Math.min((itineraries.length / 10) * 100, 100)} className="h-2" />
                 </div>
                 
                 <div className="space-y-4">
@@ -530,7 +492,7 @@ export function Dashboard() {
                     <span className="text-sm font-medium">Average Budget</span>
                     <span className="text-sm text-muted-foreground font-semibold">${averageBudget.toLocaleString()}</span>
                   </div>
-                  <Progress value={Math.min((averageBudget / 10000) * 100, 100)} className="h-3" />
+                  <Progress value={Math.min((averageBudget / 10000) * 100, 100)} className="h-2" />
                 </div>
 
                 <div className="space-y-4">
@@ -548,12 +510,12 @@ export function Dashboard() {
                     const date = new Date(it.date_created);
                     const now = new Date();
                     return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-                  }).length / 5) * 100, 100)} className="h-3" />
+                  }).length / 5) * 100, 100)} className="h-2" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 bg-gradient-to-br from-white to-muted/20 shadow-xl">
+            <Card className="border border-border/50 bg-card shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -567,7 +529,7 @@ export function Dashboard() {
                   {Array.from(new Set(itineraries.map(it => it.destination)))
                     .slice(0, 5)
                     .map((destination, index) => (
-                      <div key={destination} className="flex items-center justify-between p-3 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors">
+                      <div key={destination} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">
                             {index + 1}
@@ -586,7 +548,7 @@ export function Dashboard() {
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6">
-          <Card className="border-0 bg-gradient-to-br from-white to-muted/20 shadow-xl">
+          <Card className="border border-border/50 bg-card shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <div className="p-2 bg-green-500/10 rounded-lg">
@@ -598,8 +560,8 @@ export function Dashboard() {
             <CardContent>
               <div className="space-y-4">
                 {itineraries.slice(0, 5).map((itinerary, index) => (
-                  <div key={itinerary.id} className="flex items-start gap-4 p-4 rounded-2xl hover:bg-muted/50 transition-all duration-300 border border-transparent hover:border-muted">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                  <div key={itinerary.id} className="flex items-start gap-4 p-4 rounded-xl hover:bg-muted/30 transition-all duration-300 border border-transparent hover:border-border/50">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-sm">
                       {itinerary.title.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -618,11 +580,11 @@ export function Dashboard() {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" className="rounded-xl">
+                      <Button variant="ghost" size="sm" className="rounded-lg">
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Link to={`/edit-itinerary/${itinerary.id}`}>
-                        <Button variant="ghost" size="sm" className="rounded-xl">
+                        <Button variant="ghost" size="sm" className="rounded-lg">
                           <Edit className="h-4 w-4" />
                         </Button>
                       </Link>
