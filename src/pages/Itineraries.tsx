@@ -19,7 +19,14 @@ import {
   Download,
   Share2,
   Plus,
-  X
+  X,
+  Sparkles,
+  Globe,
+  SortAsc,
+  Target,
+  RefreshCw,
+  SlidersHorizontal,
+  FilterX
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
@@ -138,6 +145,14 @@ export function Itineraries() {
     setViewModalOpen(true);
   };
 
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setFilterDestination('all');
+    setSortBy('date');
+  };
+
+  const hasActiveFilters = searchTerm || filterDestination !== 'all' || sortBy !== 'date';
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -159,66 +174,185 @@ export function Itineraries() {
           </p>
         </div>
         <Link to="/new-proposal">
-          <Button className="bg-[var(--primary)] hover:bg-[var(--primary)]/90">
+          <Button className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 px-6 py-3 rounded-2xl shadow-lg">
             <Plus className="h-4 w-4 mr-2" />
             Create New
           </Button>
         </Link>
       </div>
 
-      {/* Filters and Search */}
-      <Card className="mb-6 bg-gradient-to-r from-white/90 to-white/70 backdrop-blur-sm border-0 shadow-lg">
+      {/* Premium Filters Section */}
+      <Card className="mb-8 border-0 bg-gradient-to-br from-white/95 to-white/80 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-xl font-bold">
+            <div className="p-2 bg-gradient-to-br from-[var(--primary)]/10 to-[var(--primary)]/20 rounded-xl">
+              <SlidersHorizontal className="h-5 w-5 text-[var(--primary)]" />
+            </div>
+            Advanced Filters
+            {hasActiveFilters && (
+              <Badge className="ml-2 bg-[var(--primary)] text-white border-0">
+                Active
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-[var(--muted-foreground)]" />
-              <Input
-                placeholder="Search itineraries..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white/60 backdrop-blur-sm border-[var(--border)] focus:border-[var(--primary)] transition-colors duration-300"
-              />
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+            {/* Search Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Search Itineraries
+              </label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by title, client, or destination..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12 pr-4 py-3 bg-white/60 backdrop-blur-sm border border-input/50 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all duration-300 rounded-2xl"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
             
-            <Select value={filterDestination} onValueChange={setFilterDestination}>
-              <SelectTrigger className="bg-white/60 backdrop-blur-sm border-[var(--border)] focus:border-[var(--primary)] transition-colors duration-300">
-                <SelectValue placeholder="Filter by destination" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Destinations</SelectItem>
-                {getUniqueDestinations().map(destination => (
-                  <SelectItem key={destination} value={destination}>
-                    {destination}
+            {/* Destination Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Destination
+              </label>
+              <Select value={filterDestination} onValueChange={setFilterDestination}>
+                <SelectTrigger className="bg-white/60 backdrop-blur-sm border border-input/50 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all duration-300 rounded-2xl py-3">
+                  <SelectValue placeholder="All destinations" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-0 shadow-2xl">
+                  <SelectItem value="all" className="rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      All Destinations
+                    </div>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  {getUniqueDestinations().map(destination => (
+                    <SelectItem key={destination} value={destination} className="rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        {destination}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="bg-white/60 backdrop-blur-sm border-[var(--border)] focus:border-[var(--primary)] transition-colors duration-300">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Date Created</SelectItem>
-                <SelectItem value="title">Title</SelectItem>
-                <SelectItem value="client">Client Name</SelectItem>
-                <SelectItem value="destination">Destination</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Sort Options */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <SortAsc className="h-4 w-4" />
+                Sort By
+              </label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="bg-white/60 backdrop-blur-sm border border-input/50 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all duration-300 rounded-2xl py-3">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-0 shadow-2xl">
+                  <SelectItem value="date" className="rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Date Created
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="title" className="rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Title
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="client" className="rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Client Name
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="destination" className="rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Destination
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm('');
-                setFilterDestination('all');
-                setSortBy('date');
-              }}
-              className="bg-white/60 hover:bg-white/80 border-[var(--border)] hover:border-[var(--primary)]/30 transition-all duration-300"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Clear Filters
-            </Button>
+            {/* Clear Filters Button */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Actions
+              </label>
+              <Button
+                variant="outline"
+                onClick={clearAllFilters}
+                disabled={!hasActiveFilters}
+                className="w-full bg-white/60 hover:bg-white/80 border border-input/50 hover:border-[var(--primary)]/30 transition-all duration-300 rounded-2xl py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FilterX className="h-4 w-4 mr-2" />
+                Clear Filters
+              </Button>
+            </div>
           </div>
+
+          {/* Active Filters Display */}
+          {hasActiveFilters && (
+            <div className="mt-6 pt-6 border-t border-border/50">
+              <div className="flex items-center gap-2 mb-3">
+                <Filter className="h-4 w-4 text-[var(--primary)]" />
+                <span className="text-sm font-semibold text-muted-foreground">Active Filters:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {searchTerm && (
+                  <Badge variant="secondary" className="bg-[var(--primary)]/10 text-[var(--primary)] border-[var(--primary)]/20">
+                    Search: "{searchTerm}"
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="ml-2 hover:text-[var(--primary)]/70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterDestination !== 'all' && (
+                  <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                    Destination: {filterDestination}
+                    <button
+                      onClick={() => setFilterDestination('all')}
+                      className="ml-2 hover:text-blue-600/70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {sortBy !== 'date' && (
+                  <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-500/20">
+                    Sort: {sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}
+                    <button
+                      onClick={() => setSortBy('date')}
+                      className="ml-2 hover:text-green-600/70"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
