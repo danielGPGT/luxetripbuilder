@@ -4,6 +4,7 @@ import { gemini } from './gemini';
 import type { TripPreferences, GeneratedItinerary } from './gemini';
 import { supabase } from './supabase';
 import type { TripIntake } from '@/types/trip';
+import { tierManager } from './tierManager';
 
 export interface SavedItinerary {
   id: string;
@@ -21,12 +22,17 @@ export interface SavedItinerary {
 export class ItineraryService {
   private supabase;
 
-  constructor(supabaseUrl: string, supabaseKey: string) {
-    this.supabase = createClient(supabaseUrl, supabaseKey);
+  constructor() {
+    this.supabase = supabase;
   }
 
   async saveItinerary(itinerary: GeneratedItinerary, userId: string): Promise<SavedItinerary> {
     try {
+      // Check if user can create more itineraries
+      if (!tierManager.canCreateItinerary()) {
+        throw new Error(tierManager.getLimitReachedMessage('itineraries'));
+      }
+
       const { data, error } = await this.supabase
         .from('itineraries')
         .insert([
@@ -40,10 +46,18 @@ export class ItineraryService {
         .single();
 
       if (error) throw error;
+
+      // Increment usage after successful save
+      await tierManager.incrementUsage('itineraries');
+      
       toast.success('Itinerary saved successfully');
       return data;
     } catch (error) {
+      if (error instanceof Error && error.message.includes('limit')) {
+        toast.error(error.message);
+      } else {
       toast.error('Failed to save itinerary');
+      }
       throw error;
     }
   }
@@ -120,6 +134,11 @@ export class ItineraryService {
 export const itineraryService = {
   async generate(preferences: TripPreferences, userId: string): Promise<SavedItinerary> {
     try {
+      // Check if user can create more itineraries
+      if (!tierManager.canCreateItinerary()) {
+        throw new Error(tierManager.getLimitReachedMessage('itineraries'));
+      }
+
       // Generate itinerary using Gemini
       const generated = await gemini.generateItinerary(preferences);
 
@@ -127,7 +146,7 @@ export const itineraryService = {
       const now = new Date().toISOString();
 
       // Save to Supabase
-      const { data, error } = await this.supabase
+      const { data, error } = await supabase
         .from('itineraries')
         .insert({
           title: `${preferences.clientName}'s ${preferences.destination} Trip`,
@@ -149,15 +168,21 @@ export const itineraryService = {
       }
       if (!data) throw new Error('Failed to save itinerary');
 
+      // Increment usage after successful save
+      await tierManager.incrementUsage('itineraries');
+
       return data as SavedItinerary;
     } catch (error) {
       console.error('Error in generate:', error);
+      if (error instanceof Error && error.message.includes('limit')) {
+        toast.error(error.message);
+      }
       throw error;
     }
   },
 
   async getById(id: string): Promise<SavedItinerary> {
-    const { data, error } = await this.supabase
+    const { data, error } = await supabase
       .from('itineraries')
       .select()
       .eq('id', id)
@@ -170,7 +195,7 @@ export const itineraryService = {
   },
 
   async list(userId: string): Promise<SavedItinerary[]> {
-    const { data, error } = await this.supabase
+    const { data, error } = await supabase
       .from('itineraries')
       .select()
       .eq('generated_by', userId)
@@ -187,7 +212,7 @@ export const itineraryService = {
       updated_at: new Date().toISOString()
     };
 
-    const { data, error } = await this.supabase
+    const { data, error } = await supabase
       .from('itineraries')
       .update(updatedData)
       .eq('id', id)
@@ -201,7 +226,7 @@ export const itineraryService = {
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await supabase
       .from('itineraries')
       .delete()
       .eq('id', id);
@@ -216,9 +241,15 @@ export async function saveItinerary(
   userId: string
 ): Promise<SavedItinerary | null> {
   try {
+    // Check if user can create more itineraries
+    if (!tierManager.canCreateItinerary()) {
+      throw new Error(tierManager.getLimitReachedMessage('itineraries'));
+    }
+
     const { data, error } = await supabase
       .from('itineraries')
       .insert({
+        user_id: userId,
         title: itinerary.title,
         client_name: itinerary.clientName,
         destination: itinerary.destination,
@@ -232,12 +263,34 @@ export async function saveItinerary(
 
     if (error) {
       console.error('Error saving itinerary:', error);
-      throw error;
+      
+      // Handle specific error types
+      if (error.code === '403') {
+        console.error('Access denied saving itinerary. This could be due to:');
+        console.error('1. Missing RLS policies');
+        console.error('2. User not authenticated');
+        console.error('3. Incorrect user ID format');
+        throw new Error('Access denied. Please check your authentication and try again.');
+      } else if (error.code === '42703' || error.code === '42P01') {
+        console.error('Itineraries table not found. Please run the database setup script.');
+        throw new Error('Database not properly configured. Please contact support.');
+      } else if (error.code === '23505') {
+        // Unique constraint violation
+        throw new Error('Itinerary with this name already exists. Please choose a different title.');
+      } else {
+        throw error;
+      }
     }
+
+    // Increment usage after successful save
+    await tierManager.incrementUsage('itineraries');
 
     return data;
   } catch (error) {
     console.error('Failed to save itinerary:', error);
+    if (error instanceof Error && error.message.includes('limit')) {
+      toast.error(error.message);
+    }
     throw error;
   }
 }

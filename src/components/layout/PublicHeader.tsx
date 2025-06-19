@@ -11,24 +11,25 @@ import {
 } from '@/components/ui/navigation-menu';
 import { Link } from 'react-router-dom';
 
-export function Header() {
+export function PublicHeader() {
   const { user } = useAuth();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    window.location.reload(); // Optional: force refresh to update UI
+    window.location.reload();
   };
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-[var(--background)]/80 backdrop-blur-lg border-b border-[var(--border)] shadow-sm">
-      <div className="w-full px-4 sm:px-6 py-3 grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] items-center gap-y-2">
+      <div className="w-full px-4 sm:px-6 py-3 flex items-center justify-between">
         {/* Logo/Brand */}
-        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 justify-self-start hover:opacity-80 transition-opacity">
+        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <span className="text-2xl font-bold tracking-tight text-[var(--primary)] font-sans">AItinerary</span>
           <WandSparkles className="h-6 w-6 text-[var(--primary)]" />
         </Link>
+        
         {/* Center nav links using NavigationMenu */}
-        <div className="justify-self-center w-full flex justify-center">
+        <div className="absolute left-1/2 transform -translate-x-1/2">
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
@@ -43,8 +44,9 @@ export function Header() {
             </NavigationMenuList>
           </NavigationMenu>
         </div>
+        
         {/* Social + Auth/User Section */}
-        <div className="flex items-center gap-4 justify-self-end">
+        <div className="flex items-center gap-4">
           {/* Social Media Icons */}
           <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" title="Instagram">
             <Button variant="ghost" size="icon">
@@ -65,7 +67,7 @@ export function Header() {
           {user ? (
             <>
               <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
-        <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Avatar>
                   <AvatarImage src={user.user_metadata?.avatar_url} />
                   <AvatarFallback>{user.user_metadata?.name?.[0] || user.email?.[0]}</AvatarFallback>
@@ -76,10 +78,10 @@ export function Header() {
           ) : (
             <>
               <Link to="/login">
-          <Button variant="outline">Sign In</Button>
+                <Button variant="outline">Sign In</Button>
               </Link>
               <Link to="/signup">
-          <Button>Sign Up</Button>
+                <Button>Sign Up</Button>
               </Link>
             </>
           )}

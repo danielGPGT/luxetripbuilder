@@ -159,7 +159,7 @@ export default function NewProposal() {
   };
 
   return (
-      <div className="relative w-full min-h-screen flex items-center justify-center overflow-hidden">
+      <div className="relative w-full min-h-screen flex items-center justify-center">
         {/* Background image with gradient overlay */}
         
         {/* Itinerary Display */}
@@ -334,24 +334,23 @@ export default function NewProposal() {
   }
 
   return (
-    <div className="relative w-full min-h-screen flex items-center justify-center overflow-hidden">
+    <div className="relative w-full min-h-screen flex items-center justify-center">
       {/* Background image with gradient overlay */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0"></div>
+      {/* Responsive grid: sticky stepper left, wide form right */}
+      <div className="relative z-10 w-full grid grid-cols-1 md:grid-cols-[260px_1fr] gap-0 min-h-screen py-8 px-2 md:px-8">
+        {/* Sticky Stepper (left) */}
+        <div className="hidden md:block pr-8">
+          <div className="sticky top-28">
+            <Stepper currentStep={currentStep} totalSteps={totalSteps} labels={["Traveler Info", "Destinations", "Trip Style", "Experience", "Budget"]} vertical />
       </div>
-      
-      {/* Glassy Form Overlay with Vertical Stepper */}
-      <div className="relative z-10 w-full flex flex-col md:flex-row items-center justify-center min-h-screen py-12 px-2">
-        {/* Stepper (vertical, left) */}
-        <div className="hidden md:flex flex-col items-center justify-center pr-8">
-          <Stepper currentStep={currentStep} totalSteps={totalSteps} labels={["Traveler Info", "Destinations", "Trip Style", "Experience", "Budget"]} vertical />
         </div>
-        
         {/* Form Card (right) */}
-        <div className="w-full max-w-2xl">
+        <div className="w-full max-w-3xl mx-auto">
           <Card className="w-full bg-white/60 backdrop-blur-2xl shadow-2xl border-0">
             <FormProvider {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
-                <CardHeader className="px-12 border-b-0">
+                <CardHeader className="px-8 md:px-12 border-b-0">
                   <CardTitle className="text-4xl font-bold text-[var(--foreground)] mb-4 tracking-tight font-sans">
                     {currentStep === 1 && <span>Traveler Information</span>}
                     {currentStep === 2 && <span>Destinations</span>}
@@ -360,14 +359,12 @@ export default function NewProposal() {
                     {currentStep === 5 && <span>Budget & Preferences</span>}
                   </CardTitle>
                 </CardHeader>
-                
-                <CardContent className="px-12 py-8 space-y-8">
+                <CardContent className="px-8 md:px-12 py-8 space-y-8">
                   {generationError && (
                     <Alert variant="destructive">
                       <AlertDescription>{generationError}</AlertDescription>
                     </Alert>
                   )}
-                  
                   <StepTransition step={1} currentStep={currentStep}>
                     <Step1TravelerInfo />
                   </StepTransition>
@@ -384,8 +381,7 @@ export default function NewProposal() {
                     <Step5Budget />
                   </StepTransition>
                 </CardContent>
-                
-                <CardFooter className="flex flex-row gap-4 px-12 pb-8 pt-6 w-full justify-end">
+                <CardFooter className="flex flex-row gap-4 px-8 md:px-12 pb-8 pt-6 w-full justify-end">
                   <Button
                     type="button"
                     variant="outline"

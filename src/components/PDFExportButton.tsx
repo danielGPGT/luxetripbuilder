@@ -4,6 +4,8 @@ import { useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import type { SavedItinerary } from '@/lib/itineraryService';
+import { useTier } from '@/hooks/useTier';
+import { toast } from 'sonner';
 
 interface PDFExportButtonProps {
   itinerary: SavedItinerary;
@@ -12,8 +14,15 @@ interface PDFExportButtonProps {
 
 export function PDFExportButton({ itinerary, className }: PDFExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const { canDownloadPDF, incrementUsage, getLimitReachedMessage } = useTier();
 
   const exportToPDF = async () => {
+    // Check if user can download PDFs
+    if (!canDownloadPDF()) {
+      toast.error(getLimitReachedMessage('pdf_downloads'));
+      return;
+    }
+
     setIsExporting(true);
     try {
       // Create a completely isolated iframe to prevent CSS inheritance
@@ -177,9 +186,13 @@ export function PDFExportButton({ itinerary, className }: PDFExportButtonProps) 
       // Save the PDF
       pdf.save(`${itinerary.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_itinerary.pdf`);
 
+      // Increment usage after successful download
+      await incrementUsage('pdf_downloads');
+      toast.success('PDF exported successfully!');
+
     } catch (error) {
       console.error('Failed to export PDF:', error);
-      alert('Failed to export PDF. Please try again.');
+      toast.error('Failed to export PDF. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -188,7 +201,7 @@ export function PDFExportButton({ itinerary, className }: PDFExportButtonProps) 
   return (
     <Button
       onClick={exportToPDF}
-      disabled={isExporting}
+      disabled={isExporting || !canDownloadPDF()}
       variant="outline"
       className={className}
     >

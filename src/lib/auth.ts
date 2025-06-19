@@ -11,35 +11,6 @@ export type UserProfile = {
   updated_at?: string;
 };
 
-async function createUserProfile(user: User, name: string): Promise<void> {
-  // First check if profile already exists
-  const { data: existingProfile } = await supabase
-    .from('users')
-    .select()
-    .eq('id', user.id)
-    .single();
-
-  if (existingProfile) {
-    console.log('Profile already exists');
-    return;
-  }
-
-  const { error } = await supabase
-    .from('users')
-    .insert({
-      id: user.id,
-      email: user.email,
-      name: name,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
-
-  if (error) {
-    console.error('Error creating user profile:', error);
-    throw error;
-  }
-}
-
 export const auth = {
   async signUp(email: string, password: string, name: string): Promise<void> {
     const { data, error } = await supabase.auth.signUp({
@@ -55,8 +26,8 @@ export const auth = {
     if (error) throw error;
     if (!data.user) throw new Error('No user returned after signup');
 
-    // Create user profile in our users table
-    await createUserProfile(data.user, name);
+    // The database trigger will automatically create the user profile
+    // No need to manually create it here
   },
 
   async signIn(email: string, password: string) {
@@ -66,12 +37,6 @@ export const auth = {
     });
 
     if (error) throw error;
-
-    // Ensure profile exists after sign in
-    if (data.user) {
-      const metadata = data.user.user_metadata;
-      await createUserProfile(data.user, metadata?.name || email.split('@')[0]);
-    }
 
     return data;
   },
@@ -101,19 +66,20 @@ export const auth = {
       throw error;
     }
 
-    // If no profile exists, create one
+    // If no profile exists, the trigger should have created it
+    // Let's wait a moment and try again
     if (!profile) {
-      const metadata = user.user_metadata;
-      await createUserProfile(user, metadata?.name || user.email?.split('@')[0] || 'User');
-      // Fetch the newly created profile
-      const { data: newProfile, error: newError } = await supabase
+      // Wait a bit for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const { data: retryProfile, error: retryError } = await supabase
         .from('users')
         .select()
         .eq('id', user.id)
         .single();
 
-      if (newError) throw newError;
-      return newProfile as UserProfile;
+      if (retryError) throw retryError;
+      return retryProfile as UserProfile;
     }
 
     return profile as UserProfile;
@@ -147,8 +113,8 @@ export const auth = {
       .single();
 
     if (!profile) {
-      const metadata = user.user_metadata;
-      await createUserProfile(user, metadata?.name || user.email?.split('@')[0] || 'User');
+      // The trigger should handle this, but if it doesn't, we'll wait
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   },
 }; 

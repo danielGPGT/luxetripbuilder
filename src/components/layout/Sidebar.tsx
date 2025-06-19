@@ -1,124 +1,125 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import {
-  LayoutDashboard,
-  Settings,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Sun, Moon, Home, FilePlus2, Calendar, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
-import { ItineraryService } from '@/lib/itineraryService';
-import { useEffect } from 'react';
-import type { SavedItinerary } from '@/lib/itineraryService';
+import LuxeLogo from '@/assets/Luxe.svg';
+import { loadItineraries } from '@/lib/itineraryService';
+import { useTheme } from '@/components/ThemeProvider';
 
-interface SidebarProps {
-  className?: string;
-}
-
-export function Sidebar({ className }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [recentItineraries, setRecentItineraries] = useState<SavedItinerary[]>([]);
-  const location = useLocation();
+export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
   const { user } = useAuth();
+  const location = useLocation();
+  const [recentItineraries, setRecentItineraries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { theme, setTheme } = useTheme();
 
-  useEffect(() => {
-    if (user) {
-      const itineraryService = new ItineraryService(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY
-      );
-      
-      itineraryService.getUserItineraries(user.id)
-        .then(setRecentItineraries)
-        .catch(console.error);
-    }
-  }, [user]);
-
+  // Example nav items
   const navItems = [
-    {
-      title: 'Dashboard',
-      href: '/dashboard',
-      icon: LayoutDashboard,
-    },
-    {
-      title: 'Builder',
-      href: '/builder',
-      icon: FileText,
-    },
-    {
-      title: 'Settings',
-      href: '/settings',
-      icon: Settings,
-    },
+    { label: 'Dashboard', icon: Home, href: '/dashboard' },
+    { label: 'New Proposal', icon: FilePlus2, href: '/new-proposal' },
+    { label: 'Itineraries', icon: Calendar, href: '/itineraries' },
+    // Add more as needed
   ];
 
+  useEffect(() => {
+    if (user?.id) {
+      setLoading(true);
+      loadItineraries(user.id)
+        .then((data) => setRecentItineraries(data.slice(0, 3)))
+        .finally(() => setLoading(false));
+    } else {
+      setRecentItineraries([]);
+    }
+  }, [user?.id]);
+
   return (
-    <div
-      className={cn(
-        'relative flex h-full flex-col border-r bg-background ',
-        isCollapsed ? 'w-16' : 'w-64',
-        className
-      )}
-    >
-      <div className="flex h-16 items-center justify-between px-4">
-        {!isCollapsed && <span className="text-lg font-semibold">Navigation</span>}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="ml-auto"
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+    <aside className={`fixed left-0 top-0 h-screen z-40 bg-background border-r shadow-lg transition-all duration-300 flex flex-col ${collapsed ? 'w-20' : 'w-72'}`}>
+      {/* Top: Logo & Collapse Button */}
+      <div className="flex items-center justify-between h-20 px-4">
+        <Link to="/dashboard" className="flex items-center gap-2">
+          <img src={LuxeLogo} alt="AItinerary Logo" className="h-8 w-8" />
+          <span className={`font-bold text-xl transition-opacity duration-200 ${collapsed ? 'opacity-0 w-0' : 'opacity-100 w-auto'} text-[var(--foreground)]`}>AItinerary</span>
+        </Link>
+        <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)}>
+          {collapsed ? <ChevronRight /> : <ChevronLeft />}
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 px-2">
-        <div className="space-y-1 py-2">
-          {navItems.map((item) => (
+      {/* Navigation */}
+      <nav className="flex-1 px-2">
+        {navItems.map(item => (
+          <Link to={item.href} key={item.href}>
             <Button
-              key={item.href}
               variant={location.pathname === item.href ? 'secondary' : 'ghost'}
-              className={cn(
-                'w-full justify-start',
-                isCollapsed && 'justify-center'
-              )}
-              asChild
+              className={`w-full flex items-center gap-3 my-1 ${collapsed ? 'justify-center' : 'justify-start'}`}
             >
-              <Link to={item.href}>
-                <item.icon className="mr-2 h-4 w-4" />
-                {!isCollapsed && item.title}
-              </Link>
+              <item.icon className="h-5 w-5" />
+              {!collapsed && <span className="text-[var(--foreground)]">{item.label}</span>}
             </Button>
+          </Link>
           ))}
-        </div>
+      </nav>
 
-        {!isCollapsed && recentItineraries.length > 0 && (
-          <div className="mt-6 space-y-1">
-            <h4 className="px-2 text-sm font-medium">Recent Itineraries</h4>
-            {recentItineraries.slice(0, 5).map((itinerary) => (
-              <Button
-                key={itinerary.id}
-                variant="ghost"
-                className="w-full justify-start"
-                asChild
-              >
-                <Link to={`/itinerary/${itinerary.id}`}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  {itinerary.title}
+      {/* Projects/Recent Itineraries */}
+      {user && !collapsed && (
+        <div className="px-4 py-2">
+          <div className="font-semibold text-sm mb-2 text-[var(--muted-foreground)]">Recent Itineraries</div>
+          <ScrollArea className="max-h-32">
+            {loading ? (
+              <div className="text-xs text-muted-foreground px-2 py-1">Loading...</div>
+            ) : recentItineraries.length === 0 ? (
+              <div className="text-xs text-muted-foreground px-2 py-1">No itineraries</div>
+            ) : (
+              recentItineraries.map(it => (
+                <Link to={`/itinerary/${it.id}`} key={it.id}>
+                  <Button variant="ghost" className="w-full justify-start my-1 truncate">
+                    <span className="truncate">{it.title.length > 22 ? it.title.slice(0, 22) + '…' : it.title}</span>
+                  </Button>
                 </Link>
+              ))
+            )}
+          </ScrollArea>
+          {/* TODO: Add 'Show more' functionality if needed */}
+        </div>
+      )}
+
+      {/* Bottom: Theme Switcher & User */}
+      <div className="mt-auto w-full px-4 py-4 flex flex-col gap-4">
+        <div className="flex items-center gap-2 justify-center mb-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme('light')}
+            aria-pressed={theme === 'light'}
+          >
+            <Sun className={theme === 'light' ? 'text-yellow-500' : ''} />
+          </Button>
+              <Button
+                variant="ghost"
+            size="icon"
+            onClick={() => setTheme('dark')}
+            aria-pressed={theme === 'dark'}
+              >
+            <Moon className={theme === 'dark' ? 'text-blue-500' : ''} />
               </Button>
-            ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <Avatar>
+            <AvatarImage src={user?.user_metadata?.avatar_url} />
+            <AvatarFallback>{user?.user_metadata?.name?.[0] || user?.email?.[0]}</AvatarFallback>
+          </Avatar>
+          {!collapsed && (
+            <div>
+              <div className="font-medium text-[var(--foreground)]">{user?.user_metadata?.name || user?.email || "User Name"}</div>
+              <div className="text-xs text-muted-foreground">{user?.email || "user@email.com"}</div>
           </div>
         )}
-      </ScrollArea>
+        </div>
     </div>
+    </aside>
   );
 } 

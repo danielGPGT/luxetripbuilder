@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { toast } from 'sonner';
+import { jsonrepair } from 'jsonrepair';
 
 export interface TripPreferences {
   clientName: string;
@@ -118,7 +119,7 @@ export interface GeneratedItinerary {
 
 class GeminiService {
   private genAI: GoogleGenerativeAI;
-  private model: any;
+  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
 
   constructor(apiKey: string) {
     if (!apiKey) {
@@ -137,6 +138,41 @@ class GeminiService {
     });
   }
 
+  // Use jsonrepair to handle malformed JSON responses from Gemini
+  private tryRepairJson(str: string): string {
+    try {
+      // Remove code fences and trim
+      const cleaned = str.replace(/```json|```/gi, '').trim();
+      
+      // Use jsonrepair to fix common JSON issues
+      const repaired = jsonrepair(cleaned);
+      return repaired;
+    } catch (error) {
+      console.error('JSON repair failed:', error);
+      // Fallback to basic repair for simple cases
+      return this.basicJsonRepair(str);
+    }
+  }
+
+  // Fallback method for basic JSON repair
+  private basicJsonRepair(str: string): string {
+    // Remove code fences
+    str = str.replace(/```json|```/gi, '').trim();
+    const openBraces = (str.match(/{/g) || []).length;
+    let closeBraces = (str.match(/}/g) || []).length;
+    const openBrackets = (str.match(/\[/g) || []).length;
+    let closeBrackets = (str.match(/\]/g) || []).length;
+    while (closeBraces < openBraces) {
+      str += '}';
+      closeBraces++;
+    }
+    while (closeBrackets < openBrackets) {
+      str += ']';
+      closeBrackets++;
+    }
+    return str;
+  }
+
   async generateItinerary(preferences: TripPreferences): Promise<GeneratedItinerary> {
     try {
       const prompt = this.buildPrompt(preferences);
@@ -148,9 +184,9 @@ class GeminiService {
       console.log('Raw Gemini Response:', text);
 
       try {
-        // Remove all code block markers and trim whitespace
-        const cleanedText = text.replace(/```json|```/gi, '').trim();
-        console.log('Cleaned Response:', cleanedText.slice(0, 500));
+        // Use jsonrepair to handle malformed JSON
+        const cleanedText = this.tryRepairJson(text);
+        console.log('Cleaned/Repaired Response:', cleanedText.slice(0, 500));
         const itinerary = JSON.parse(cleanedText);
         toast.success('Itinerary generated successfully');
         return itinerary;
@@ -174,6 +210,11 @@ class GeminiService {
     const budgetPerPerson = preferences.budget.max / preferences.numberOfTravelers;
 
     return `You are a luxury travel itinerary planning assistant specializing in creating detailed, premium travel experiences. Generate a comprehensive luxury travel itinerary with detailed pricing breakdowns and recommendations.
+
+IMPORTANT:
+* Respond with ONLY valid, compact JSON. Do NOT include markdown, code fences, or any extra text.
+* Keep the response as short as possible while including all required fields.
+* If the itinerary is long, you may abbreviate or summarize some details to fit the response.
 
 CLIENT INFORMATION:
 - Name: ${preferences.clientName}
