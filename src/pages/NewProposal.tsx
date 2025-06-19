@@ -4,6 +4,7 @@ import { Step2Destinations } from '@/components/forms/steps/Step2Destinations';
 import { Step3TripStyle } from '@/components/forms/steps/Step3TripStyle';
 import { Step4Experience } from '@/components/forms/steps/Step4Experience';
 import { Step5Budget } from '@/components/forms/steps/Step5Budget';
+import { Step6Events } from '@/components/forms/steps/Step6Events';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react';
@@ -20,8 +21,35 @@ import { saveItinerary, updateItinerary, type SavedItinerary } from '@/lib/itine
 import { useAuth } from '@/lib/AuthProvider';
 import { toast } from 'sonner';
 import { PDFExportButton } from '@/components/PDFExportButton';
+import { useIntakeStore } from '@/store/intake';
 
 import bgImg from '@/assets/imgs/spencer-davis-Ivwyqtw3PzU-unsplash.jpg';
+
+// Helper to fetch event details and tickets from Sports Events 365 API
+async function fetchEventDetailsAndTickets(eventId: string) {
+  const API_KEY = import.meta.env.VITE_SPORTSEVENTS365_API_KEY || '';
+  // Fetch event details
+  const eventRes = await fetch(`https://api-v2.sandbox365.com/events/${eventId}`, {
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Accept': 'application/json',
+    },
+  });
+  if (!eventRes.ok) throw new Error('Failed to fetch event');
+  const event = await eventRes.json();
+
+  // Fetch ticket options for the event
+  const ticketRes = await fetch(`https://api-v2.sandbox365.com/events/${eventId}/tickets`, {
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Accept': 'application/json',
+    },
+  });
+  if (!ticketRes.ok) throw new Error('Failed to fetch tickets');
+  const tickets = await ticketRes.json();
+
+  return { ...event, tickets: tickets.categories || [] };
+}
 
 export default function NewProposal() {
   const {
@@ -32,6 +60,7 @@ export default function NewProposal() {
     prevStep,
     isFirstStep,
     isLastStep,
+    stepIndex,
   } = useMultiStepForm();
 
   const { isLoaded, error } = useGoogleMapsScript();
@@ -42,6 +71,7 @@ export default function NewProposal() {
   const { user } = useAuth();
   const [savedItinerary, setSavedItinerary] = useState<SavedItinerary | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [allowSubmit, setAllowSubmit] = useState(false);
 
   useEffect(() => {
     if (itinerary) {
@@ -50,6 +80,37 @@ export default function NewProposal() {
   }, [itinerary]);
 
   const transformFormData = (data: TripIntake): TripPreferences => {
+    // Get event data from the intake store
+    const { intakeData } = useIntakeStore.getState();
+    const selectedEvent = intakeData?.selectedEvent;
+    const selectedTicket = intakeData?.selectedTicket;
+    
+    console.log('🎫 NewProposal - Using event data from store:', {
+      event: selectedEvent?.name,
+      ticket: selectedTicket?.categoryName,
+      hasEvent: !!selectedEvent,
+      hasTicket: !!selectedTicket,
+      fullIntakeData: intakeData
+    });
+    
+    // Create event-specific special requests if an event is selected
+    const eventSpecialRequests = selectedEvent ? 
+      `EVENT FOCUSED TRIP: The main purpose of this trip is to attend ${selectedEvent.name} on ${selectedEvent.dateOfEvent}. Ticket type: ${selectedTicket?.categoryName}. This event should be the absolute centerpiece of the entire itinerary. All activities should be planned around this event, including proper transportation to/from the venue, accommodation near the event location, and complementary activities that enhance the event experience.` : 
+      undefined;
+    
+    // Combine existing special requests with event requests
+    const combinedSpecialRequests = [data.experience.specialRequests, eventSpecialRequests]
+      .filter(Boolean)
+      .join(' ');
+    
+    console.log('📋 NewProposal - TripPreferences created:', {
+      specialRequests: combinedSpecialRequests,
+      destination: data.destinations.primary,
+      hasEventRequest: !!eventSpecialRequests,
+      eventSpecialRequests,
+      existingSpecialRequests: data.experience.specialRequests
+    });
+    
     return {
       clientName: data.travelerInfo.name,
       destination: data.destinations.primary,
@@ -71,7 +132,7 @@ export default function NewProposal() {
           ['fine-dining', 'wine', 'local-culture'].includes(interest)
         ),
       },
-      specialRequests: data.experience.specialRequests,
+      specialRequests: combinedSpecialRequests || undefined,
       transportType: data.travelerInfo.transportType,
       fromLocation: data.destinations.from,
       travelType: data.travelerInfo.travelType,
@@ -82,18 +143,47 @@ export default function NewProposal() {
     setIsGenerating(true);
     setGenerationError(null);
     
+    // Debug: Check store contents right before submission
+    const { intakeData } = useIntakeStore.getState();
+    console.log('🚀 Form submission - Store contents:', {
+      hasSelectedEvent: !!intakeData?.selectedEvent,
+      hasSelectedTicket: !!intakeData?.selectedTicket,
+      eventName: intakeData?.selectedEvent?.name,
+      ticketType: intakeData?.selectedTicket?.categoryName,
+      fullIntakeData: intakeData
+    });
+    
     try {
-      console.log('Form data:', data);
-      
       const preferences = transformFormData(data as TripIntake);
-      console.log('Transformed preferences:', preferences);
-      
+      // Get selected event IDs
+      const selectedEventIds: string[] = data.selectedEvents || [];
+      // Fetch event details and tickets for selected events
+      let selectedEventDetails: any[] = [];
+      if (selectedEventIds.length > 0) {
+        selectedEventDetails = await Promise.all(selectedEventIds.map(fetchEventDetailsAndTickets));
+      }
+      // Pass selected events to the generator (if your AI supports it)
+      // TODO: Pass selectedEventDetails to Gemini prompt (update Gemini integration as needed)
       const generatedItinerary = await gemini.generateItinerary(preferences);
-      setItinerary(generatedItinerary);
-      
-      console.log('Generated itinerary:', generatedItinerary);
+      // Inject selected events as activities on the correct days
+      const updatedDays = generatedItinerary.days.map((day: any) => {
+        const eventsForDay = selectedEventDetails.filter((e: any) => e.date === day.date);
+        if (eventsForDay.length === 0) return day;
+        const eventActivities = eventsForDay.map((e: any) => ({
+          time: 'Event',
+          description: e.name + (e.tickets?.[0]?.price ? ` (Ticket: ${e.tickets[0].price} ${e.tickets[0].currency})` : ''),
+          location: e.venue?.name || '',
+          notes: e.tickets?.[0]?.categoryName || '',
+          estimatedCost: e.tickets?.[0]?.price || 0,
+          costType: 'total',
+        }));
+        return {
+          ...day,
+          activities: [...day.activities, ...eventActivities],
+        };
+      });
+      setItinerary({ ...generatedItinerary, days: updatedDays });
     } catch (error) {
-      console.error('Itinerary generation failed:', error);
       setGenerationError(error instanceof Error ? error.message : 'Failed to generate itinerary');
     } finally {
       setIsGenerating(false);
@@ -157,6 +247,16 @@ export default function NewProposal() {
       // TODO: Implement AI regeneration for a single day
       alert('Regenerate Day with AI coming soon!');
   };
+
+  // Steps array with events as final step
+  const steps = [
+    <Step1TravelerInfo key="step1" />, // 0
+    <Step2Destinations key="step2" />, // 1
+    <Step3TripStyle key="step3" />,    // 2
+    <Step4Experience key="step4" />,   // 3
+    <Step5Budget key="step5" />,       // 4
+    <Step6Events key="step6" />,       // 5 - Final step
+  ];
 
   return (
       <div className="relative w-full min-h-screen flex items-center justify-center">
@@ -342,14 +442,24 @@ export default function NewProposal() {
         {/* Sticky Stepper (left) */}
         <div className="hidden md:block pr-8">
           <div className="sticky top-28">
-            <Stepper currentStep={currentStep} totalSteps={totalSteps} labels={["Traveler Info", "Destinations", "Trip Style", "Experience", "Budget"]} vertical />
+            <Stepper currentStep={currentStep} totalSteps={totalSteps} labels={["Traveler Info", "Destinations", "Trip Style", "Experience", "Budget", "Events"]} vertical />
       </div>
         </div>
         {/* Form Card (right) */}
         <div className="w-full max-w-3xl mx-auto">
           <Card className="w-full bg-white/60 backdrop-blur-2xl shadow-2xl border-0">
             <FormProvider {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  if (isLastStep && allowSubmit) {
+                    setAllowSubmit(false); // reset
+                    form.handleSubmit(onSubmit)();
+                  } else if (!isLastStep) {
+                    nextStep();
+                  }
+                }}
+              >
                 <CardHeader className="px-8 md:px-12 border-b-0">
                   <CardTitle className="text-4xl font-bold text-[var(--foreground)] mb-4 tracking-tight font-sans">
                     {currentStep === 1 && <span>Traveler Information</span>}
@@ -357,6 +467,7 @@ export default function NewProposal() {
                     {currentStep === 3 && <span>Trip Style</span>}
                     {currentStep === 4 && <span>Experience Preferences</span>}
                     {currentStep === 5 && <span>Budget & Preferences</span>}
+                    {currentStep === 6 && <span>Events</span>}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-8 md:px-12 py-8 space-y-8">
@@ -380,6 +491,9 @@ export default function NewProposal() {
                   <StepTransition step={5} currentStep={currentStep}>
                     <Step5Budget />
                   </StepTransition>
+                  <StepTransition step={6} currentStep={currentStep}>
+                    <Step6Events />
+                  </StepTransition>
                 </CardContent>
                 <CardFooter className="flex flex-row gap-4 px-8 md:px-12 pb-8 pt-6 w-full justify-end">
                   <Button
@@ -393,10 +507,17 @@ export default function NewProposal() {
                     Back
                   </Button>
                   {isLastStep ? (
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="button"
                       disabled={isGenerating}
                       className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-[var(--primary-foreground)] font-bold shadow-md border-0"
+                      onClick={() => {
+                        setAllowSubmit(true);
+                        // Programmatically submit the form
+                        setTimeout(() => {
+                          document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                        }, 0);
+                      }}
                     >
                       {isGenerating ? (
                         <>
@@ -417,8 +538,8 @@ export default function NewProposal() {
                       disabled={isGenerating}
                       className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-[var(--primary-foreground)] font-bold shadow-md border-0"
                     >
-                      Next
                       <ChevronRight className="h-5 w-5 ml-0" />
+                      Next
                     </Button>
                   )}
                 </CardFooter>

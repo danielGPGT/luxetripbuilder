@@ -8,6 +8,18 @@ import { Loader2, MapPin, User, Calendar, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { PDFExportButton } from '@/components/PDFExportButton';
 
+// Helper function to format date with day of the week
+const formatDateWithDay = (dateString: string) => {
+  const date = new Date(dateString);
+  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const formattedDate = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+  return `${dayOfWeek}, ${formattedDate}`;
+};
+
 export default function ViewItinerary() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -56,13 +68,24 @@ export default function ViewItinerary() {
         {/* Hero Image */}
         <div className="relative h-56 w-full bg-gray-100 flex items-center justify-center">
           {heroImage ? (
-            <img src={heroImage} alt="Itinerary" className="object-cover w-full h-full" />
-          ) : (
-            <div className="flex flex-col items-center justify-center w-full h-full text-gray-300">
-              <MapPin className="h-10 w-10 mb-2" />
-              <span className="text-xs">No Image</span>
-            </div>
-          )}
+            <img 
+              src={heroImage} 
+              alt="Itinerary" 
+              className="object-cover w-full h-full"
+              onError={(e) => {
+                // Hide the broken image and show fallback
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                if (fallback) {
+                  fallback.style.display = 'flex';
+                }
+              }}
+            />
+          ) : null}
+          <div className="flex flex-col items-center justify-center w-full h-full text-gray-300" style={{ display: heroImage ? 'none' : 'flex' }}>
+            <MapPin className="h-10 w-10 mb-2" />
+            <span className="text-xs">No Image</span>
+          </div>
           <div className="absolute top-4 left-4">
             <Badge className="bg-gradient-to-r from-[var(--primary)] to-[var(--primary)]/80 text-white border-0 text-xs font-medium px-2 py-1 shadow-md">
               LUXURY
@@ -95,7 +118,7 @@ export default function ViewItinerary() {
                 <MapPin className="h-4 w-4" /> {itinerary.destination}
               </div>
               <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                <Calendar className="h-4 w-4" /> {new Date(itinerary.date_created).toLocaleDateString()}
+                <Calendar className="h-4 w-4" /> {formatDateWithDay(itinerary.date_created)}
               </div>
             </div>
           </div>
@@ -115,7 +138,7 @@ export default function ViewItinerary() {
               {itinerary.days?.map((day, index) => (
                 <div key={index} className="bg-white/60 backdrop-blur-sm p-4 rounded-lg border border-[var(--border)]/30">
                   <h4 className="text-md font-semibold text-[var(--foreground)] mb-2">
-                    Day {index + 1} - {day.date}
+                    Day {index + 1} - {formatDateWithDay(day.date)}
                   </h4>
                   <ul className="space-y-2">
                     {day.activities?.map((activity, actIndex) => (
@@ -155,7 +178,7 @@ export default function ViewItinerary() {
                   <span className="font-semibold text-[var(--foreground)]">Destination:</span> {itinerary.destination}
                 </div>
                 <div>
-                  <span className="font-semibold text-[var(--foreground)]">Created:</span> {new Date(itinerary.date_created).toLocaleDateString()}
+                  <span className="font-semibold text-[var(--foreground)]">Created:</span> {formatDateWithDay(itinerary.date_created)}
                 </div>
                 <div>
                   <span className="font-semibold text-[var(--foreground)]">Duration:</span> {itinerary.days?.length || 0} days

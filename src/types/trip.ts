@@ -64,6 +64,14 @@ export const tripIntakeSchema = z.object({
     experienceType: experienceTypeEnum,
     travelClass: travelClassEnum,
   }),
+
+  // Step 6: Events
+  eventRequests: z.string().default(''),
+  eventTypes: z.array(z.string()).default([]),
+
+  // Step 7: Inventory
+  includeInventory: z.boolean().default(false),
+  inventoryTypes: z.array(z.string()).default([]),
 });
 
 export type TripIntake = z.infer<typeof tripIntakeSchema>; 

@@ -18,6 +18,16 @@ export interface UnsplashImage {
   };
 }
 
+function pickBestMatch(results: any[], keywords: string[]): any | null {
+  if (!results || results.length === 0) return null;
+  // Try to find a result whose alt_description contains any keyword
+  const lowerKeywords = keywords.map(k => k.toLowerCase());
+  const best = results.find(img =>
+    img.alt_description && lowerKeywords.some(k => img.alt_description.toLowerCase().includes(k))
+  );
+  return best || results[0]; // fallback to first if none match
+}
+
 export async function searchDestinationImage(destination: string): Promise<UnsplashImage | null> {
   try {
     if (!import.meta.env.VITE_UNSPLASH_ACCESS_KEY) {
@@ -25,15 +35,24 @@ export async function searchDestinationImage(destination: string): Promise<Unspl
       return null;
     }
 
-    const result = await unsplash.search.getPhotos({
-      query: `${destination} luxury travel`,
-      page: 1,
-      perPage: 1,
-      orientation: 'landscape',
-    });
-
-    if (result.response?.results && result.response.results.length > 0) {
-      return result.response.results[0];
+    const queries = [
+      `${destination} luxury travel`,
+      `${destination} travel`,
+      `${destination} scenery`,
+      `${destination}`
+    ];
+    for (const query of queries) {
+      const result = await unsplash.search.getPhotos({
+        query,
+        page: 1,
+        perPage: 5,
+        orientation: 'landscape',
+        orderBy: 'relevant',
+      });
+      if (result.response?.results && result.response.results.length > 0) {
+        const best = pickBestMatch(result.response.results, [destination, 'luxury', 'travel']);
+        if (best) return best;
+      }
     }
     return null;
   } catch (error) {
@@ -49,15 +68,25 @@ export async function searchActivityImage(activity: string, destination: string)
       return null;
     }
 
-    const result = await unsplash.search.getPhotos({
-      query: `${activity} ${destination}`,
-      page: 1,
-      perPage: 1,
-      orientation: 'landscape',
-    });
-
-    if (result.response?.results && result.response.results.length > 0) {
-      return result.response.results[0];
+    const queries = [
+      `${activity} ${destination}`,
+      `${activity} in ${destination}`,
+      `${destination} ${activity}`,
+      `${activity}`,
+      `${destination}`
+    ];
+    for (const query of queries) {
+      const result = await unsplash.search.getPhotos({
+        query,
+        page: 1,
+        perPage: 5,
+        orientation: 'landscape',
+        orderBy: 'relevant',
+      });
+      if (result.response?.results && result.response.results.length > 0) {
+        const best = pickBestMatch(result.response.results, [activity, destination]);
+        if (best) return best;
+      }
     }
     return null;
   } catch (error) {

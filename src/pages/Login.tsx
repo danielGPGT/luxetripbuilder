@@ -93,7 +93,7 @@ export default function Login() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent" />
         </div>
         {/* Top content */}
-        <div className="relative flex flex-col space-y-6 z-10 mt-8">
+        <div className="relative flex flex-col space-y-6 z-10 mt-20">
           <h2 className="text-4xl font-bold leading-tight">
             Tailor-made Luxury Travel
           </h2>

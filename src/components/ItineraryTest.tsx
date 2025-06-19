@@ -4,6 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { gemini } from '@/lib/gemini';
 import type { GeneratedItinerary, TripPreferences } from '@/lib/gemini';
 
+// Helper function to format date with day of the week
+const formatDateWithDay = (dateString: string) => {
+  const date = new Date(dateString);
+  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const formattedDate = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+  return `${dayOfWeek}, ${formattedDate}`;
+};
+
 const samplePreferences: TripPreferences = {
   clientName: 'John Smith',
   destination: 'Paris, France',
@@ -16,7 +28,7 @@ const samplePreferences: TripPreferences = {
     currency: 'USD',
   },
   preferences: {
-    luxuryLevel: 'luxury',
+    tone: 'luxury',
     pace: 'moderate',
     interests: ['fine dining', 'art', 'shopping'],
     accommodationType: ['luxury hotel'],
@@ -68,7 +80,7 @@ export function ItineraryTest() {
                 <h4 className="font-medium">Daily Schedule:</h4>
                 {itinerary.days.map((day, index) => (
                   <div key={index} className="mt-2 p-2 bg-gray-50 rounded">
-                    <p className="font-medium">Day {index + 1} - {day.date}</p>
+                    <p className="font-medium">Day {index + 1} - {formatDateWithDay(day.date)}</p>
                     {day.activities.map((activity, actIndex) => (
                       <div key={actIndex} className="ml-4 mt-1">
                         <p><strong>{activity.time}</strong> - {activity.description}</p>

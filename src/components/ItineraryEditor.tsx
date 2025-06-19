@@ -10,9 +10,11 @@ interface ItineraryEditorProps {
   onChange: (days: ItineraryDay[]) => void;
   onRegenerateDay: (index: number) => void;
   destination?: string;
+  includeInventory?: boolean;
+  inventoryTypes?: string[];
 }
 
-function SortableItineraryCard({ day, index, onChange, onRegenerate, id, destination }: any) {
+function SortableItineraryCard({ day, index, onChange, onRegenerate, id, destination, includeInventory, inventoryTypes }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -27,12 +29,14 @@ function SortableItineraryCard({ day, index, onChange, onRegenerate, id, destina
         index={index}
         dragHandleProps={listeners}
         destination={destination}
+        includeInventory={includeInventory}
+        inventoryTypes={inventoryTypes}
       />
     </div>
   );
 }
 
-export function ItineraryEditor({ days, onChange, onRegenerateDay, destination }: ItineraryEditorProps) {
+export function ItineraryEditor({ days, onChange, onRegenerateDay, destination, includeInventory, inventoryTypes }: ItineraryEditorProps) {
   const [items, setItems] = useState(days.map((_, i) => i.toString()));
 
   // Keep items in sync with days
@@ -68,6 +72,8 @@ export function ItineraryEditor({ days, onChange, onRegenerateDay, destination }
             onChange={handleDayChange}
             onRegenerate={onRegenerateDay}
             destination={destination}
+            includeInventory={includeInventory}
+            inventoryTypes={inventoryTypes}
           />
         ))}
       </SortableContext>

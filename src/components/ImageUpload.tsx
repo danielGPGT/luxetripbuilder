@@ -1,7 +1,22 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { searchDestinationImage, searchActivityImage, type UnsplashImage } from '@/lib/unsplash';
+import { ImageUploadService } from '@/lib/imageUpload';
+import { useAuth } from '@/lib/AuthProvider';
+import { toast } from 'sonner';
+
+// Helper function to detect blob URLs
+const isBlobUrl = (url: string): boolean => {
+  return url.startsWith('blob:');
+};
+
+// Helper function to check if an image URL is valid
+const isValidImageUrl = (url: string): boolean => {
+  if (!url) return false;
+  if (isBlobUrl(url)) return false; // Blob URLs are temporary and likely invalid
+  return true;
+};
 
 interface ImageUploadProps {
   currentImage?: string;
@@ -9,6 +24,70 @@ interface ImageUploadProps {
   destination?: string;
   activity?: string;
   className?: string;
+}
+
+// Reusable image component with error handling
+interface SafeImageProps {
+  src?: string;
+  alt: string;
+  className?: string;
+  fallback?: React.ReactNode;
+}
+
+export function SafeImage({ src, alt, className, fallback }: SafeImageProps) {
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Reset states when src changes
+  useEffect(() => {
+    console.log('🖼️ SafeImage: src changed to:', src);
+    setHasError(false);
+    setIsLoading(true);
+  }, [src]);
+
+  if (!src) {
+    console.log('🖼️ SafeImage: no src provided');
+    return fallback ? <>{fallback}</> : (
+      <div className="flex flex-col items-center justify-center w-full h-full text-gray-300">
+        <ImageIcon className="h-10 w-10 mb-2" />
+        <span className="text-xs">No Image</span>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    console.log('🖼️ SafeImage: image failed to load');
+    return fallback ? <>{fallback}</> : (
+      <div className="flex flex-col items-center justify-center w-full h-full text-gray-300">
+        <ImageIcon className="h-10 w-10 mb-2" />
+        <span className="text-xs">Image Unavailable</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        </div>
+      )}
+      <img 
+        src={src} 
+        alt={alt} 
+        className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+        onLoad={() => {
+          console.log('🖼️ SafeImage: image loaded successfully');
+          setIsLoading(false);
+        }}
+        onError={() => {
+          console.log('🖼️ SafeImage: image failed to load, URL:', src);
+          setHasError(true);
+          setIsLoading(false);
+        }}
+      />
+    </div>
+  );
 }
 
 export function ImageUpload({ 
@@ -21,18 +100,40 @@ export function ImageUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingStock, setIsLoadingStock] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
+    if (!user) {
+      toast.error('Please log in to upload images');
+      return;
+    }
 
-    // For demo purposes, we'll create a local URL
-    // In production, you'd upload to a service like Cloudinary, AWS S3, etc.
     setIsUploading(true);
     try {
-      const imageUrl = URL.createObjectURL(file);
-      onImageChange(imageUrl);
+      console.log('🖼️ Starting image upload for file:', file.name, 'Size:', file.size);
+      
+      // Upload to Supabase Storage
+      const uploadedImage = await ImageUploadService.uploadImage(file, user.id);
+      
+      console.log('✅ Image uploaded successfully:', uploadedImage.url);
+      
+      // Update the image URL with the permanent URL
+      onImageChange(uploadedImage.url);
+      
+      // Small delay to ensure the image URL is properly set
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      toast.success('Image uploaded successfully!');
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('❌ Error uploading image:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
+      toast.error(errorMessage);
+      
+      // If it's a bucket not found error, show setup instructions
+      if (errorMessage.includes('bucket not found')) {
+        toast.error('Please set up the storage bucket first. Check IMAGE_UPLOAD_SETUP.md for instructions.');
+      }
     } finally {
       setIsUploading(false);
     }
@@ -59,9 +160,11 @@ export function ImageUpload({
       const image = await searchActivityImage(searchQuery, destination);
       if (image) {
         onImageChange(image.urls.regular);
+        toast.success('Stock image loaded!');
       }
     } catch (error) {
       console.error('Error loading stock image:', error);
+      toast.error('Failed to load stock image');
     } finally {
       setIsLoadingStock(false);
     }
@@ -69,16 +172,23 @@ export function ImageUpload({
 
   const removeImage = () => {
     onImageChange('');
+    toast.success('Image removed');
   };
 
   return (
     <div className={`space-y-4 ${className}`}>
       {currentImage ? (
         <div className="relative group">
-          <img
+          <SafeImage
             src={currentImage}
             alt="Itinerary"
             className="w-full h-48 object-cover rounded-lg shadow-md"
+            fallback={
+              <div className="w-full h-48 bg-gray-100 rounded-lg shadow-md flex flex-col items-center justify-center">
+                <ImageIcon className="h-10 w-10 text-gray-400 mb-2" />
+                <span className="text-xs text-gray-500">Image Unavailable</span>
+              </div>
+            }
           />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
             <Button
@@ -104,7 +214,7 @@ export function ImageUpload({
             Drag and drop an image here, or click to select
           </p>
           <p className="text-sm text-gray-500">
-            Supports JPG, PNG, GIF up to 10MB
+            Supports JPG, PNG, WebP, GIF up to 10MB
           </p>
         </div>
       )}
@@ -117,8 +227,17 @@ export function ImageUpload({
           disabled={isUploading}
           className="flex-1"
         >
-          <Upload className="h-4 w-4 mr-2" />
-          {isUploading ? 'Uploading...' : 'Upload Image'}
+          {isUploading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Image
+            </>
+          )}
         </Button>
         
         {destination && (
@@ -129,8 +248,17 @@ export function ImageUpload({
             disabled={isLoadingStock}
             className="flex-1"
           >
-            <ImageIcon className="h-4 w-4 mr-2" />
-            {isLoadingStock ? 'Loading...' : 'Stock Photo'}
+            {isLoadingStock ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Stock Photo
+              </>
+            )}
           </Button>
         )}
       </div>

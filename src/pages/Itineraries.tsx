@@ -230,13 +230,24 @@ export function Itineraries() {
               {/* Hero Image */}
               <div className="relative h-56 w-full bg-gray-100 flex items-center justify-center">
                 {selectedItinerary.days?.[0]?.imageUrl ? (
-                  <img src={selectedItinerary.days[0].imageUrl} alt="Itinerary" className="object-cover w-full h-full" />
-                ) : (
-                  <div className="flex flex-col items-center justify-center w-full h-full text-gray-300">
-                    <MapPin className="h-10 w-10 mb-2" />
-                    <span className="text-xs">No Image</span>
-                  </div>
-                )}
+                  <img 
+                    src={selectedItinerary.days[0].imageUrl} 
+                    alt="Itinerary" 
+                    className="object-cover w-full h-full"
+                    onError={(e) => {
+                      // Hide the broken image and show fallback
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) {
+                        fallback.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                <div className="flex flex-col items-center justify-center w-full h-full text-gray-300" style={{ display: selectedItinerary.days?.[0]?.imageUrl ? 'none' : 'flex' }}>
+                  <MapPin className="h-10 w-10 mb-2" />
+                  <span className="text-xs">No Image</span>
+                </div>
                 <div className="absolute top-4 left-4">
                 <Badge className="bg-gradient-to-r from-[var(--primary)] to-[var(--primary)]/80 text-white border-0 text-xs font-medium px-2 py-1 shadow-md">
                         {((selectedItinerary.preferences as any)?.style?.tone || 'LUXURY').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -327,13 +338,24 @@ export function Itineraries() {
                   {/* Hero Image */}
                   <div className="relative h-40 w-full rounded-t-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
                     {heroImage ? (
-                      <img src={heroImage} alt="Itinerary" className="object-cover w-full h-full" />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center w-full h-full text-gray-300">
-                        <MapPin className="h-10 w-10 mb-2" />
-                        <span className="text-xs">No Image</span>
-                      </div>
-                    )}
+                      <img 
+                        src={heroImage} 
+                        alt="Itinerary" 
+                        className="object-cover w-full h-full"
+                        onError={(e) => {
+                          // Hide the broken image and show fallback
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) {
+                            fallback.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    <div className="flex flex-col items-center justify-center w-full h-full text-gray-300" style={{ display: heroImage ? 'none' : 'flex' }}>
+                      <MapPin className="h-10 w-10 mb-2" />
+                      <span className="text-xs">No Image</span>
+                    </div>
                     {/* Gradient overlay for readability */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                     {/* LUXURY badge */}

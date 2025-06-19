@@ -175,7 +175,19 @@ class GeminiService {
 
   async generateItinerary(preferences: TripPreferences): Promise<GeneratedItinerary> {
     try {
+      // Debug logging for event data
+      console.log('🎫 Gemini Service - Event Data Debug:', {
+        hasSpecialRequests: !!preferences.specialRequests,
+        specialRequests: preferences.specialRequests,
+        destination: preferences.destination,
+        startDate: preferences.startDate,
+        endDate: preferences.endDate
+      });
+
       const prompt = this.buildPrompt(preferences);
+      console.log('📝 Generated prompt length:', prompt.length);
+      console.log('📝 Prompt includes event instructions:', prompt.includes('CRITICAL EVENT INFORMATION'));
+      
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
@@ -209,6 +221,65 @@ class GeminiService {
     const budgetPerDay = preferences.budget.max / duration;
     const budgetPerPerson = preferences.budget.max / preferences.numberOfTravelers;
 
+    console.log('🔍 buildPrompt - specialRequests content:', preferences.specialRequests);
+
+    // Check if this is an event-focused trip
+    const hasEventRequest = preferences.specialRequests?.toLowerCase().includes('include') && 
+                           preferences.specialRequests?.toLowerCase().includes('as the main focus');
+    
+    // Alternative detection - check for any event-related content
+    const hasEventContent = preferences.specialRequests?.toLowerCase().includes('event') ||
+                           preferences.specialRequests?.toLowerCase().includes('ticket') ||
+                           preferences.specialRequests?.toLowerCase().includes('grand prix') ||
+                           preferences.specialRequests?.toLowerCase().includes('f1');
+    
+    const isEventTrip = hasEventRequest || hasEventContent;
+    
+    console.log('🔍 Event detection debug:', {
+      specialRequests: preferences.specialRequests,
+      hasEventRequest,
+      hasEventContent,
+      isEventTrip,
+      specialRequestsLower: preferences.specialRequests?.toLowerCase()
+    });
+    
+    let eventInstructions = '';
+    if (isEventTrip) {
+      eventInstructions = `
+
+CRITICAL EVENT INFORMATION - THIS IS THE CENTERPIECE OF THE TRIP:
+${preferences.specialRequests}
+
+STRICT ITINERARY REQUIREMENTS FOR EVENT:
+1. Event Integration:
+   - The specified event is the MAIN FOCUS of the trip
+   - ALL event sessions must be included in the itinerary
+   - Each session should be clearly marked in activities
+   - Do not schedule other major activities during event times
+
+2. Transportation & Logistics:
+   - Include detailed transport to/from each session
+   - Factor in traffic and security check times
+   - Suggest optimal departure times from hotel
+   - Include parking/drop-off information if available
+
+3. Complementary Activities:
+   - Plan activities that enhance the event experience
+   - Include relevant fan zones or event villages
+   - Suggest nearby attractions for non-event times
+   - Include post-session dining or entertainment aligned with event timing
+
+4. Accommodation:
+   - Suggest hotels close to the event venue
+   - Consider traffic patterns during event days
+   - Include luxury properties with event shuttle services if available
+
+5. Special Considerations:
+   - Note best times to arrive for optimal experience
+   - Include backup plans for weather delays
+   - List essential items to bring for the event`;
+    }
+
     return `You are a luxury travel itinerary planning assistant specializing in creating detailed, premium travel experiences. Generate a comprehensive luxury travel itinerary with detailed pricing breakdowns and recommendations.
 
 IMPORTANT:
@@ -234,7 +305,7 @@ PREFERENCES:
 - Interests: ${preferences.preferences.interests.join(', ')}
 - Accommodation Types: ${preferences.preferences.accommodationType.join(', ')}
 - Dining Preferences: ${preferences.preferences.diningPreferences.join(', ')}
-${preferences.specialRequests ? `- Special Requests: ${preferences.specialRequests}` : ''}
+${preferences.specialRequests ? `- Special Requests: ${preferences.specialRequests}` : ''}${eventInstructions}
 
 INSTRUCTIONS:
 1. Create a detailed daily itinerary with specific times, locations, and activities
@@ -246,7 +317,10 @@ INSTRUCTIONS:
 7. Consider the tone and interests when selecting activities
 8. Ensure the total cost stays within budget
 9. Include insider tips and luxury touches
-10. Add special experiences that match the traveler's preferences
+10. Add special experiences that match the traveler's preferences${isEventTrip ? `
+11. Make the specified event the absolute centerpiece of the itinerary
+12. Schedule all activities around the event timing
+13. Include event-specific logistics and recommendations` : ''}
 
 Respond with ONLY a JSON object in this exact format, with no additional text or formatting:
 {

@@ -5,7 +5,7 @@ import { tripIntakeSchema, TripIntake } from '@/types/trip';
 
 export function useMultiStepForm() {
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 5;
+  const totalSteps = 6;
 
   const form = useForm<TripIntake>({
     resolver: zodResolver(tripIntakeSchema),
@@ -42,6 +42,10 @@ export function useMultiStepForm() {
         experienceType: 'exclusive',
         travelClass: 'business',
       },
+      eventRequests: '',
+      eventTypes: [],
+      includeInventory: false,
+      inventoryTypes: [],
     },
     mode: 'onChange',
   });
@@ -73,6 +77,8 @@ export function useMultiStepForm() {
         return ['experience'];
       case 5:
         return ['budget'];
+      case 6:
+        return ['eventRequests', 'eventTypes'];
       default:
         return [];
     }
@@ -86,5 +92,6 @@ export function useMultiStepForm() {
     prevStep,
     isFirstStep: currentStep === 1,
     isLastStep: currentStep === totalSteps,
+    stepIndex: currentStep - 1,
   };
 } 

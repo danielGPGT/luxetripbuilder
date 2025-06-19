@@ -28,7 +28,7 @@ export function Header() {
           <WandSparkles className="h-6 w-6 text-[var(--primary)]" />
         </Link>
         {/* Center nav links using NavigationMenu */}
-        <div className="justify-self-center w-full flex justify-center">
+        <div className="absolute left-1/2 transform -translate-x-1/2">
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>

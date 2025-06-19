@@ -7,6 +7,18 @@ import type { SavedItinerary } from '@/lib/itineraryService';
 import { useTier } from '@/hooks/useTier';
 import { toast } from 'sonner';
 
+// Helper function to format date with day of the week
+const formatDateWithDay = (dateString: string) => {
+  const date = new Date(dateString);
+  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const formattedDate = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+  return `${dayOfWeek}, ${formattedDate}`;
+};
+
 interface PDFExportButtonProps {
   itinerary: SavedItinerary;
   className?: string;
@@ -14,7 +26,7 @@ interface PDFExportButtonProps {
 
 export function PDFExportButton({ itinerary, className }: PDFExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
-  const { canDownloadPDF, incrementUsage, getLimitReachedMessage } = useTier();
+  const { canDownloadPDF, getLimitReachedMessage, incrementUsage } = useTier();
 
   const exportToPDF = async () => {
     // Check if user can download PDFs
@@ -93,7 +105,7 @@ export function PDFExportButton({ itinerary, className }: PDFExportButtonProps) 
               </div>
               <div style="background-color: #fef3c7; padding: 12px; border-radius: 6px; border-left: 3px solid #f59e0b;">
                 <h3 style="margin: 0 0 6px 0; color: #f59e0b; font-size: 11px; font-weight: bold; text-transform: uppercase;">CREATED</h3>
-                <p style="margin: 0; font-size: 13px; font-weight: bold; color: #333;">${new Date(itinerary.date_created).toLocaleDateString()}</p>
+                <p style="margin: 0; font-size: 13px; font-weight: bold; color: #333;">${formatDateWithDay(itinerary.date_created)}</p>
               </div>
             </div>
           </div>
@@ -110,7 +122,7 @@ export function PDFExportButton({ itinerary, className }: PDFExportButtonProps) 
             ${itinerary.days?.map((day, index) => `
               <div style="margin-bottom: 20px; background-color: white; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
                 <div style="background-color: #f59e0b; color: white; padding: 12px 15px;">
-                  <h3 style="margin: 0; font-size: 14px; font-weight: bold;">Day ${index + 1} - ${day.date}</h3>
+                  <h3 style="margin: 0; font-size: 14px; font-weight: bold;">Day ${index + 1} - ${formatDateWithDay(day.date)}</h3>
                 </div>
                 <div style="padding: 15px;">
                   ${day.activities?.map((activity, actIndex) => `
@@ -203,6 +215,7 @@ export function PDFExportButton({ itinerary, className }: PDFExportButtonProps) 
       onClick={exportToPDF}
       disabled={isExporting || !canDownloadPDF()}
       variant="outline"
+      size="sm"
       className={className}
     >
       {isExporting ? (
@@ -212,7 +225,7 @@ export function PDFExportButton({ itinerary, className }: PDFExportButtonProps) 
         </>
       ) : (
         <>
-          <Download className="h-4 w-4 mr-2" />
+          <Download className="h-4 w-4 mr-1" />
           Export PDF
         </>
       )}

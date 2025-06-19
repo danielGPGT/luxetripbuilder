@@ -8,10 +8,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useIntakeStore } from "@/store/intake";
+import { Step6Events } from './steps/Step6Events';
 
 const interestsList = ["food", "romance", "adventure", "wellness", "culture"];
 const toneList = ["luxury", "romantic", "playful", "family"];
 const travelTypeList = ["solo", "couple", "group"];
+const inventoryTypesList = [
+  { label: 'Hotels', value: 'hotels' },
+  { label: 'Flights', value: 'flights' },
+  { label: 'Events', value: 'events' },
+];
 
 const intakeSchema = z.object({
   destination: z.string().min(2, "Destination is required"),
@@ -24,12 +30,18 @@ const intakeSchema = z.object({
     amount: z.number().min(1, "Budget required"),
     currency: z.enum(["GBP", "USD"]),
   }),
+  selectedEvent: z.any().optional(),
+  selectedTicket: z.any().optional(),
+  eventRequests: z.string().optional(),
+  eventTypes: z.array(z.string()).optional(),
 });
 
 type IntakeFormValues = z.infer<typeof intakeSchema>;
 
-export function IntakeForm({ onSubmit }: { onSubmit: (data: IntakeFormValues) => void }) {
+export function IntakeForm({ onSubmit }: { onSubmit: (data: IntakeFormValues & { includeInventory?: boolean; inventoryTypes?: string[] }) => void }) {
   const [step, setStep] = useState(0);
+  const [includeInventory, setIncludeInventory] = useState(false);
+  const [inventoryTypes, setInventoryTypes] = useState<string[]>([]);
   const { setIntakeData } = useIntakeStore();
   const form = useForm<IntakeFormValues>({
     resolver: zodResolver(intakeSchema),
@@ -54,6 +66,8 @@ export function IntakeForm({ onSubmit }: { onSubmit: (data: IntakeFormValues) =>
       fieldsToValidate.push('interests');
     } else if (step === 2) {
       fieldsToValidate.push('tone', 'travelType');
+    } else if (step === 3) {
+      fieldsToValidate.push('budget');
     }
 
     // Validate only the fields for the current step
@@ -65,8 +79,8 @@ export function IntakeForm({ onSubmit }: { onSubmit: (data: IntakeFormValues) =>
   const handlePrev = () => setStep((s) => s - 1);
 
   const handleFinalSubmit = form.handleSubmit((data) => {
-    setIntakeData(data);
-    onSubmit(data);
+    setIntakeData({ ...data, includeInventory, inventoryTypes });
+    onSubmit({ ...data, includeInventory, inventoryTypes });
   });
 
   return (
@@ -210,7 +224,16 @@ export function IntakeForm({ onSubmit }: { onSubmit: (data: IntakeFormValues) =>
             </div>
           </div>
           <Button type="button" onClick={handlePrev}>Back</Button>
-          <Button type="submit" className="ml-2">Submit</Button>
+          <Button type="button" onClick={() => setStep(4)} className="ml-2">Next</Button>
+        </div>
+      )}
+      {step === 4 && (
+        <div className="space-y-4">
+          <Step6Events />
+          <div className="flex justify-between pt-6">
+            <Button type="button" variant="outline" onClick={handlePrev}>Back</Button>
+            <Button type="submit">Generate Itinerary</Button>
+          </div>
         </div>
       )}
     </form>
