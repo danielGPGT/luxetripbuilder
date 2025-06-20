@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Footer } from '@/components/layout/Footer';
 import { 
   Sparkles, 
   Globe, 
@@ -373,6 +374,9 @@ export function Features() {
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 } 

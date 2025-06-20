@@ -1,52 +1,91 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Star, Zap, Crown, Users, Globe, Shield, Clock, MessageCircle } from 'lucide-react';
+import { Check, X, Star, Zap, Crown, Users, Globe, Shield, Clock, MessageCircle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthProvider';
+import { useStripeSubscription } from '@/hooks/useStripeSubscription';
+import { toast } from 'sonner';
 import img3 from "@/assets/imgs/spencer-davis-Ivwyqtw3PzU-unsplash.jpg";
+import { Footer } from '@/components/layout/Footer';
 
 export function Pricing() {
   const { user } = useAuth();
+  const {
+    subscription,
+    loading,
+    processing,
+    pricing,
+    pricingLoading,
+    createSubscription,
+    getCurrentPlan,
+    getPlanPrice,
+    getPlanFeatures,
+    isSubscriptionActive,
+  } = useStripeSubscription();
 
   const plans = [
     {
       name: "Starter",
-      price: "$29",
+      planType: "starter" as const,
+      price: pricingLoading ? "Loading..." : getPlanPrice('starter'),
       period: "/month",
       description: "Perfect for individual travel agents",
       popular: false,
-      features: [
+      features: pricingLoading ? [
         "5 itineraries per month",
+        "10 PDF downloads per month",
         "Basic AI recommendations",
-        "PDF export",
-        "Email support",
         "Standard templates",
-        "Basic analytics"
+        "Basic analytics (30 days)",
+        "Email support"
+      ] : getPlanFeatures('starter').length > 0 ? getPlanFeatures('starter') : [
+        "5 itineraries per month",
+        "10 PDF downloads per month",
+        "Basic AI recommendations",
+        "Standard templates",
+        "Basic analytics (30 days)",
+        "Email support"
       ],
       limitations: [
+        "No Media Library access",
         "No custom branding",
         "No API access",
-        "No priority support"
+        "No priority support",
+        "No team collaboration"
       ],
       icon: <Users className="h-8 w-8" />,
       color: "from-blue-500 to-cyan-500"
     },
     {
       name: "Professional",
-      price: "$79",
+      planType: "professional" as const,
+      price: pricingLoading ? "Loading..." : getPlanPrice('professional'),
       period: "/month",
       description: "Ideal for growing travel agencies",
       popular: true,
-      features: [
+      features: pricingLoading ? [
         "Unlimited itineraries",
+        "Unlimited PDF downloads",
+        "Full Media Library access",
         "Advanced AI features",
+        "Custom branding & white-label",
+        "Analytics dashboard (1 year)",
+        "API access (1000 calls/month)",
         "Priority support",
-        "Custom branding",
-        "Analytics dashboard",
-        "API access",
-        "White-label PDFs",
-        "Team collaboration"
+        "Team collaboration (up to 5 users)",
+        "Bulk operations"
+      ] : getPlanFeatures('professional').length > 0 ? getPlanFeatures('professional') : [
+        "Unlimited itineraries",
+        "Unlimited PDF downloads",
+        "Full Media Library access",
+        "Advanced AI features",
+        "Custom branding & white-label",
+        "Analytics dashboard (1 year)",
+        "API access (1000 calls/month)",
+        "Priority support",
+        "Team collaboration (up to 5 users)",
+        "Bulk operations"
       ],
       limitations: [],
       icon: <Crown className="h-8 w-8" />,
@@ -54,19 +93,33 @@ export function Pricing() {
     },
     {
       name: "Enterprise",
-      price: "Custom",
+      planType: "enterprise" as const,
+      price: pricingLoading ? "Loading..." : getPlanPrice('enterprise'),
       period: "",
       description: "For large travel organizations",
       popular: false,
-      features: [
+      features: pricingLoading ? [
         "Everything in Professional",
+        "Unlimited API calls",
         "White-label solution",
         "Dedicated account manager",
         "Custom integrations",
         "Training & onboarding",
         "SLA guarantee",
         "Advanced security",
-        "Custom AI training"
+        "Custom AI training",
+        "Unlimited team members"
+      ] : getPlanFeatures('enterprise').length > 0 ? getPlanFeatures('enterprise') : [
+        "Everything in Professional",
+        "Unlimited API calls",
+        "White-label solution",
+        "Dedicated account manager",
+        "Custom integrations",
+        "Training & onboarding",
+        "SLA guarantee",
+        "Advanced security",
+        "Custom AI training",
+        "Unlimited team members"
       ],
       limitations: [],
       icon: <Globe className="h-8 w-8" />,
@@ -134,6 +187,81 @@ export function Pricing() {
     }
   ];
 
+  const handleSubscribe = async (planType: 'starter' | 'professional' | 'enterprise') => {
+    if (!user?.email) {
+      toast.error('Please log in to subscribe');
+      return;
+    }
+
+    if (planType === 'enterprise') {
+      // For enterprise, redirect to contact form or open email
+      window.location.href = 'mailto:sales@luxetripbuilder.com?subject=Enterprise Plan Inquiry';
+      return;
+    }
+
+    const result = await createSubscription(
+      planType,
+      user.email,
+      user.user_metadata?.name
+    );
+
+    if (!result.success) {
+      toast.error(result.error || 'Failed to create subscription');
+    }
+  };
+
+  const getCurrentPlanName = () => {
+    if (!subscription) return null;
+    return plans.find(plan => plan.planType === subscription.plan_type)?.name;
+  };
+
+  const isCurrentPlan = (planType: string) => {
+    return subscription?.plan_type === planType;
+  };
+
+  const getButtonText = (plan: typeof plans[0]) => {
+    if (plan.planType === 'enterprise') {
+      return 'Contact Sales';
+    }
+
+    if (!user) {
+      return 'Start Free Trial';
+    }
+
+    if (!isSubscriptionActive()) {
+      return 'Subscribe Now';
+    }
+
+    if (isCurrentPlan(plan.planType)) {
+      return 'Current Plan';
+    }
+
+    const currentPlanIndex = plans.findIndex(p => p.planType === getCurrentPlan());
+    const thisPlanIndex = plans.findIndex(p => p.planType === plan.planType);
+    
+    if (thisPlanIndex > currentPlanIndex) {
+      return 'Upgrade';
+    } else {
+      return 'Downgrade';
+    }
+  };
+
+  const getButtonVariant = (plan: typeof plans[0]) => {
+    if (plan.planType === 'enterprise') {
+      return 'outline' as const;
+    }
+
+    if (isCurrentPlan(plan.planType)) {
+      return 'secondary' as const;
+    }
+
+    return plan.popular ? 'default' as const : 'outline' as const;
+  };
+
+  const isButtonDisabled = (plan: typeof plans[0]) => {
+    return processing || (isCurrentPlan(plan.planType) && isSubscriptionActive());
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -165,6 +293,14 @@ export function Pricing() {
             Start free and scale as you grow. No hidden fees, no surprises. 
             Cancel anytime with full access until the end of your billing period.
           </p>
+
+          {user && isSubscriptionActive() && (
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 inline-block">
+              <p className="text-white/90">
+                Current Plan: <span className="font-semibold">{getCurrentPlanName()}</span>
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -177,6 +313,12 @@ export function Pricing() {
                 {plan.popular && (
                   <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[var(--primary)]">
                     Most Popular
+                  </Badge>
+                )}
+
+                {isCurrentPlan(plan.planType) && isSubscriptionActive() && (
+                  <Badge className="absolute -top-3 right-4 bg-green-500">
+                    Current Plan
                   </Badge>
                 )}
                 
@@ -196,7 +338,7 @@ export function Pricing() {
                   <div className="space-y-3">
                     <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">What's included:</h4>
                     <ul className="space-y-3">
-                      {plan.features.map((feature, featureIndex) => (
+                      {plan.features.map((feature: string, featureIndex: number) => (
                         <li key={featureIndex} className="flex items-center gap-3">
                           <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                           <span className="text-sm">{feature}</span>
@@ -209,7 +351,7 @@ export function Pricing() {
                     <div className="space-y-3">
                       <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Not included:</h4>
                       <ul className="space-y-3">
-                        {plan.limitations.map((limitation, limitationIndex) => (
+                        {plan.limitations.map((limitation: string, limitationIndex: number) => (
                           <li key={limitationIndex} className="flex items-center gap-3">
                             <X className="h-5 w-5 text-red-500 flex-shrink-0" />
                             <span className="text-sm text-muted-foreground">{limitation}</span>
@@ -220,14 +362,28 @@ export function Pricing() {
                   )}
                   
                   <div className="pt-4">
-                    {plan.name === "Enterprise" ? (
-                      <Button className="w-full" variant="outline">
-                        Contact Sales
+                    {plan.planType === "enterprise" ? (
+                      <Button 
+                        className="w-full" 
+                        variant="outline"
+                        onClick={() => handleSubscribe(plan.planType)}
+                        disabled={processing}
+                      >
+                        {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Contact Sales'}
+                      </Button>
+                    ) : user ? (
+                      <Button 
+                        className="w-full" 
+                        variant={getButtonVariant(plan)}
+                        onClick={() => handleSubscribe(plan.planType)}
+                        disabled={isButtonDisabled(plan)}
+                      >
+                        {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : getButtonText(plan)}
                       </Button>
                     ) : (
-                      <Link to={user ? "/dashboard" : "/login"}>
+                      <Link to="/login">
                         <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
-                          {user ? "Get Started" : "Start Free Trial"}
+                          Start Free Trial
                         </Button>
                       </Link>
                     )}
@@ -319,6 +475,9 @@ export function Pricing() {
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 } 

@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Loader2, Library, Crown } from 'lucide-react';
 import { searchDestinationImage, searchActivityImage, type UnsplashImage } from '@/lib/unsplash';
 import { ImageUploadService } from '@/lib/imageUpload';
 import { useAuth } from '@/lib/AuthProvider';
 import { toast } from 'sonner';
+import MediaLibrarySelector from './MediaLibrarySelector';
+import { MediaItem } from '@/lib/mediaLibrary';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { TierManager } from '@/lib/tierManager';
 
 // Helper function to detect blob URLs
 const isBlobUrl = (url: string): boolean => {
@@ -99,8 +103,19 @@ export function ImageUpload({
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingStock, setIsLoadingStock] = useState(false);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [hasMediaLibraryAccess, setHasMediaLibraryAccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.id) {
+      const tierManager = TierManager.getInstance();
+      tierManager.initialize(user.id).then(() => {
+        setHasMediaLibraryAccess(tierManager.hasMediaLibraryAccess());
+      });
+    }
+  }, [user?.id]);
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
@@ -175,6 +190,12 @@ export function ImageUpload({
     toast.success('Image removed');
   };
 
+  const handleMediaLibrarySelect = (mediaItem: MediaItem) => {
+    onImageChange(mediaItem.image_url);
+    setShowMediaLibrary(false);
+    toast.success('Image selected from media library');
+  };
+
   return (
     <div className={`space-y-4 ${className}`}>
       {currentImage ? (
@@ -240,6 +261,17 @@ export function ImageUpload({
           )}
         </Button>
         
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowMediaLibrary(true)}
+          className="flex-1 relative"
+        >
+          <Library className="h-4 w-4 mr-2" />
+          Media Library
+          <Crown className={`h-3 w-3 absolute -top-1 -right-1 ${hasMediaLibraryAccess ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+        </Button>
+        
         {destination && (
           <Button
             variant="outline"
@@ -273,6 +305,25 @@ export function ImageUpload({
         }}
         className="hidden"
       />
+
+      {/* Media Library Dialog */}
+      <Dialog open={showMediaLibrary} onOpenChange={setShowMediaLibrary}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-[1400px] h-[900px] overflow-hidden flex flex-col !max-w-none sm:!max-w-none">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Library className="h-5 w-5" />
+              Select from Media Library
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden">
+            <MediaLibrarySelector
+              onSelect={handleMediaLibrarySelect}
+              multiple={false}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

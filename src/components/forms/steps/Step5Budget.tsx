@@ -77,7 +77,7 @@ export function Step5Budget() {
               />
             </div>
             {form.formState.errors.budget?.amount && (
-              <p className="text-sm text-red-500 mt-2 font-medium">{form.formState.errors.budget.amount.message}</p>
+              <p className="text-sm text-destructive mt-2 font-medium">{form.formState.errors.budget.amount.message}</p>
             )}
           </div>
           <div>
@@ -104,7 +104,7 @@ export function Step5Budget() {
               )}
             />
             {form.formState.errors.budget?.currency && (
-              <p className="text-sm text-red-500 mt-2 font-medium">{form.formState.errors.budget.currency.message}</p>
+              <p className="text-sm text-destructive mt-2 font-medium">{form.formState.errors.budget.currency.message}</p>
             )}
           </div>
         </div>
@@ -125,7 +125,7 @@ export function Step5Budget() {
                 key={value}
                 className={cn(
                   'flex items-center gap-4 p-6 rounded-lg border-2 transition-all duration-300',
-                  'bg-white/80 backdrop-blur-sm hover:bg-white/90 hover:shadow-lg',
+                  'bg-card backdrop-blur-sm hover:bg-primary/10 hover:shadow-lg',
                   isSelected 
                     ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-lg' 
                     : 'border-[var(--border)] hover:border-[var(--primary)]/30'
@@ -151,7 +151,7 @@ export function Step5Budget() {
           })}
         </RadioGroup>
         {form.formState.errors.budget?.experienceType && (
-          <p className="text-sm text-red-500 mt-4 font-medium">{form.formState.errors.budget.experienceType.message}</p>
+          <p className="text-sm text-destructive mt-4 font-medium">{form.formState.errors.budget.experienceType.message}</p>
         )}
       </div>
 
@@ -170,7 +170,7 @@ export function Step5Budget() {
                 key={value}
                 className={cn(
                   'relative p-6 rounded-lg border-2 transition-all duration-300',
-                  'bg-white/80 backdrop-blur-sm hover:bg-white/90 hover:shadow-lg',
+                  'bg-card backdrop-blur-sm hover:bg-primary/10 hover:shadow-lg',
                   isSelected 
                     ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-lg' 
                     : 'border-[var(--border)] hover:border-[var(--primary)]/30'
@@ -198,7 +198,7 @@ export function Step5Budget() {
           })}
         </RadioGroup>
         {form.formState.errors.budget?.travelClass && (
-          <p className="text-sm text-red-500 mt-4 font-medium">{form.formState.errors.budget.travelClass.message}</p>
+          <p className="text-sm text-destructive mt-4 font-medium">{form.formState.errors.budget.travelClass.message}</p>
         )}
       </div>
     </div>

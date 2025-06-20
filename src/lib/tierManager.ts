@@ -8,11 +8,17 @@ interface PlanLimits {
   itineraries_per_month: number;
   pdf_downloads_per_month: number;
   api_calls_per_month: number;
+  media_library_access: boolean;
+  media_uploads_per_month: number;
   custom_branding: boolean;
   white_label: boolean;
   priority_support: boolean;
   team_collaboration: boolean;
   advanced_ai_features: boolean;
+  analytics_history_days: number;
+  team_members_limit: number;
+  bulk_operations: boolean;
+  export_formats: string[];
 }
 
 interface UsageStats {
@@ -30,32 +36,50 @@ const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   starter: {
     itineraries_per_month: 5,
     pdf_downloads_per_month: 10,
-    api_calls_per_month: 100,
+    api_calls_per_month: 0, // No API access
+    media_library_access: false, // No media library access
+    media_uploads_per_month: 0,
     custom_branding: false,
     white_label: false,
     priority_support: false,
     team_collaboration: false,
     advanced_ai_features: false,
+    analytics_history_days: 30,
+    team_members_limit: 1,
+    bulk_operations: false,
+    export_formats: ['pdf'],
   },
   professional: {
     itineraries_per_month: -1, // unlimited
     pdf_downloads_per_month: -1, // unlimited
     api_calls_per_month: 1000,
+    media_library_access: true, // Full media library access
+    media_uploads_per_month: -1, // unlimited
     custom_branding: true,
     white_label: true,
     priority_support: true,
     team_collaboration: true,
     advanced_ai_features: true,
+    analytics_history_days: 365,
+    team_members_limit: 5,
+    bulk_operations: true,
+    export_formats: ['pdf', 'docx', 'html'],
   },
   enterprise: {
     itineraries_per_month: -1, // unlimited
     pdf_downloads_per_month: -1, // unlimited
     api_calls_per_month: -1, // unlimited
+    media_library_access: true,
+    media_uploads_per_month: -1, // unlimited
     custom_branding: true,
     white_label: true,
     priority_support: true,
     team_collaboration: true,
     advanced_ai_features: true,
+    analytics_history_days: -1, // unlimited
+    team_members_limit: -1, // unlimited
+    bulk_operations: true,
+    export_formats: ['pdf', 'docx', 'html', 'json', 'xml'],
   },
 };
 
@@ -353,6 +377,34 @@ export class TierManager {
 
   hasAdvancedAIFeatures(): boolean {
     return PLAN_LIMITS[this.currentPlan].advanced_ai_features;
+  }
+
+  hasMediaLibraryAccess(): boolean {
+    return PLAN_LIMITS[this.currentPlan].media_library_access;
+  }
+
+  canUploadMedia(): boolean {
+    const limits = PLAN_LIMITS[this.currentPlan];
+    if (!limits.media_library_access) return false;
+    if (limits.media_uploads_per_month === -1) return true;
+    // TODO: Track media uploads in usage_tracking
+    return true;
+  }
+
+  getAnalyticsHistoryDays(): number {
+    return PLAN_LIMITS[this.currentPlan].analytics_history_days;
+  }
+
+  getTeamMembersLimit(): number {
+    return PLAN_LIMITS[this.currentPlan].team_members_limit;
+  }
+
+  hasBulkOperations(): boolean {
+    return PLAN_LIMITS[this.currentPlan].bulk_operations;
+  }
+
+  getExportFormats(): string[] {
+    return PLAN_LIMITS[this.currentPlan].export_formats;
   }
 
   getCurrentPlan(): PlanType {

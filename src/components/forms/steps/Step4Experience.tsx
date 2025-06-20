@@ -63,7 +63,7 @@ export function Step4Experience() {
                 key={value}
                 className={cn(
                   'flex items-center gap-4 p-4 rounded-lg border-2 transition-all duration-300',
-                  'bg-white/80 backdrop-blur-sm hover:bg-white/90 hover:shadow-md',
+                  'bg-card backdrop-blur-sm hover:bg-primary/10 hover:shadow-md',
                   isSelected 
                     ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-md' 
                     : 'border-[var(--border)] hover:border-[var(--primary)]/30'
@@ -89,7 +89,7 @@ export function Step4Experience() {
           })}
         </RadioGroup>
         {form.formState.errors.experience?.pace && (
-          <p className="text-sm text-red-500 mt-4 font-medium">{form.formState.errors.experience.pace.message}</p>
+          <p className="text-sm text-destructive mt-4 font-medium">{form.formState.errors.experience.pace.message}</p>
         )}
       </div>
 
@@ -108,7 +108,7 @@ export function Step4Experience() {
                 key={value}
                 className={cn(
                   'relative p-6 rounded-lg border-2 transition-all duration-300',
-                  'bg-white/80 backdrop-blur-sm hover:bg-white/90 hover:shadow-lg',
+                  'bg-card backdrop-blur-sm hover:bg-primary/10 hover:shadow-lg',
                   isSelected 
                     ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-lg' 
                     : 'border-[var(--border)] hover:border-[var(--primary)]/30'
@@ -138,7 +138,7 @@ export function Step4Experience() {
           })}
         </RadioGroup>
         {form.formState.errors.experience?.accommodation && (
-          <p className="text-sm text-red-500 mt-4 font-medium">{form.formState.errors.experience.accommodation.message}</p>
+          <p className="text-sm text-destructive mt-4 font-medium">{form.formState.errors.experience.accommodation.message}</p>
         )}
       </div>
 
@@ -156,7 +156,7 @@ export function Step4Experience() {
           </p>
         </div>
         {form.formState.errors.experience?.specialRequests && (
-          <p className="text-sm text-red-500 mt-4 font-medium">{form.formState.errors.experience.specialRequests.message}</p>
+          <p className="text-sm text-destructive mt-4 font-medium">{form.formState.errors.experience.specialRequests.message}</p>
         )}
       </div>
     </div>

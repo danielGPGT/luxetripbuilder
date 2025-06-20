@@ -102,8 +102,8 @@ export function ItineraryCard({ day, onChange, onRegenerate, index, dragHandlePr
         />
       </div>
 
-      <p className="mb-2 text-gray-700">{formatDateWithDay(day.date)}</p>
-      <ul className="list-disc list-inside text-gray-600 mb-2">
+      <p className="mb-2 text-muted-foreground">{formatDateWithDay(day.date)}</p>
+      <ul className="list-disc list-inside text-muted-foreground mb-2">
         {localDay.activities.map((activity, idx) => {
           const isEvent = activity.time === 'Event';
           return (
@@ -112,7 +112,7 @@ export function ItineraryCard({ day, onChange, onRegenerate, index, dragHandlePr
               className={
                 isEvent
                   ? 'mb-1 flex flex-col gap-1 rounded-xl p-4 bg-gradient-to-r from-yellow-200 via-yellow-100 to-yellow-50 border-2 border-yellow-400 shadow-lg ring-2 ring-yellow-300 font-bold text-yellow-900 relative'
-                  : 'mb-1 flex flex-col gap-1 bg-white/40 rounded p-2'
+                  : 'mb-1 flex flex-col gap-1 bg-card backdrop-blur-sm rounded p-2'
               }
             >
               {isEvent ? (
@@ -146,7 +146,7 @@ export function ItineraryCard({ day, onChange, onRegenerate, index, dragHandlePr
                       onClick={() => handleActivityFieldClick(idx, 'time', activity.time)}
                       title="Click to edit"
                     >
-                      {activity.time || <span className="text-gray-400 italic">Time</span>}
+                      {activity.time || <span className="text-foreground italic">Time</span>}
                     </span>
                   )}
                   {/* Inline editable description */}
@@ -165,7 +165,7 @@ export function ItineraryCard({ day, onChange, onRegenerate, index, dragHandlePr
                       onClick={() => handleActivityFieldClick(idx, 'description', activity.description)}
                       title="Click to edit"
                     >
-                      {activity.description || <span className="text-gray-400 italic">Description</span>}
+                      {activity.description || <span className="text-foreground italic">Description</span>}
                     </span>
                   )}
                   {/* Inline editable location */}
@@ -180,11 +180,11 @@ export function ItineraryCard({ day, onChange, onRegenerate, index, dragHandlePr
                     />
                   ) : (
                     <span
-                      className="text-xs text-gray-500 cursor-pointer hover:bg-[var(--primary)]/10 rounded px-1 py-0.5"
+                      className="text-xs text-muted-foreground cursor-pointer hover:bg-[var(--primary)]/10 rounded px-1 py-0.5"
                       onClick={() => handleActivityFieldClick(idx, 'location', activity.location)}
                       title="Click to edit"
                     >
-                      {activity.location || <span className="text-gray-300 italic">Location</span>}
+                      {activity.location || <span className="text-foreground italic">Location</span>}
                     </span>
                   )}
                   {/* Inline editable notes */}
@@ -199,11 +199,11 @@ export function ItineraryCard({ day, onChange, onRegenerate, index, dragHandlePr
                     />
                   ) : (
                     <span
-                      className="text-xs text-gray-400 italic cursor-pointer hover:bg-[var(--primary)]/10 rounded px-1 py-0.5"
+                      className="text-xs text-muted-foreground italic cursor-pointer hover:bg-[var(--primary)]/10 rounded px-1 py-0.5"
                       onClick={() => handleActivityFieldClick(idx, 'notes', activity.notes)}
                       title="Click to edit"
                     >
-                      {activity.notes || <span className="text-gray-200 italic">Notes</span>}
+                      {activity.notes || <span className="text-foreground italic">Notes</span>}
                     </span>
                   )}
                   {/* Inline editable estimatedCost */}
@@ -223,7 +223,7 @@ export function ItineraryCard({ day, onChange, onRegenerate, index, dragHandlePr
                       onClick={() => handleActivityFieldClick(idx, 'estimatedCost', activity.estimatedCost)}
                       title="Click to edit"
                     >
-                      {activity.estimatedCost ? activity.estimatedCost : <span className="text-gray-300 italic">Cost</span>}
+                      {activity.estimatedCost ? activity.estimatedCost : <span className="text-foreground italic">Cost</span>}
                     </span>
                   )}
                   {/* Inline editable costType */}
@@ -239,18 +239,18 @@ export function ItineraryCard({ day, onChange, onRegenerate, index, dragHandlePr
                     </select>
                   ) : (
                     <span
-                      className="ml-2 text-xs text-gray-400 cursor-pointer hover:bg-[var(--primary)]/10 rounded px-1 py-0.5"
+                      className="ml-2 text-xs text-muted-foreground cursor-pointer hover:bg-[var(--primary)]/10 rounded px-1 py-0.5"
                       onClick={() => handleActivityFieldClick(idx, 'costType', activity.costType)}
                       title="Click to edit"
                     >
-                      {activity.costType || <span className="text-gray-200 italic">Cost Type</span>}
+                      {activity.costType || <span className="text-foreground italic">Cost Type</span>}
                     </span>
                   )}
                   {/* Remove activity button */}
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="ml-2 text-red-500 hover:bg-red-100"
+                    className="ml-2 text-destructive hover:bg-destructive/10"
                     onClick={() => removeActivity(idx)}
                     title="Remove activity"
                   >

@@ -19,6 +19,22 @@ const eventTypesList = [
 
 // Helper to fetch all countries from Sports Events 365 API
 async function fetchCountries() {
+  // Check cache first
+  const cached = localStorage.getItem('sports365_countries');
+  const cacheTime = localStorage.getItem('sports365_countries_time');
+  
+  // Cache is valid for 24 hours, but only if it has more than 50 countries (to avoid old limited cache)
+  if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 24 * 60 * 60 * 1000) {
+    const cachedCountries = JSON.parse(cached);
+    if (cachedCountries.length > 50) {
+      return cachedCountries;
+    } else {
+      // Clear old limited cache
+      localStorage.removeItem('sports365_countries');
+      localStorage.removeItem('sports365_countries_time');
+    }
+  }
+
   const API_KEY = import.meta.env.VITE_SPORTSEVENTS365_API_KEY || '';
   const USERNAME = import.meta.env.VITE_SPORTSEVENTS365_USERNAME || '';
   const PASSWORD = import.meta.env.VITE_SPORTSEVENTS365_PASSWORD || '';
@@ -26,15 +42,12 @@ async function fetchCountries() {
   // Create Base64 encoded credentials
   const credentials = btoa(`${USERNAME}:${PASSWORD}`);
   
-  console.log('🌍 Fetching all countries (paginated)...');
-  
   let allCountries: any[] = [];
   let currentPage = 1;
   let hasMorePages = true;
   
   while (hasMorePages) {
     const url = `https://api-v2.sandbox365.com/countries?apiKey=${API_KEY}&page=${currentPage}`;
-    console.log(`📡 Fetching page ${currentPage}...`);
     
     const res = await fetch(url, {
       headers: {
@@ -44,13 +57,10 @@ async function fetchCountries() {
     });
     
     if (!res.ok) {
-      console.error('❌ Failed to fetch countries page:', currentPage, res.status, res.statusText);
       throw new Error(`Failed to fetch countries page ${currentPage}: ${res.status} ${res.statusText}`);
     }
     
     const data = await res.json();
-    console.log(`✅ Page ${currentPage} response:`, data.meta);
-    
     const pageCountries = data.data || [];
     allCountries = [...allCountries, ...pageCountries];
     
@@ -64,12 +74,25 @@ async function fetchCountries() {
     }
   }
   
-  console.log('✅ All countries fetched:', allCountries.length, 'total countries');
+  // Cache the results
+  localStorage.setItem('sports365_countries', JSON.stringify(allCountries));
+  localStorage.setItem('sports365_countries_time', Date.now().toString());
+  
   return allCountries;
 }
 
 // Helper to fetch cities by country ID
 async function fetchCitiesByCountry(countryId: string) {
+  // Check cache first
+  const cacheKey = `sports365_cities_${countryId}`;
+  const cached = localStorage.getItem(cacheKey);
+  const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+  
+  // Cache is valid for 24 hours
+  if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 24 * 60 * 60 * 1000) {
+    return JSON.parse(cached);
+  }
+
   const API_KEY = import.meta.env.VITE_SPORTSEVENTS365_API_KEY || '';
   const USERNAME = import.meta.env.VITE_SPORTSEVENTS365_USERNAME || '';
   const PASSWORD = import.meta.env.VITE_SPORTSEVENTS365_PASSWORD || '';
@@ -78,9 +101,6 @@ async function fetchCitiesByCountry(countryId: string) {
   const credentials = btoa(`${USERNAME}:${PASSWORD}`);
   
   const url = `https://api-v2.sandbox365.com/countries/${countryId}/city?apiKey=${API_KEY}`;
-  console.log('🔍 Fetching cities for country:', countryId);
-  console.log('📡 API URL:', url);
-  console.log('🔑 Using credentials:', { username: USERNAME, hasPassword: !!PASSWORD, hasApiKey: !!API_KEY });
   
   const res = await fetch(url, {
     headers: {
@@ -89,25 +109,11 @@ async function fetchCitiesByCountry(countryId: string) {
     },
   });
   
-  console.log('📥 Response status:', res.status, res.statusText);
-  
   if (!res.ok) {
-    console.error('❌ Failed to fetch cities:', res.status, res.statusText);
     throw new Error(`Failed to fetch cities: ${res.status} ${res.statusText}`);
   }
   
   const data = await res.json();
-  console.log('✅ Cities response:', data);
-  console.log('📊 Cities response structure:', {
-    hasData: !!data.data,
-    hasCities: !!data.cities,
-    dataType: typeof data.data,
-    citiesType: typeof data.cities,
-    keys: Object.keys(data),
-    isArray: Array.isArray(data),
-    isDataArray: Array.isArray(data.data),
-    isCitiesArray: Array.isArray(data.cities)
-  });
   
   // Handle different possible response structures
   let cities = [];
@@ -118,17 +124,17 @@ async function fetchCitiesByCountry(countryId: string) {
   } else if (Array.isArray(data.cities)) {
     cities = data.cities;
   } else if (data && typeof data === 'object') {
-    // Check if data.data contains the actual city object
     if (data.data && typeof data.data === 'object' && data.data.id) {
-      cities = [data.data]; // Single city object
+      cities = [data.data];
     } else if (data.id) {
-      // If it's a single city object, wrap it in an array
       cities = [data];
     }
   }
   
-  console.log('🏙️ Extracted cities (array):', cities);
-  console.log('🏙️ Cities length:', cities.length);
+  // Cache the results
+  localStorage.setItem(cacheKey, JSON.stringify(cities));
+  localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+  
   return cities;
 }
 
@@ -142,8 +148,6 @@ async function fetchEventsByCity(cityId: string) {
   const credentials = btoa(`${USERNAME}:${PASSWORD}`);
   
   const url = `https://api-v2.sandbox365.com/events/city/${cityId}?apiKey=${API_KEY}`;
-  console.log('🎫 Fetching events for city:', cityId);
-  console.log('📡 API URL:', url);
   
   const res = await fetch(url, {
     headers: {
@@ -152,25 +156,11 @@ async function fetchEventsByCity(cityId: string) {
     },
   });
   
-  console.log('📥 Response status:', res.status, res.statusText);
-  
   if (!res.ok) {
-    console.error('❌ Failed to fetch events:', res.status, res.statusText);
     throw new Error(`Failed to fetch events: ${res.status} ${res.statusText}`);
   }
   
   const data = await res.json();
-  console.log('✅ Events response:', data);
-  console.log('📊 Events response structure:', {
-    hasData: !!data.data,
-    hasEvents: !!data.events,
-    dataType: typeof data.data,
-    eventsType: typeof data.events,
-    keys: Object.keys(data),
-    isArray: Array.isArray(data),
-    isDataArray: Array.isArray(data.data),
-    isEventsArray: Array.isArray(data.events)
-  });
   
   // Handle different possible response structures
   let events = [];
@@ -181,17 +171,13 @@ async function fetchEventsByCity(cityId: string) {
   } else if (Array.isArray(data.events)) {
     events = data.events;
   } else if (data && typeof data === 'object') {
-    // Check if data.data contains the actual event object
     if (data.data && typeof data.data === 'object' && data.data.id) {
-      events = [data.data]; // Single event object
+      events = [data.data];
     } else if (data.id) {
-      // If it's a single event object, wrap it in an array
       events = [data];
     }
   }
   
-  console.log('🎫 Extracted events (array):', events);
-  console.log('🎫 Events length:', events.length);
   return events;
 }
 
@@ -205,8 +191,6 @@ async function fetchTicketsByEvent(eventId: string) {
   const credentials = btoa(`${USERNAME}:${PASSWORD}`);
   
   const url = `https://api-v2.sandbox365.com/tickets/${eventId}?apiKey=${API_KEY}`;
-  console.log('🎟️ Fetching tickets for event:', eventId);
-  console.log('📡 API URL:', url);
   
   const res = await fetch(url, {
     headers: {
@@ -215,25 +199,11 @@ async function fetchTicketsByEvent(eventId: string) {
     },
   });
   
-  console.log('📥 Response status:', res.status, res.statusText);
-  
   if (!res.ok) {
-    console.error('❌ Failed to fetch tickets:', res.status, res.statusText);
     throw new Error(`Failed to fetch tickets: ${res.status} ${res.statusText}`);
   }
   
   const data = await res.json();
-  console.log('✅ Tickets response:', data);
-  console.log('📊 Tickets response structure:', {
-    hasData: !!data.data,
-    hasTickets: !!data.tickets,
-    dataType: typeof data.data,
-    ticketsType: typeof data.tickets,
-    keys: Object.keys(data),
-    isArray: Array.isArray(data),
-    isDataArray: Array.isArray(data.data),
-    isTicketsArray: Array.isArray(data.tickets)
-  });
   
   // Handle different possible response structures
   let tickets = [];
@@ -244,17 +214,13 @@ async function fetchTicketsByEvent(eventId: string) {
   } else if (Array.isArray(data.tickets)) {
     tickets = data.tickets;
   } else if (data && typeof data === 'object') {
-    // Check if data.data contains the actual ticket object
     if (data.data && typeof data.data === 'object' && data.data.id) {
-      tickets = [data.data]; // Single ticket object
+      tickets = [data.data];
     } else if (data.id) {
-      // If it's a single ticket object, wrap it in an array
       tickets = [data];
     }
   }
   
-  console.log('🎟️ Extracted tickets (array):', tickets);
-  console.log('🎟️ Tickets length:', tickets.length);
   return tickets;
 }
 
@@ -280,15 +246,6 @@ export function Step6Events() {
   
   // Check if we're in NewProposal form (which doesn't have eventCountryId/eventCityId)
   const isNewProposalForm = !form.watch('eventCountryId');
-  
-  console.log('🎯 Step6Events component rendered in NewProposal form');
-  console.log('🔍 Form context check:', {
-    startDate,
-    endDate,
-    isNewProposalForm,
-    hasEventCountryId: !!form.watch('eventCountryId'),
-    hasEventCityId: !!form.watch('eventCityId')
-  });
 
   const [countries, setCountries] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
@@ -318,60 +275,21 @@ export function Step6Events() {
     const selectedTicket = tickets.find(t => t.id.toString() === newSelectedId);
     const selectedEventData = selectedEvent;
     
-    // Update form data with selected event and ticket
-    form.setValue('selectedEvent', selectedEventData);
-    form.setValue('selectedTicket', selectedTicket);
-    
-    // Also save to intake store
+    // Save to intake store
     const { updateEventData } = useIntakeStore.getState();
     if (selectedEventData && selectedTicket) {
       updateEventData(selectedEventData, selectedTicket);
-      console.log('💾 Saved event and ticket to intake store:', {
-        event: selectedEventData.name,
-        ticket: selectedTicket.categoryName,
-        fullEvent: selectedEventData,
-        fullTicket: selectedTicket
-      });
-      
-      // Verify the data was saved by reading it back with a delay
-      setTimeout(() => {
-        const { intakeData } = useIntakeStore.getState();
-        console.log('✅ Verification - intake store now contains:', {
-          hasSelectedEvent: !!intakeData?.selectedEvent,
-          hasSelectedTicket: !!intakeData?.selectedTicket,
-          eventName: intakeData?.selectedEvent?.name,
-          ticketType: intakeData?.selectedTicket?.categoryName,
-          fullIntakeData: intakeData
-        });
-      }, 100);
-    } else {
-      console.log('❌ Not saving to store - missing data:', {
-        hasEvent: !!selectedEventData,
-        hasTicket: !!selectedTicket
-      });
     }
   };
 
   // Fetch countries on mount
   useEffect(() => {
-    console.log('🌍 Loading countries...');
     setLoadingCountries(true);
     fetchCountries()
       .then(countries => {
-        console.log('🌍 Countries loaded:', countries.length, 'countries');
-        console.log('🌍 First few countries:', countries.slice(0, 5).map((c: any) => ({ id: c.id, name: c.name })));
-        // Log all countries to find UAE
-        const uaeCountry = countries.find((c: any) => c.name.toLowerCase().includes('uae') || c.name.toLowerCase().includes('emirates'));
-        if (uaeCountry) {
-          console.log('🇦🇪 Found UAE in countries list:', uaeCountry);
-        } else {
-          console.log('🇦🇪 UAE not found in countries list');
-          console.log('🌍 All countries:', countries.map((c: any) => ({ id: c.id, name: c.name })));
-        }
         setCountries(countries);
       })
       .catch((err) => {
-        console.error('💥 Error loading countries:', err);
         setError(err.message);
       })
       .finally(() => setLoadingCountries(false));
@@ -381,36 +299,21 @@ export function Step6Events() {
   useEffect(() => {
     if (!selectedCountryId) return;
     
-    // Find the selected country name for logging
-    const selectedCountry = countries.find(c => c.id.toString() === selectedCountryId);
-    const countryName = selectedCountry?.name || 'Unknown';
-    
-    console.log('🌍 Country selected:', selectedCountryId, '(', countryName, ')');
-    console.log('🌍 Full country object:', selectedCountry); // Log the full country object
     setLoadingCities(true);
     setCities([]);
     
     // Update form field if it exists, otherwise just update local state
     if (!isNewProposalForm) {
-      form.setValue('eventCityId', ''); // Reset city selection
+      (form as any).setValue('eventCityId', ''); // Reset city selection
     } else {
       setSelectedCityId(''); // Reset local state
     }
     
     fetchCitiesByCountry(selectedCountryId)
       .then(cities => {
-        console.log('🏙️ Cities loaded:', cities.length, 'cities for', countryName);
-        console.log('🏙️ City data structure:', cities[0]); // Log the first city to see structure
-        if (cities.length > 0 && cities[0].country) {
-          console.log('🏙️ City belongs to country:', cities[0].country); // Log the city's country info
-        }
-        if (cities.length === 0) {
-          console.warn('⚠️ No cities found for country:', countryName, '(ID:', selectedCountryId, ')');
-        }
         setCities(cities);
       })
       .catch((err) => {
-        console.error('💥 Error loading cities:', err);
         setError(err.message);
       })
       .finally(() => setLoadingCities(false));
@@ -419,7 +322,6 @@ export function Step6Events() {
   // Fetch events when city changes
   useEffect(() => {
     if (!selectedCityId) return;
-    console.log('🏙️ City selected:', selectedCityId);
     setLoadingEvents(true);
     setError(null);
     setSelectedEvent(null);
@@ -427,16 +329,14 @@ export function Step6Events() {
     
     // Update form field if it exists, otherwise just update local state
     if (!isNewProposalForm) {
-      form.setValue('eventId', ''); // Reset event selection
+      (form as any).setValue('eventId', ''); // Reset event selection
     }
     
     fetchEventsByCity(selectedCityId)
       .then(events => {
-        console.log('🎫 Events loaded:', events.length, 'events');
         setEvents(events);
       })
       .catch((err) => {
-        console.error('💥 Error loading events:', err);
         setError(err.message);
       })
       .finally(() => setLoadingEvents(false));
@@ -445,16 +345,13 @@ export function Step6Events() {
   // Fetch tickets when event is selected
   useEffect(() => {
     if (!selectedEvent) return;
-    console.log('🎫 Event selected:', selectedEvent.id, selectedEvent.name);
     setLoadingTickets(true);
     setError(null);
     fetchTicketsByEvent(selectedEvent.id.toString())
       .then(tickets => {
-        console.log('🎟️ Tickets loaded:', tickets.length, 'tickets');
         setTickets(tickets);
       })
       .catch((err) => {
-        console.error('💥 Error loading tickets:', err);
         setError(err.message);
       })
       .finally(() => setLoadingTickets(false));
@@ -462,12 +359,10 @@ export function Step6Events() {
 
   // Filter events by date
   const filteredEvents = events.filter((event: any) => isEventInRange(event, startDate, endDate));
-  console.log('📅 Filtered events for date range:', filteredEvents.length, 'events');
 
   // Get selected country name for display
   const selectedCountry = countries.find((country: any) => country.id.toString() === selectedCountryId);
   const selectedCity = cities.find((city: any) => {
-    console.log('🔍 Checking city:', city);
     return city && city.id && city.id.toString() === selectedCityId;
   });
 
@@ -502,7 +397,6 @@ export function Step6Events() {
                         key={country.id}
                         value={country.name}
                         onSelect={() => {
-                          console.log('🏳️ Country selected from dropdown:', country.id, country.name);
                           setSelectedCountryId(country.id.toString());
                           setCountryOpen(false);
                         }}
@@ -553,7 +447,6 @@ export function Step6Events() {
                             key={country.id}
                             value={country.name}
                             onSelect={() => {
-                              console.log('🏳️ Country selected from dropdown:', country.id, country.name);
                               field.onChange(country.id.toString());
                               setCountryOpen(false);
                             }}

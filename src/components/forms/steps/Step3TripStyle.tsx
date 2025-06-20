@@ -65,7 +65,7 @@ export function Step3TripStyle() {
                 onClick={() => form.setValue('style.tone', value)}
                 className={cn(
                   'flex flex-col items-center gap-1 py-4 px-4 h-auto transition-all duration-300 border-2',
-                  'bg-white/80 backdrop-blur-sm hover:bg-white/90 hover:shadow-lg',
+                  'bg-card backdrop-blur-sm hover:bg-primary/10 hover:shadow-lg',
                   isSelected 
                     ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-lg' 
                     : 'border-[var(--border)] hover:border-[var(--primary)]/50'
@@ -102,7 +102,7 @@ export function Step3TripStyle() {
                     key={value} 
                     className={cn(
                       'flex items-center gap-4 cursor-pointer p-4 rounded-lg border-2 transition-all duration-300',
-                      'bg-white/80 backdrop-blur-sm hover:bg-white/90 hover:shadow-md',
+                      'bg-card backdrop-blur-sm hover:bg-primary/10 hover:shadow-md',
                       isSelected 
                         ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-md' 
                         : 'border-[var(--border)] hover:border-[var(--primary)]/30'
@@ -136,7 +136,7 @@ export function Step3TripStyle() {
           )}
         />
         {form.formState.errors.style?.interests && (
-          <p className="text-sm text-red-500 mt-4 font-medium">{form.formState.errors.style.interests.message}</p>
+          <p className="text-sm text-destructive mt-4 font-medium">{form.formState.errors.style.interests.message}</p>
         )}
       </div>
     </div>

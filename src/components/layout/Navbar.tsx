@@ -1,8 +1,17 @@
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Plus, Bell, User } from 'lucide-react';
+import { Plus, Bell, User, FileText, Home, Map, Calendar, Image } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'New Proposal', href: '/new-proposal', icon: Plus },
+  { name: 'Itineraries', href: '/itineraries', icon: Map },
+  { name: 'Quotes', href: '/quotes', icon: FileText },
+  { name: 'Bookings', href: '/bookings', icon: Calendar },
+  { name: 'Media Library', href: '/media-library', icon: Image },
+];
 
 export function Navbar() {
   const { user } = useAuth();
@@ -26,6 +35,13 @@ export function Navbar() {
             <Link to="/builder">
               <Plus className="h-5 w-5" />
               <span className="sr-only">Create New Itinerary</span>
+            </Link>
+          </Button>
+
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/quotes">
+              <FileText className="h-5 w-5" />
+              <span className="sr-only">My Quotes</span>
             </Link>
           </Button>
 

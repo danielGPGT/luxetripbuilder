@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/lib/AuthProvider';
 import { Link } from 'react-router-dom';
+import { Footer } from '@/components/layout/Footer';
 import { 
   Sparkles, 
   Globe, 
@@ -189,6 +190,22 @@ export function Home() {
         </div>
       </section>
 
+      {/* Learn More Section */}
+      <section className="py-24 bg-gradient-to-br from-muted/50 to-muted/30">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-4xl font-bold mb-4">Want to See How It Works?</h2>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Discover our step-by-step process for creating stunning luxury itineraries in minutes.
+          </p>
+          <Link to="/how-it-works">
+            <Button size="lg" className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-lg px-8 py-6">
+              Learn How It Works
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4">
@@ -258,58 +275,7 @@ export function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="py-16 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">LuxeTripBuilder</h3>
-              <p className="text-muted-foreground mb-4">
-                AI-powered luxury travel itinerary builder for professionals.
-              </p>
-              <div className="flex gap-4">
-                <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                <Phone className="h-5 w-5 text-muted-foreground" />
-                <Mail className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>Features</li>
-                <li>Pricing</li>
-                <li>API</li>
-                <li>Integrations</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>About</li>
-                <li>Blog</li>
-                <li>Careers</li>
-                <li>Contact</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>Help Center</li>
-                <li>Documentation</li>
-                <li>Status</li>
-                <li>Security</li>
-              </ul>
-            </div>
-          </div>
-          <Separator className="my-8" />
-          <div className="flex flex-col sm:flex-row justify-between items-center text-muted-foreground">
-            <p>&copy; 2024 LuxeTripBuilder. All rights reserved.</p>
-            <div className="flex gap-4 mt-4 sm:mt-0">
-              <span>Privacy Policy</span>
-              <span>Terms of Service</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 } 

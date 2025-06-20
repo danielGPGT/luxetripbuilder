@@ -122,13 +122,13 @@ export default function Signup() {
               src={carouselImages[nextIdx]}
               alt="Travel background"
               className="absolute inset-0 w-full h-full object-cover opacity-40 transition-opacity duration-1000 ease-in-out"
-            />
+          />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent" />
         </div>
         
         {/* Top content */}
-        <div className="relative flex flex-col space-y-6 z-10 mt-8">
+        <div className="relative flex flex-col space-y-6 z-10 mt-20">
           <h2 className="text-4xl font-bold leading-tight">
             Start Your Luxury Journey
           </h2>
@@ -138,25 +138,26 @@ export default function Signup() {
         </div>
         
         {/* Bottom quote */}
-        <div className="relative z-10 mb-8">
+        <div className="relative text-sm text-gray-300 mt-8 z-10 mb-4">
           <blockquote className="text-lg italic text-gray-300">
             "The best journeys are those that are perfectly tailored to your dreams."
           </blockquote>
           <p className="text-sm text-gray-400 mt-2">— Luxury Travel Expert</p>
-        </div>
-        
-        {/* Carousel Indicators */}
+          {/* Carousel Indicators */}
         <div className="relative z-10 flex justify-center space-x-2">
           {carouselImages.map((_, idx) => (
             <button
               key={idx}
               onClick={() => handleSlideChange(idx)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                idx === carouselIdx ? 'bg-white' : 'bg-white/50'
+              className={`h-2 w-2 rounded-full transition-all duration-500 ease-in-out ${
+                carouselIdx === idx ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/60'
               }`}
             />
           ))}
         </div>
+        </div>
+        
+        
       </div>
 
       {/* Right Side - Signup Form */}

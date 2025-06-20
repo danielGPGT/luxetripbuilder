@@ -5,10 +5,10 @@ import { tripIntakeSchema, TripIntake } from '@/types/trip';
 
 export function useMultiStepForm() {
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 6;
+  const totalSteps = 7;
 
   const form = useForm<TripIntake>({
-    resolver: zodResolver(tripIntakeSchema),
+    resolver: zodResolver(tripIntakeSchema) as any,
     defaultValues: {
       travelerInfo: {
         name: '',
@@ -44,13 +44,17 @@ export function useMultiStepForm() {
       },
       eventRequests: '',
       eventTypes: [],
-      includeInventory: false,
-      inventoryTypes: [],
+      includeInventory: { flights: false, hotels: false, events: false },
+      flightFilters: undefined,
+      hotelFilters: undefined,
+      eventFilters: undefined,
+      agentContext: undefined,
     },
-    mode: 'onChange',
+    mode: 'onTouched',
   });
 
   const nextStep = async () => {
+    // Get specific fields to validate for the current step
     const fieldsToValidate = getFieldsForStep(currentStep);
     const isValid = await form.trigger(fieldsToValidate);
     
@@ -68,17 +72,39 @@ export function useMultiStepForm() {
   const getFieldsForStep = (step: number): (keyof TripIntake)[] => {
     switch (step) {
       case 1:
-        return ['travelerInfo'];
+        // Step 1: Only validate traveler info fields that are actually in step 1
+        return [
+          'travelerInfo.name',
+          'travelerInfo.email', 
+          'travelerInfo.phone',
+          'travelerInfo.address.street',
+          'travelerInfo.address.city',
+          'travelerInfo.address.state',
+          'travelerInfo.address.zipCode',
+          'travelerInfo.address.country',
+          'travelerInfo.travelType',
+          'travelerInfo.travelers.adults',
+          'travelerInfo.travelers.children'
+        ] as any;
       case 2:
-        return ['destinations'];
+        // Step 2: Only validate destinations and the moved fields
+        return [
+          'destinations.from',
+          'destinations.primary',
+          'travelerInfo.transportType',
+          'travelerInfo.startDate',
+          'travelerInfo.endDate'
+        ] as any;
       case 3:
-        return ['style'];
+        return ['style.tone', 'style.interests'] as any;
       case 4:
-        return ['experience'];
+        return ['experience.pace', 'experience.accommodation'] as any;
       case 5:
-        return ['budget'];
+        return ['budget.amount', 'budget.currency', 'budget.experienceType', 'budget.travelClass'] as any;
       case 6:
-        return ['eventRequests', 'eventTypes'];
+        return ['eventRequests', 'eventTypes'] as any;
+      case 7:
+        return []; // Review step - no validation needed
       default:
         return [];
     }

@@ -22,10 +22,41 @@ export const interestsEnum = z.enum([
   'local-culture'
 ]);
 
+export const flightFiltersSchema = z.object({
+  preferredAirlines: z.array(z.string()).optional(),
+  nonstopOnly: z.boolean().optional(),
+  departureTimeRange: z.tuple([z.string(), z.string()]).optional(),
+});
+
+export const hotelFiltersSchema = z.object({
+  minStarRating: z.number().optional(),
+  roomType: z.string().optional(),
+  amenities: z.array(z.string()).optional(),
+});
+
+export const eventFiltersSchema = z.object({
+  types: z.array(z.string()).optional(),
+  regions: z.array(z.string()).optional(),
+});
+
+export const agentContextSchema = z.object({
+  agentId: z.string(),
+  marginOverride: z.number().optional(),
+});
+
 export const tripIntakeSchema = z.object({
   // Step 1: Traveler Overview
   travelerInfo: z.object({
     name: z.string().min(2, 'Name is required'),
+    email: z.string().email('Valid email is required'),
+    phone: z.string().min(10, 'Valid phone number is required'),
+    address: z.object({
+      street: z.string().min(5, 'Street address is required'),
+      city: z.string().min(2, 'City is required'),
+      state: z.string().min(2, 'State/Province is required'),
+      zipCode: z.string().min(3, 'ZIP/Postal code is required'),
+      country: z.string().min(2, 'Country is required'),
+    }),
     travelType: travelTypeEnum,
     transportType: transportTypeEnum,
     startDate: z.string().min(1, 'Start date is required'),
@@ -69,9 +100,22 @@ export const tripIntakeSchema = z.object({
   eventRequests: z.string().default(''),
   eventTypes: z.array(z.string()).default([]),
 
-  // Step 7: Inventory
-  includeInventory: z.boolean().default(false),
-  inventoryTypes: z.array(z.string()).default([]),
+  // Step 7: Inventory (updated structure)
+  includeInventory: z.object({
+    flights: z.boolean(),
+    hotels: z.boolean(),
+    events: z.boolean(),
+  }),
+  flightFilters: flightFiltersSchema.optional(),
+  hotelFilters: hotelFiltersSchema.optional(),
+  eventFilters: eventFiltersSchema.optional(),
+
+  // Agent context
+  agentContext: agentContextSchema.optional(),
 });
 
-export type TripIntake = z.infer<typeof tripIntakeSchema>; 
+export type TripIntake = z.infer<typeof tripIntakeSchema>;
+export type FlightFilters = z.infer<typeof flightFiltersSchema>;
+export type HotelFilters = z.infer<typeof hotelFiltersSchema>;
+export type EventFilters = z.infer<typeof eventFiltersSchema>;
+export type AgentContext = z.infer<typeof agentContextSchema>; 

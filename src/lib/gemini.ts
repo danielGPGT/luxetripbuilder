@@ -117,6 +117,23 @@ export interface GeneratedItinerary {
   travelTips: TravelTip[];
 }
 
+// Helper to convert file buffer to Gemini-compatible format
+async function fileToGenerativePart(file: File) {
+  const base64EncodedData = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  return {
+    inlineData: {
+      data: base64EncodedData,
+      mimeType: file.type,
+    },
+  };
+}
+
 class GeminiService {
   private genAI: GoogleGenerativeAI;
   private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
@@ -126,14 +143,14 @@ class GeminiService {
       throw new Error('Gemini API key is required');
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
+    // Use the latest Flash model which is multimodal (handles text and vision)
     this.model = this.genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
-      // Flash model works best with these settings
+      model: "gemini-1.5-flash-latest",
       generationConfig: {
-        temperature: 0.9, // Slightly higher for more creative responses
+        temperature: 0.9,
         topK: 32,
         topP: 0.8,
-        maxOutputTokens: 4096, // Increased for longer itineraries
+        maxOutputTokens: 8192,
       }
     });
   }
@@ -141,22 +158,17 @@ class GeminiService {
   // Use jsonrepair to handle malformed JSON responses from Gemini
   private tryRepairJson(str: string): string {
     try {
-      // Remove code fences and trim
       const cleaned = str.replace(/```json|```/gi, '').trim();
-      
-      // Use jsonrepair to fix common JSON issues
       const repaired = jsonrepair(cleaned);
       return repaired;
     } catch (error) {
       console.error('JSON repair failed:', error);
-      // Fallback to basic repair for simple cases
       return this.basicJsonRepair(str);
     }
   }
 
   // Fallback method for basic JSON repair
   private basicJsonRepair(str: string): string {
-    // Remove code fences
     str = str.replace(/```json|```/gi, '').trim();
     const openBraces = (str.match(/{/g) || []).length;
     let closeBraces = (str.match(/}/g) || []).length;
@@ -175,43 +187,40 @@ class GeminiService {
 
   async generateItinerary(preferences: TripPreferences): Promise<GeneratedItinerary> {
     try {
-      // Debug logging for event data
-      console.log('🎫 Gemini Service - Event Data Debug:', {
-        hasSpecialRequests: !!preferences.specialRequests,
-        specialRequests: preferences.specialRequests,
-        destination: preferences.destination,
-        startDate: preferences.startDate,
-        endDate: preferences.endDate
-      });
-
       const prompt = this.buildPrompt(preferences);
-      console.log('📝 Generated prompt length:', prompt.length);
-      console.log('📝 Prompt includes event instructions:', prompt.includes('CRITICAL EVENT INFORMATION'));
-      
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
 
-      // Debug log to see raw response
-      console.log('Raw Gemini Response:', text);
-
       try {
-        // Use jsonrepair to handle malformed JSON
         const cleanedText = this.tryRepairJson(text);
-        console.log('Cleaned/Repaired Response:', cleanedText.slice(0, 500));
-        const itinerary = JSON.parse(cleanedText);
-        toast.success('Itinerary generated successfully');
+        const itinerary = JSON.parse(cleanedText) as GeneratedItinerary;
         return itinerary;
-      } catch (error) {
-        console.error('Parse Error:', error);
-        toast.error('Failed to parse AI response. The response may be too long or incomplete. Try a shorter trip or fewer details.');
-        // Show a snippet for debugging
-        throw new Error(
-          `Failed to parse Gemini response as JSON.\n\nFirst 500 chars of response:\n${text.slice(0, 500)}...`);
+      } catch (parseError) {
+        console.error('❌ Failed to parse JSON response:', parseError);
+        console.error('Raw response was:', text);
+        throw new Error('Failed to parse AI response. Please try again.');
       }
     } catch (error) {
-      console.error('Generation Error:', error);
-      toast.error('Failed to generate itinerary');
+      console.error('❌ Error generating itinerary:', error);
+      throw error;
+    }
+  }
+
+  async generateContent(prompt: string, imageFile?: File): Promise<{ response: { text: () => string } }> {
+    try {
+      if (imageFile) {
+        // Use the multimodal model for requests with images
+        const imagePart = await fileToGenerativePart(imageFile);
+        const result = await this.model.generateContent([prompt, imagePart]);
+        return result;
+      } else {
+        // Use the same model for text-only requests
+        const result = await this.model.generateContent(prompt);
+        return result;
+      }
+    } catch (error) {
+      console.error('❌ Error generating content:', error);
       throw error;
     }
   }
@@ -284,8 +293,9 @@ STRICT ITINERARY REQUIREMENTS FOR EVENT:
 
 IMPORTANT:
 * Respond with ONLY valid, compact JSON. Do NOT include markdown, code fences, or any extra text.
-* Keep the response as short as possible while including all required fields.
-* If the itinerary is long, you may abbreviate or summarize some details to fit the response.
+* Provide comprehensive, detailed itineraries with specific times, locations, and pricing.
+* Include multiple activities per day with realistic timing and costs.
+* Be thorough in your recommendations and pricing breakdowns.
 
 CLIENT INFORMATION:
 - Name: ${preferences.clientName}

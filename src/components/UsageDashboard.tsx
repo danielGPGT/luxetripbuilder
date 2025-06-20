@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -7,321 +8,262 @@ import {
   FileText, 
   Download, 
   Code, 
-  AlertTriangle, 
-  Crown, 
-  Zap,
-  TrendingUp,
-  Lock
+  Image, 
+  TrendingUp, 
+  AlertTriangle,
+  Crown,
+  Users,
+  Globe
 } from 'lucide-react';
-import { useTier } from '@/hooks/useTier';
 import { Link } from 'react-router-dom';
+import { TierManager } from '@/lib/tierManager';
+import { useAuth } from '@/lib/AuthProvider';
 
 export function UsageDashboard() {
-  const { 
-    isLoading, 
-    currentPlan, 
-    usage, 
-    getPlanLimits, 
-    getUpgradeMessage,
-    hasCustomBranding,
-    hasWhiteLabel,
-    hasPrioritySupport,
-    hasTeamCollaboration,
-    hasAdvancedAIFeatures
-  } = useTier();
+  const { user } = useAuth();
+  const [usage, setUsage] = useState<any>(null);
+  const [plan, setPlan] = useState<string>('starter');
+  const [limits, setLimits] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-4 bg-muted rounded animate-pulse" />
-        <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
-        <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (user?.id) {
+      loadUsageData();
+    }
+  }, [user?.id]);
 
-  const limits = getPlanLimits();
-  const planNames = {
-    starter: 'Starter',
-    professional: 'Professional',
-    enterprise: 'Enterprise',
+  const loadUsageData = async () => {
+    if (!user?.id) return;
+
+    try {
+      setLoading(true);
+      const tierManager = TierManager.getInstance();
+      await tierManager.initialize(user.id);
+      
+      const currentUsage = tierManager.getCurrentUsage();
+      const currentPlan = tierManager.getCurrentPlan();
+      const planLimits = tierManager.getPlanLimits();
+      
+      setUsage(currentUsage);
+      setPlan(currentPlan);
+      setLimits(planLimits);
+    } catch (error) {
+      console.error('Error loading usage data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const planColors = {
-    starter: 'bg-blue-500',
-    professional: 'bg-purple-500',
-    enterprise: 'bg-gradient-to-r from-purple-600 to-pink-600',
-  };
-
-  const calculateProgress = (current: number, limit: number) => {
+  const getUsagePercentage = (current: number, limit: number) => {
     if (limit === -1) return 0; // unlimited
+    if (limit === 0) return 100; // not available
     return Math.min((current / limit) * 100, 100);
   };
 
-  const getProgressColor = (progress: number) => {
-    if (progress >= 90) return 'bg-red-500';
-    if (progress >= 75) return 'bg-yellow-500';
+  const getUsageColor = (percentage: number) => {
+    if (percentage >= 90) return 'bg-red-500';
+    if (percentage >= 75) return 'bg-yellow-500';
     return 'bg-green-500';
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Current Plan Header */}
-      <Card className="border-2 border-[var(--primary)]/20">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${planColors[currentPlan]}`} />
-              <CardTitle className="text-xl">
-                {planNames[currentPlan]} Plan
-              </CardTitle>
-              <Badge variant="secondary" className="ml-2">
-                Current
-              </Badge>
-            </div>
-            <Link to="/pricing">
-              <Button variant="outline" size="sm">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Upgrade
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
-      </Card>
+  const getPlanIcon = (planType: string) => {
+    switch (planType) {
+      case 'professional':
+        return <Crown className="h-4 w-4" />;
+      case 'enterprise':
+        return <Globe className="h-4 w-4" />;
+      default:
+        return <Users className="h-4 w-4" />;
+    }
+  };
 
-      {/* Usage Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Itineraries */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-500" />
-                <CardTitle className="text-sm">Itineraries</CardTitle>
-              </div>
-              {limits.itineraries_per_month === -1 && (
-                <Badge variant="secondary" className="text-xs">
-                  Unlimited
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {usage?.itineraries_created || 0} used
-                </span>
-                {limits.itineraries_per_month !== -1 && (
-                  <span className="text-muted-foreground">
-                    of {limits.itineraries_per_month}
-                  </span>
-                )}
-              </div>
-              {limits.itineraries_per_month !== -1 && (
-                <Progress 
-                  value={calculateProgress(usage?.itineraries_created || 0, limits.itineraries_per_month)} 
-                  className="h-2"
-                />
-              )}
-              {usage?.limit_reached.itineraries && (
-                <Alert className="mt-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Limit reached. Upgrade to create more itineraries.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+  const getPlanColor = (planType: string) => {
+    switch (planType) {
+      case 'professional':
+        return 'bg-purple-500';
+      case 'enterprise':
+        return 'bg-green-500';
+      default:
+        return 'bg-blue-500';
+    }
+  };
 
-        {/* PDF Downloads */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Download className="h-5 w-5 text-green-500" />
-                <CardTitle className="text-sm">PDF Downloads</CardTitle>
-              </div>
-              {limits.pdf_downloads_per_month === -1 && (
-                <Badge variant="secondary" className="text-xs">
-                  Unlimited
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {usage?.pdf_downloads || 0} used
-                </span>
-                {limits.pdf_downloads_per_month !== -1 && (
-                  <span className="text-muted-foreground">
-                    of {limits.pdf_downloads_per_month}
-                  </span>
-                )}
-              </div>
-              {limits.pdf_downloads_per_month !== -1 && (
-                <Progress 
-                  value={calculateProgress(usage?.pdf_downloads || 0, limits.pdf_downloads_per_month)} 
-                  className="h-2"
-                />
-              )}
-              {usage?.limit_reached.pdf_downloads && (
-                <Alert className="mt-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Limit reached. Upgrade for unlimited downloads.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* API Calls */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Code className="h-5 w-5 text-purple-500" />
-                <CardTitle className="text-sm">API Calls</CardTitle>
-              </div>
-              {limits.api_calls_per_month === -1 && (
-                <Badge variant="secondary" className="text-xs">
-                  Unlimited
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {usage?.api_calls || 0} used
-                </span>
-                {limits.api_calls_per_month !== -1 && (
-                  <span className="text-muted-foreground">
-                    of {limits.api_calls_per_month}
-                  </span>
-                )}
-              </div>
-              {limits.api_calls_per_month !== -1 && (
-                <Progress 
-                  value={calculateProgress(usage?.api_calls || 0, limits.api_calls_per_month)} 
-                  className="h-2"
-                />
-              )}
-              {usage?.limit_reached.api_calls && (
-                <Alert className="mt-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Limit reached. Upgrade for unlimited API access.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Plan Features */}
+  if (loading) {
+    return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Plan Features</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                {hasCustomBranding ? (
-                  <Crown className="h-5 w-5 text-green-500" />
-                ) : (
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className={hasCustomBranding ? '' : 'text-muted-foreground'}>
-                  Custom Branding
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                {hasWhiteLabel ? (
-                  <Crown className="h-5 w-5 text-green-500" />
-                ) : (
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className={hasWhiteLabel ? '' : 'text-muted-foreground'}>
-                  White Label Solution
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                {hasPrioritySupport ? (
-                  <Crown className="h-5 w-5 text-green-500" />
-                ) : (
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className={hasPrioritySupport ? '' : 'text-muted-foreground'}>
-                  Priority Support
-                </span>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                {hasTeamCollaboration ? (
-                  <Crown className="h-5 w-5 text-green-500" />
-                ) : (
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className={hasTeamCollaboration ? '' : 'text-muted-foreground'}>
-                  Team Collaboration
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                {hasAdvancedAIFeatures ? (
-                  <Crown className="h-5 w-5 text-green-500" />
-                ) : (
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className={hasAdvancedAIFeatures ? '' : 'text-muted-foreground'}>
-                  Advanced AI Features
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <Zap className="h-5 w-5 text-green-500" />
-                <span>AI-Powered Itineraries</span>
-              </div>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-muted rounded w-1/4"></div>
+            <div className="space-y-2">
+              <div className="h-2 bg-muted rounded"></div>
+              <div className="h-2 bg-muted rounded w-5/6"></div>
             </div>
           </div>
         </CardContent>
       </Card>
+    );
+  }
 
-      {/* Upgrade CTA */}
-      {currentPlan !== 'enterprise' && (
-        <Card className="bg-gradient-to-r from-[var(--primary)]/10 to-purple-500/10 border-[var(--primary)]/20">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center gap-2">
-                <TrendingUp className="h-5 w-5 text-[var(--primary)]" />
-                <h3 className="text-lg font-semibold">Ready to Upgrade?</h3>
-              </div>
-              <p className="text-muted-foreground">
-                {getUpgradeMessage()}
-              </p>
+  if (!usage || !limits) {
+    return null;
+  }
+
+  const usageItems = [
+    {
+      title: 'Itineraries Created',
+      current: usage.itineraries_created,
+      limit: limits.itineraries_per_month,
+      icon: <FileText className="h-4 w-4" />,
+      unit: 'itineraries'
+    },
+    {
+      title: 'PDF Downloads',
+      current: usage.pdf_downloads,
+      limit: limits.pdf_downloads_per_month,
+      icon: <Download className="h-4 w-4" />,
+      unit: 'downloads'
+    },
+    {
+      title: 'API Calls',
+      current: usage.api_calls,
+      limit: limits.api_calls_per_month,
+      icon: <Code className="h-4 w-4" />,
+      unit: 'calls'
+    }
+  ];
+
+  const featureAccess = [
+    {
+      title: 'Media Library',
+      hasAccess: limits.media_library_access,
+      icon: <Image className="h-4 w-4" />
+    },
+    {
+      title: 'Custom Branding',
+      hasAccess: limits.custom_branding,
+      icon: <Crown className="h-4 w-4" />
+    },
+    {
+      title: 'Team Collaboration',
+      hasAccess: limits.team_collaboration,
+      icon: <Users className="h-4 w-4" />
+    }
+  ];
+
+  const hasReachedLimits = usage.limit_reached.itineraries || 
+                          usage.limit_reached.pdf_downloads || 
+                          usage.limit_reached.api_calls;
+
+  return (
+    <div className="space-y-6">
+      {/* Plan Overview */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              Current Plan
+              <Badge className={`${getPlanColor(plan)} text-white`}>
+                {getPlanIcon(plan)}
+                <span className="ml-1 capitalize">{plan}</span>
+              </Badge>
+            </CardTitle>
+            <Button asChild variant="outline" size="sm">
               <Link to="/pricing">
-                <Button className="bg-[var(--primary)] hover:bg-[var(--primary)]/90">
-                  View Plans
-                  <TrendingUp className="ml-2 h-4 w-4" />
-                </Button>
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Upgrade Plan
               </Link>
-            </div>
-          </CardContent>
-        </Card>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            {plan === 'starter' && 'Perfect for individual travel agents getting started.'}
+            {plan === 'professional' && 'Ideal for growing travel agencies with advanced needs.'}
+            {plan === 'enterprise' && 'For large travel organizations requiring custom solutions.'}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Usage Limits */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Monthly Usage</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {usageItems.map((item, index) => {
+            const percentage = getUsagePercentage(item.current, item.limit);
+            const isUnlimited = item.limit === -1;
+            const isNotAvailable = item.limit === 0;
+            
+            return (
+              <div key={index} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {item.icon}
+                    <span className="font-medium">{item.title}</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {isUnlimited ? (
+                      <span className="text-green-600 font-medium">Unlimited</span>
+                    ) : isNotAvailable ? (
+                      <span className="text-red-600 font-medium">Not Available</span>
+                    ) : (
+                      `${item.current} / ${item.limit} ${item.unit}`
+                    )}
+                  </div>
+                </div>
+                {!isUnlimited && !isNotAvailable && (
+                  <Progress 
+                    value={percentage} 
+                    className="h-2"
+                  />
+                )}
+                {percentage >= 90 && !isUnlimited && !isNotAvailable && (
+                  <Alert className="border-yellow-200 bg-yellow-50">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription className="text-yellow-800">
+                      You're approaching your limit. Consider upgrading your plan.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {/* Feature Access */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Feature Access</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {featureAccess.map((feature, index) => (
+              <div key={index} className="flex items-center gap-3 p-3 rounded-lg border">
+                <div className={`p-2 rounded-full ${feature.hasAccess ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                  {feature.icon}
+                </div>
+                <div>
+                  <div className="font-medium">{feature.title}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {feature.hasAccess ? 'Available' : 'Not available'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Upgrade Alert */}
+      {hasReachedLimits && (
+        <Alert className="border-red-200 bg-red-50">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800">
+            You've reached some of your plan limits. Upgrade to continue using all features.
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );
