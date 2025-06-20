@@ -163,7 +163,7 @@ export function Header() {
               onClick={() => setTheme("light")}
               className={`h-8 px-3 transition-all duration-200 ${
                 theme === "light" 
-                  ? "bg-[var(--primary)] text-white shadow-sm" 
+                  ? "bg-[var(--primary)] text-primary-foreground shadow-sm" 
                   : "hover:bg-[var(--muted-foreground)]/10 text-foreground"
               }`}
             >
