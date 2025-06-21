@@ -73,7 +73,9 @@ import {
   UndrawTeam,
   UndrawSecurityOn,
   UndrawWorking,
-  UndrawBuildingWebsites
+  UndrawArtificialIntelligence,
+  UndrawRomanticGetaway,
+  UndrawDigitalNomad,
 } from 'react-undraw-illustrations';
 
 // Import blog posts data
@@ -316,9 +318,12 @@ export function Home() {
             {/* Right Side - Illustration */}
             <div className="lg:col-span-2 flex justify-center lg:justify-end animate-fade-in-up animation-delay-400">
               <div className="relative w-full max-w-lg">
+                {/* Background shape behind illustration */}
+                <div className="absolute bg-[var(--primary)]/10 w-[120%] h-[120%] left-[-10%] top-[-10%] rounded-[70%_30%_40%_60%/50%_60%_30%_70%]"></div>
+                
                 {/* Main unDraw illustration */}
-                <div className="w-full h-96 flex items-center justify-center">
-                  <UndrawTrip 
+                <div className="relative w-full h-96 flex items-center justify-center">
+                  <UndrawArtificialIntelligence
                     primaryColor="var(--primary)"
                     secondaryColor="var(--secondary)"
                     skinColor="#e2bd95"
@@ -337,16 +342,16 @@ export function Home() {
                   <Lock className="h-4 w-4 text-blue-500" />
                 </div>
                 <div className="absolute top-1/2 -left-8 w-6 h-6 bg-purple-500/10 rounded-full flex items-center justify-center border border-purple-500/20 animate-pulse animation-delay-400">
-                  <CheckCircle className="h-3 w-3 text-purple-500" />
+                  <Heart className="h-3 w-3 text-purple-500" />
                 </div>
                 <div className="absolute top-1/4 -right-10 w-10 h-10 bg-cyan-500/10 rounded-full flex items-center justify-center border border-cyan-500/20 animate-bounce animation-delay-300">
-                    <Cloud className="h-5 w-5 text-cyan-500" />
+                    <Plane className="h-5 w-5 text-cyan-500" />
                 </div>
                 <div className="absolute bottom-1/3 -right-4 w-7 h-7 bg-orange-500/10 rounded-full flex items-center justify-center border border-orange-500/20 animate-bounce animation-delay-500">
-                    <Database className="h-4 w-4 text-orange-500" />
+                    <Star className="h-4 w-4 text-orange-500" />
                 </div>
                 <div className="absolute bottom-16 -left-12 w-9 h-9 bg-pink-500/10 rounded-full flex items-center justify-center border border-pink-500/20 animate-bounce animation-delay-700">
-                    <Server className="h-4 w-4 text-pink-500" />
+                    <Globe className="h-4 w-4 text-pink-500" />
                 </div>
                 <div className="absolute -top-6 left-1/3 w-8 h-8 bg-indigo-500/10 rounded-full flex items-center justify-center border border-indigo-500/20 animate-pulse animation-delay-600">
                     <Target className="h-4 w-4 text-indigo-500" />
@@ -672,16 +677,16 @@ export function Home() {
                   <Lock className="h-4 w-4 text-blue-500" />
                 </div>
                 <div className="absolute top-1/2 -left-8 w-6 h-6 bg-purple-500/10 rounded-full flex items-center justify-center border border-purple-500/20 animate-pulse animation-delay-400">
-                  <CheckCircle className="h-3 w-3 text-purple-500" />
+                  <Heart className="h-3 w-3 text-purple-500" />
                 </div>
                 <div className="absolute top-1/4 -right-10 w-10 h-10 bg-cyan-500/10 rounded-full flex items-center justify-center border border-cyan-500/20 animate-bounce animation-delay-300">
-                  <Cloud className="h-5 w-5 text-cyan-500" />
+                  <Plane className="h-5 w-5 text-cyan-500" />
                 </div>
                 <div className="absolute bottom-1/3 -right-4 w-7 h-7 bg-orange-500/10 rounded-full flex items-center justify-center border border-orange-500/20 animate-bounce animation-delay-500">
-                  <Database className="h-4 w-4 text-orange-500" />
+                  <Star className="h-4 w-4 text-orange-500" />
                 </div>
                 <div className="absolute bottom-16 -left-12 w-9 h-9 bg-pink-500/10 rounded-full flex items-center justify-center border border-pink-500/20 animate-bounce animation-delay-700">
-                  <Server className="h-4 w-4 text-pink-500" />
+                  <Globe className="h-4 w-4 text-pink-500" />
                 </div>
                 <div className="absolute -top-6 left-1/3 w-8 h-8 bg-indigo-500/10 rounded-full flex items-center justify-center border border-indigo-500/20 animate-pulse animation-delay-600">
                   <Target className="h-4 w-4 text-indigo-500" />
