@@ -13,7 +13,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <Sidebar />
       <div className="ml-20 lg:ml-72 transition-all duration-300">
         <Header />
-        <main className="pt-20 text-[var(--foreground)]">
+        <main className="pt-28 text-[var(--foreground)]">
           {children}
         </main>
       </div>
