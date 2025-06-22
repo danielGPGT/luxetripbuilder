@@ -136,21 +136,34 @@ async function fileToGenerativePart(file: File) {
 
 class GeminiService {
   private genAI: GoogleGenerativeAI;
-  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
+  private itineraryModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
+  private mediaModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
 
   constructor(apiKey: string) {
     if (!apiKey) {
       throw new Error('Gemini API key is required');
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
-    // Use the latest Flash model which is multimodal (handles text and vision)
-    this.model = this.genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash-latest",
+    
+    // Gemini 2.0 Flash for itinerary/quote creation (better reasoning and planning)
+    this.itineraryModel = this.genAI.getGenerativeModel({ 
+      model: "gemini-2.0-flash-exp",
       generationConfig: {
         temperature: 0.9,
         topK: 32,
         topP: 0.8,
         maxOutputTokens: 8192,
+      }
+    });
+
+    // Gemini 1.5 Flash for media library (better multimodal capabilities)
+    this.mediaModel = this.genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash-latest",
+      generationConfig: {
+        temperature: 0.7,
+        topK: 32,
+        topP: 0.8,
+        maxOutputTokens: 4096,
       }
     });
   }
@@ -185,10 +198,11 @@ class GeminiService {
     return str;
   }
 
+  // Use Gemini 2.0 Flash for itinerary generation (better planning and reasoning)
   async generateItinerary(preferences: TripPreferences): Promise<GeneratedItinerary> {
     try {
       const prompt = this.buildPrompt(preferences);
-      const result = await this.model.generateContent(prompt);
+      const result = await this.itineraryModel.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
 
@@ -207,20 +221,44 @@ class GeminiService {
     }
   }
 
+  // Use Gemini 1.5 Flash for media library content (better multimodal capabilities)
   async generateContent(prompt: string, imageFile?: File): Promise<{ response: { text: () => string } }> {
     try {
       if (imageFile) {
-        // Use the multimodal model for requests with images
+        // Use the media model (Gemini 1.5 Flash) for requests with images
         const imagePart = await fileToGenerativePart(imageFile);
-        const result = await this.model.generateContent([prompt, imagePart]);
+        const result = await this.mediaModel.generateContent([prompt, imagePart]);
         return result;
       } else {
-        // Use the same model for text-only requests
-        const result = await this.model.generateContent(prompt);
+        // Use the media model for text-only requests in media library context
+        const result = await this.mediaModel.generateContent(prompt);
         return result;
       }
     } catch (error) {
       console.error('❌ Error generating content:', error);
+      throw error;
+    }
+  }
+
+  // Use Gemini 2.0 Flash for quote generation (better reasoning and planning)
+  async generateQuote(preferences: TripPreferences): Promise<GeneratedItinerary> {
+    try {
+      const prompt = this.buildQuotePrompt(preferences);
+      const result = await this.itineraryModel.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      try {
+        const cleanedText = this.tryRepairJson(text);
+        const quote = JSON.parse(cleanedText) as GeneratedItinerary;
+        return quote;
+      } catch (parseError) {
+        console.error('❌ Failed to parse JSON response:', parseError);
+        console.error('Raw response was:', text);
+        throw new Error('Failed to parse AI response. Please try again.');
+      }
+    } catch (error) {
+      console.error('❌ Error generating quote:', error);
       throw error;
     }
   }
@@ -265,6 +303,7 @@ STRICT ITINERARY REQUIREMENTS FOR EVENT:
    - ALL event sessions must be included in the itinerary
    - Each session should be clearly marked in activities
    - Do not schedule other major activities during event times
+   - Specify the exact time of the event in the activities research the website of the event to get the exact time, if no times are specified, suggest the best time to arrive for the event
 
 2. Transportation & Logistics:
    - Include detailed transport to/from each session
@@ -331,6 +370,139 @@ INSTRUCTIONS:
 11. Make the specified event the absolute centerpiece of the itinerary
 12. Schedule all activities around the event timing
 13. Include event-specific logistics and recommendations` : ''}
+
+Respond with ONLY a JSON object in this exact format, with no additional text or formatting:
+{
+  "title": string,
+  "destination": string,
+  "clientName": string,
+  "days": [
+    {
+      "date": string,
+      "activities": [
+        {
+          "time": string,
+          "description": string,
+          "location": string,
+          "notes": string,
+          "estimatedCost": number,
+          "costType": "per-person" | "total"
+        }
+      ]
+    }
+  ],
+  "summary": string,
+  "totalBudget": {
+    "amount": number,
+    "currency": string
+  },
+  "budgetBreakdown": {
+    "accommodation": {
+      "total": number,
+      "perNight": number,
+      "hotelRecommendations": [
+        {
+          "name": string,
+          "location": string,
+          "pricePerNight": number,
+          "rating": string,
+          "amenities": string[]
+        }
+      ]
+    },
+    "transportation": {
+      "total": number,
+      "breakdown": [
+        {
+          "type": string,
+          "description": string,
+          "cost": number
+        }
+      ]
+    },
+    "activities": {
+      "total": number,
+      "breakdown": [
+        {
+          "name": string,
+          "cost": number,
+          "type": string
+        }
+      ]
+    },
+    "dining": {
+      "total": number,
+      "perDay": number,
+      "recommendations": [
+        {
+          "name": string,
+          "cuisine": string,
+          "priceRange": string,
+          "location": string
+        }
+      ]
+    },
+    "miscellaneous": {
+      "total": number,
+      "description": string
+    }
+  },
+  "luxuryHighlights": [
+    {
+      "title": string,
+      "description": string,
+      "whyLuxury": string
+    }
+  ],
+  "travelTips": [
+    {
+      "category": string,
+      "tips": string[]
+    }
+  ]
+}`;
+  }
+
+  private buildQuotePrompt(preferences: TripPreferences): string {
+    const duration = Math.ceil((new Date(preferences.endDate).getTime() - new Date(preferences.startDate).getTime()) / (1000 * 60 * 60 * 24));
+    const budgetPerDay = preferences.budget.max / duration;
+    const budgetPerPerson = preferences.budget.max / preferences.numberOfTravelers;
+
+    return `You are a luxury travel quote generation assistant. Create a professional, detailed quote for a luxury travel experience.
+
+IMPORTANT:
+* Respond with ONLY valid, compact JSON. Do NOT include markdown, code fences, or any extra text.
+* Focus on creating a compelling, professional quote with detailed pricing.
+* Include luxury touches and premium recommendations.
+
+CLIENT INFORMATION:
+- Name: ${preferences.clientName}
+- Destination: ${preferences.destination}
+- Dates: ${preferences.startDate} to ${preferences.endDate} (${duration} days)
+- Number of Travelers: ${preferences.numberOfTravelers}
+- Budget Range: ${preferences.budget.min}-${preferences.budget.max} ${preferences.budget.currency}
+- Travel Type: ${preferences.travelType || 'Luxury'}
+- From: ${preferences.fromLocation || 'Not specified'}
+
+PREFERENCES:
+- Tone: ${preferences.preferences.tone}
+- Pace: ${preferences.preferences.pace}
+- Interests: ${preferences.preferences.interests.join(', ')}
+- Accommodation Types: ${preferences.preferences.accommodationType.join(', ')}
+- Dining Preferences: ${preferences.preferences.diningPreferences.join(', ')}
+${preferences.specialRequests ? `- Special Requests: ${preferences.specialRequests}` : ''}
+
+QUOTE REQUIREMENTS:
+1. Create a compelling title that reflects the luxury nature of the trip
+2. Provide a detailed summary highlighting the unique aspects
+3. Include comprehensive pricing breakdown
+4. Recommend premium accommodations with specific properties
+5. Include luxury transportation options
+6. Suggest exclusive activities and experiences
+7. Recommend fine dining establishments
+8. Add luxury highlights that make this trip special
+9. Include professional travel tips
+10. Ensure the quote feels premium and exclusive
 
 Respond with ONLY a JSON object in this exact format, with no additional text or formatting:
 {

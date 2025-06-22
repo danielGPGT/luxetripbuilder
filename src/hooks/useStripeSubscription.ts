@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthProvider';
 import { StripeService, type SubscriptionData } from '@/lib/stripeService';
 import { TierManager } from '@/lib/tierManager';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 export function useStripeSubscription() {
   const { user } = useAuth();
@@ -12,21 +13,25 @@ export function useStripeSubscription() {
   const [pricing, setPricing] = useState<any>(null);
   const [pricingLoading, setPricingLoading] = useState(true);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadSubscription();
-    } else {
-      setSubscription(null);
+  const loadSubscription = useCallback(async () => {
+    if (!user?.id) {
+      console.log('⚠️ No user ID available, skipping subscription load');
       setLoading(false);
+      return;
     }
-    loadPricing();
-  }, [user?.id]);
-
-  const loadSubscription = async () => {
-    if (!user?.id) return;
 
     try {
       setLoading(true);
+      console.log('🔄 Loading subscription for user:', user.id);
+      
+      // Ensure user is authenticated
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        console.error('❌ User not authenticated');
+        setSubscription(null);
+        return;
+      }
+      
       const currentSubscription = await StripeService.getCurrentSubscription(user.id);
       setSubscription(currentSubscription);
 
@@ -36,12 +41,50 @@ export function useStripeSubscription() {
         await tierManager.initialize(user.id);
       }
     } catch (error) {
-      console.error('Error loading subscription:', error);
-      toast.error('Failed to load subscription data');
+      console.error('❌ Error loading subscription:', error);
+      // Don't show toast for subscription loading errors to avoid spam
+      setSubscription(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  // Manual refresh function that bypasses loading state
+  const refreshSubscription = useCallback(async () => {
+    if (!user?.id) {
+      console.log('⚠️ No user ID available, skipping subscription refresh');
+      return;
+    }
+
+    try {
+      console.log('🔄 Manually refreshing subscription for user:', user.id);
+      
+      const currentSubscription = await StripeService.getCurrentSubscription(user.id);
+      setSubscription(currentSubscription);
+
+      // Update tier manager with subscription data
+      if (currentSubscription) {
+        const tierManager = TierManager.getInstance();
+        await tierManager.initialize(user.id);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing subscription:', error);
+      setSubscription(null);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadSubscription();
+    } else {
+      setSubscription(null);
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadPricing();
+  }, []);
 
   const loadPricing = async () => {
     try {
@@ -219,6 +262,47 @@ export function useStripeSubscription() {
     return subscription?.cancel_at_period_end === true;
   };
 
+  const isTrialActive = () => {
+    if (!subscription) return false;
+    return subscription.status === 'trialing' && new Date(subscription.current_period_end) > new Date();
+  };
+
+  const hasAccess = () => {
+    if (!subscription) return false;
+    
+    // Active subscription
+    if (subscription.status === 'active') return true;
+    
+    // Active trial
+    if (subscription.status === 'trialing' && new Date(subscription.current_period_end) > new Date()) return true;
+    
+    // Canceled but still within period
+    if (subscription.cancel_at_period_end && new Date(subscription.current_period_end) > new Date()) return true;
+    
+    return false;
+  };
+
+  const getTrialDaysRemaining = () => {
+    if (!subscription || subscription.status !== 'trialing') return 0;
+    
+    const endDate = new Date(subscription.current_period_end);
+    const now = new Date();
+    const diffTime = endDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const getTrialEndDate = () => {
+    if (!subscription || subscription.status !== 'trialing') return null;
+    
+    return new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   const getDaysUntilRenewal = () => {
     if (!subscription?.current_period_end) return null;
     
@@ -254,6 +338,7 @@ export function useStripeSubscription() {
     cancelSubscription,
     openBillingPortal,
     loadSubscription,
+    refreshSubscription,
     
     // Computed values
     getPlanPrice,
@@ -261,6 +346,10 @@ export function useStripeSubscription() {
     getCurrentPlan,
     isSubscriptionActive,
     isSubscriptionCanceled,
+    isTrialActive,
+    hasAccess,
+    getTrialDaysRemaining,
+    getTrialEndDate,
     getDaysUntilRenewal,
     getFormattedRenewalDate,
   };

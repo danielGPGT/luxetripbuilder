@@ -167,7 +167,7 @@ export function Pricing() {
     },
     {
       question: "Is there a free trial available?",
-      answer: "Yes, we offer a 14-day free trial for all plans. No credit card required to start."
+      answer: "Yes, we offer a 7-day free trial for all plans when you sign up. No credit card required to start your trial."
     },
     {
       question: "What payment methods do you accept?",
@@ -225,7 +225,7 @@ export function Pricing() {
     }
 
     if (!user) {
-      return 'Start Free Trial';
+      return 'Get Started';
     }
 
     if (!isSubscriptionActive()) {
@@ -290,7 +290,7 @@ export function Pricing() {
           </h1>
           
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Start free and scale as you grow. No hidden fees, no surprises. 
+            Get started with a 7-day free trial on any plan. No hidden fees, no surprises. 
             Cancel anytime with full access until the end of your billing period.
           </p>
 
@@ -381,9 +381,9 @@ export function Pricing() {
                         {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : getButtonText(plan)}
                       </Button>
                     ) : (
-                      <Link to="/login">
+                      <Link to={`/signup?plan=${plan.planType}`}>
                         <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
-                          Start Free Trial
+                          {getButtonText(plan)}
                         </Button>
                       </Link>
                     )}
@@ -460,9 +460,9 @@ export function Pricing() {
               </Link>
             ) : (
               <>
-                <Link to="/login">
+                <Link to="/signup">
                   <Button size="lg" className="bg-white text-[var(--primary)] hover:bg-white/90 text-lg px-8 py-6">
-                    Start Free Trial
+                    Get Started
                   </Button>
                 </Link>
                 <Link to="/login">

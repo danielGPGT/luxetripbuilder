@@ -19,6 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import LuxeLogo from '@/assets/imgs/logo.svg';
 
 // Recent blog posts data
 const recentPosts = [
@@ -101,8 +102,7 @@ export function Header() {
       <div className="w-full px-4 sm:px-6 py-3 flex items-center justify-between">
         {/* Logo/Brand - Always goes to homepage */}
         <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <span className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--primary)] font-sans">AItinerary</span>
-          <WandSparkles className="h-5 w-5 sm:h-6 sm:w-6 text-[var(--primary)]" />
+          <img src={LuxeLogo} alt="Luxe" className="h-10 sm:h-14" />
         </Link>
         
         {/* Desktop Navigation */}

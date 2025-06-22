@@ -59,6 +59,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { UsageDashboard } from '@/components/UsageDashboard';
+import { TrialBanner } from '@/components/TrialBanner';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -250,6 +251,9 @@ export function Dashboard() {
 
   return (
     <div className="px-4 py-8 space-y-8">
+      {/* Trial Banner */}
+      <TrialBanner />
+      
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl p-8 text-foreground shadow-xl">
         <div className="absolute inset-0 bg-card" />

@@ -34,10 +34,11 @@ export class StripeService {
    * Create a new subscription
    */
   static async createSubscription(
-    userId: string,
+    userId: string | null,
     planType: 'starter' | 'professional' | 'enterprise',
     customerEmail: string,
-    customerName?: string
+    customerName?: string,
+    signupData?: { email: string; password: string; name: string }
   ): Promise<{ success: boolean; subscriptionId?: string; error?: string }> {
     try {
       const stripe = await initializeStripe();
@@ -50,7 +51,8 @@ export class StripeService {
         userId,
         planType,
         customerEmail,
-        customerName
+        customerName,
+        signupData
       );
 
       if (!session.success) {
@@ -81,10 +83,11 @@ export class StripeService {
    * Create a Stripe checkout session
    */
   static async createCheckoutSession(
-    userId: string,
+    userId: string | null,
     planType: 'starter' | 'professional' | 'enterprise',
     customerEmail: string,
-    customerName?: string
+    customerName?: string,
+    signupData?: { email: string; password: string; name: string }
   ): Promise<{ success: boolean; sessionId?: string; error?: string }> {
     try {
       const priceId = STRIPE_PRODUCTS[planType];
@@ -101,8 +104,9 @@ export class StripeService {
         body: JSON.stringify({
           priceId,
           customerEmail,
-          userId,
+          userId, // Can be null for new signups
           planType,
+          signupData, // Include signup data for account creation after payment
           successUrl: `${window.location.origin}/order/success?session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/pricing?subscription=cancelled`,
         }),
@@ -135,23 +139,78 @@ export class StripeService {
    */
   static async getCurrentSubscription(userId: string): Promise<SubscriptionData | null> {
     try {
+      console.log('🔍 Fetching subscription for user:', userId);
+      
+      // First, test if we can access the subscriptions table at all
+      const { data: testData, error: testError } = await supabase
+        .from('subscriptions')
+        .select('count')
+        .limit(1);
+      
+      if (testError) {
+        console.error('❌ Cannot access subscriptions table:', testError);
+        return null;
+      }
+      
+      // First try to get any subscription (active, trialing, etc.)
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
-        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
 
       if (error) {
+        console.error('❌ Database error fetching subscription:', error);
         if (error.code === 'PGRST116') {
-          return null; // No subscription found
+          console.log('ℹ️ No subscription found for user');
+          // Try to create a trial subscription
+          try {
+            console.log('🔄 Attempting to create trial subscription for user:', userId);
+            const { data: newSub, error: createError } = await supabase
+              .from('subscriptions')
+              .insert({
+                user_id: userId,
+                plan_type: 'starter',
+                status: 'trialing',
+                current_period_start: new Date().toISOString(),
+                current_period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+                cancel_at_period_end: false,
+                stripe_subscription_id: null,
+                stripe_customer_id: null
+              })
+              .select()
+              .single();
+            
+            if (createError) {
+              console.error('❌ Failed to create trial subscription:', createError);
+              return null;
+            }
+            
+            console.log('✅ Created trial subscription:', newSub);
+            return newSub;
+          } catch (createError) {
+            console.error('❌ Error creating trial subscription:', createError);
+            return null;
+          }
+        }
+        // Log more details for 406 errors
+        if (error.code === '406') {
+          console.error('🚨 406 Not Acceptable error - possible RLS policy issue');
+          console.error('Error details:', error);
+          console.error('User ID:', userId);
+          // Try to get current user to debug auth issue
+          const { data: { user } } = await supabase.auth.getUser();
+          console.error('Current auth user:', user?.id);
         }
         throw error;
       }
 
+      console.log('✅ Subscription found:', data);
       return data;
     } catch (error) {
-      console.error('Error getting current subscription:', error);
+      console.error('❌ Error getting current subscription:', error);
       return null;
     }
   }
@@ -360,6 +419,36 @@ export class StripeService {
       return { success: true, customerId: `cust_${userId}` };
     } catch (error) {
       console.error('Error creating/getting customer:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      };
+    }
+  }
+
+  /**
+   * Manually sync subscription data between Stripe and database
+   */
+  static async syncSubscription(userId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await fetch('http://localhost:3001/api/sync-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Server error:', errorData);
+        return { success: false, error: `Server error: ${response.status}` };
+      }
+
+      const result = await response.json();
+      return { success: result.success, data: result.data, error: result.error };
+    } catch (error) {
+      console.error('Error syncing subscription:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error occurred' 

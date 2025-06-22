@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthProvider";
-import LuxeLogo from "@/assets/Luxe.svg";
+import Logo from "@/assets/imgs/logo.svg";
 import img1 from "@/assets/imgs/james-donaldson-toPRrcyAIUY-unsplash.jpg";
 import img2 from "@/assets/imgs/fredrik-ohlander-fCW1hWq2nq0-unsplash.jpg";
 import img3 from "@/assets/imgs/spencer-davis-Ivwyqtw3PzU-unsplash.jpg";
@@ -126,7 +126,7 @@ export default function Login() {
       {/* Right Side */}
       <div className="flex flex-col justify-center items-center w-full lg:w-1/2 p-8 bg-background min-h-screen">
         <div className="w-full max-w-md space-y-6 bg-card rounded-xl shadow-lg p-8 flex flex-col items-center">
-          <img src={LuxeLogo} alt="LuxeTripBuilder Logo" className="h-12 mb-6 lg:hidden" />
+          <img src={Logo} alt="AItinerary Logo" className="h-12 mb-6 lg:hidden" />
           <h1 className="text-2xl font-bold text-center text-primary">
             Sign in to your account
           </h1>

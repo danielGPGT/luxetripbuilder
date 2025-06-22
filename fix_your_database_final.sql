@@ -192,8 +192,29 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.subscriptions (user_id, plan_type, status)
-    VALUES (NEW.id, 'starter', 'active');
+    -- Create a trial subscription for new users
+    INSERT INTO public.subscriptions (
+        user_id, 
+        plan_type, 
+        status, 
+        current_period_start, 
+        current_period_end, 
+        cancel_at_period_end, 
+        stripe_subscription_id, 
+        stripe_customer_id
+    )
+    VALUES (
+        NEW.id, 
+        'starter', 
+        'trialing', 
+        NOW(), 
+        NOW() + INTERVAL '7 days', -- 7-day trial
+        false, 
+        null, 
+        null
+    );
+    
+    RAISE NOTICE 'Created trial subscription for user %', NEW.id;
     RETURN NEW;
 EXCEPTION
     WHEN OTHERS THEN

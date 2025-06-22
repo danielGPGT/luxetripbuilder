@@ -18,21 +18,30 @@ This guide will help you set up a complete Stripe subscription system for your L
 
 #### Starter Plan
 - **Name**: Starter Plan
-- **Price**: $29/month
+- **Description**: Perfect for individual travel agents
+- **Product ID**: `prod_starter`
+- **Price**: £29.00
 - **Billing**: Recurring (monthly)
-- **Note the Price ID**: `price_xxxxxxxxxxxxx`
+- **Trial period**: None (will be set at subscription level)
+- **Note the Price ID**: `price_starter`
 
 #### Professional Plan
 - **Name**: Professional Plan
-- **Price**: $79/month
+- **Description**: Ideal for growing travel agencies
+- **Product ID**: `prod_professional`
+- **Price**: £79.00
 - **Billing**: Recurring (monthly)
-- **Note the Price ID**: `price_xxxxxxxxxxxxx`
+- **Trial period**: None
+- **Note the Price ID**: `price_professional`
 
 #### Enterprise Plan
 - **Name**: Enterprise Plan
-- **Price**: Custom (contact sales)
-- **Billing**: One-time or custom
-- **Note the Price ID**: `price_xxxxxxxxxxxxx`
+- **Description**: For large travel organizations
+- **Product ID**: `prod_enterprise`
+- **Price**: £199.00
+- **Billing**: Recurring (monthly)
+- **Trial period**: None
+- **Note the Price ID**: `price_enterprise`
 
 ### 1.2 Configure Webhooks
 
@@ -52,6 +61,38 @@ This guide will help you set up a complete Stripe subscription system for your L
 1. Go to **Developers** → **API Keys**
 2. Copy your **Publishable Key** and **Secret Key**
 
+### 1.2 Create Prices
+
+#### Starter Plan Price
+1. Go to the Starter Plan product
+2. Click "Add price"
+3. Configure:
+   - **Pricing model**: Standard pricing
+   - **Price**: £29.00
+   - **Billing period**: Monthly
+   - **Trial period**: None (will be set at subscription level)
+   - **Price ID**: Note this (e.g., `price_starter`)
+
+#### Professional Plan Price
+1. Go to the Professional Plan product
+2. Click "Add price"
+3. Configure:
+   - **Pricing model**: Standard pricing
+   - **Price**: £79.00
+   - **Billing period**: Monthly
+   - **Trial period**: None
+   - **Price ID**: Note this (e.g., `price_professional`)
+
+#### Enterprise Plan Price
+1. Go to the Enterprise Plan product
+2. Click "Add price"
+3. Configure:
+   - **Pricing model**: Standard pricing
+   - **Price**: £199.00
+   - **Billing period**: Monthly
+   - **Trial period**: None
+   - **Price ID**: Note this (e.g., `price_enterprise`)
+
 ## 2. Environment Variables
 
 Add these environment variables to your `.env.local` file:
@@ -59,9 +100,9 @@ Add these environment variables to your `.env.local` file:
 ```env
 # Stripe Configuration
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
-VITE_STRIPE_STARTER_PRICE_ID=price_xxxxxxxxxxxxx
-VITE_STRIPE_PROFESSIONAL_PRICE_ID=price_xxxxxxxxxxxxx
-VITE_STRIPE_ENTERPRISE_PRICE_ID=price_xxxxxxxxxxxxx
+VITE_STRIPE_STARTER_PRICE_ID=price_starter
+VITE_STRIPE_PROFESSIONAL_PRICE_ID=price_professional
+VITE_STRIPE_ENTERPRISE_PRICE_ID=price_enterprise
 
 # Supabase Configuration (for Edge Functions)
 SUPABASE_URL=https://your-project.supabase.co
@@ -320,3 +361,23 @@ For issues with this implementation:
 - Implement proper authentication
 - Monitor for suspicious activity
 - Keep dependencies updated 
+
+## Step 3: Trial Period Configuration
+
+### 3.1 How Trial Periods Work
+- **Trial periods are set at the subscription level**, not the product/price level
+- The server automatically adds a 7-day trial for Starter plan subscriptions
+- Professional and Enterprise plans have no trial period
+
+### 3.2 Starter Plan Trial Setup
+The server automatically configures:
+- **Trial period**: 7 days (set in `subscription_data.trial_period_days`)
+- **Payment method**: Required during signup
+- **Trial end behavior**: Create invoice (default)
+
+### 3.3 Trial Flow
+1. User enters card details during signup
+2. No charge is made immediately
+3. User gets 7 days of full access
+4. After 7 days, first charge is made
+5. User can cancel anytime during trial to avoid charges 

@@ -17,10 +17,12 @@ import {
   Settings,
   TrendingUp,
   TrendingDown,
-  Info
+  Info,
+  Clock
 } from 'lucide-react';
 import { useStripeSubscription } from '@/hooks/useStripeSubscription';
 import { useAuth } from '@/lib/AuthProvider';
+import { StripeService } from '@/lib/stripeService';
 import { toast } from 'sonner';
 
 export function SubscriptionManager() {
@@ -35,6 +37,7 @@ export function SubscriptionManager() {
     updateSubscription,
     cancelSubscription,
     openBillingPortal,
+    loadSubscription,
     getCurrentPlan,
     getPlanPrice,
     getPlanFeatures,
@@ -42,6 +45,9 @@ export function SubscriptionManager() {
     isSubscriptionCanceled,
     getDaysUntilRenewal,
     getFormattedRenewalDate,
+    isTrialActive,
+    getTrialDaysRemaining,
+    getTrialEndDate,
   } = useStripeSubscription();
 
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -50,6 +56,7 @@ export function SubscriptionManager() {
   const [selectedPlan, setSelectedPlan] = useState<'starter' | 'professional' | 'enterprise'>('professional');
   const [planChangeType, setPlanChangeType] = useState<'upgrade' | 'downgrade'>('upgrade');
   const [targetPlan, setTargetPlan] = useState<'starter' | 'professional' | 'enterprise'>('professional');
+  const [syncing, setSyncing] = useState(false);
 
   const handleUpgrade = async () => {
     if (!user?.email) {
@@ -88,12 +95,41 @@ export function SubscriptionManager() {
   };
 
   const confirmPlanChange = async () => {
-    const result = await updateSubscription(targetPlan);
-    
-    if (result.success) {
-      setShowPlanChangeDialog(false);
-      const isUpgrade = planChangeType === 'upgrade';
-      toast.success(`Successfully ${isUpgrade ? 'upgraded' : 'downgraded'} to ${targetPlan} plan`);
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const response = await fetch('http://localhost:3001/api/change-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          newPlanType: targetPlan
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setShowPlanChangeDialog(false);
+        const isUpgrade = planChangeType === 'upgrade';
+        toast.success(`Successfully ${isUpgrade ? 'upgraded' : 'downgraded'} to ${targetPlan} plan`);
+        console.log('Plan change successful:', result.changes);
+        // Reload subscription data
+        await loadSubscription();
+      } else {
+        toast.error(result.error || 'Failed to change plan');
+      }
+    } catch (error) {
+      console.error('Error changing plan:', error);
+      toast.error('Failed to change plan');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -186,6 +222,35 @@ export function SubscriptionManager() {
     }
   };
 
+  const getBillingDetails = (currentPlan: string, targetPlan: string) => {
+    const planPrices = {
+      starter: 29,
+      professional: 79,
+      enterprise: 199
+    };
+
+    const currentPrice = planPrices[currentPlan as keyof typeof planPrices] || 0;
+    const targetPrice = planPrices[targetPlan as keyof typeof planPrices] || 0;
+    const priceDifference = targetPrice - currentPrice;
+
+    // Calculate prorated amount (simplified - in real app you'd get this from Stripe)
+    const daysInMonth = 30;
+    const daysRemaining = getDaysUntilRenewal() || daysInMonth;
+    const proratedAmount = Math.round((priceDifference * daysRemaining) / daysInMonth * 100) / 100;
+
+    const renewalDate = getFormattedRenewalDate();
+    const nextBillingDate = renewalDate || 'End of current period';
+
+    return {
+      currentPrice,
+      targetPrice,
+      priceDifference,
+      proratedAmount,
+      nextBillingDate,
+      daysRemaining
+    };
+  };
+
   const getPlanIcon = (plan: string) => {
     switch (plan) {
       case 'professional':
@@ -208,6 +273,242 @@ export function SubscriptionManager() {
     }
   };
 
+  // Sync function - REMOVED
+  /*
+  const handleSyncSubscription = async () => {
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const result = await StripeService.syncSubscription(user.id);
+      
+      if (result.success) {
+        toast.success('Subscription synced successfully');
+        // Reload subscription data
+        await loadSubscription();
+      } else {
+        toast.error(result.error || 'Failed to sync subscription');
+      }
+    } catch (error) {
+      console.error('Error syncing subscription:', error);
+      toast.error('Failed to sync subscription');
+    } finally {
+      setSyncing(false);
+    }
+  };
+  */
+
+  const handleFixTrialConversion = async () => {
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const response = await fetch('http://localhost:3001/api/fix-trial-conversion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(result.message || 'Trial conversion fixed successfully');
+        // Reload subscription data
+        await loadSubscription();
+      } else {
+        toast.error(result.error || 'Failed to fix trial conversion');
+      }
+    } catch (error) {
+      console.error('Error fixing trial conversion:', error);
+      toast.error('Failed to fix trial conversion');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleManualUpgrade = async () => {
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const response = await fetch('http://localhost:3001/api/manual-upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          planType: 'starter' // or get from current plan
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(result.message || 'Manual upgrade successful');
+        console.log('Upgrade changes:', result.changes);
+        // Reload subscription data
+        await loadSubscription();
+      } else {
+        toast.error(result.error || 'Failed to upgrade manually');
+      }
+    } catch (error) {
+      console.error('Error with manual upgrade:', error);
+      toast.error('Failed to upgrade manually');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleRefreshSubscription = async () => {
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      await loadSubscription();
+      toast.success('Subscription data refreshed');
+    } catch (error) {
+      console.error('Error refreshing subscription:', error);
+      toast.error('Failed to refresh subscription data');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDebugSubscription = () => {
+    console.log('Current subscription data:', subscription);
+    console.log('Current period end:', subscription?.current_period_end);
+    console.log('Formatted renewal date:', getFormattedRenewalDate());
+    console.log('Days until renewal:', getDaysUntilRenewal());
+    toast.success('Subscription data logged to console');
+  };
+
+  const handleFixBillingDates = async () => {
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const response = await fetch('http://localhost:3001/api/fix-billing-dates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(result.message || 'Billing dates fixed successfully');
+        console.log('Fix result:', result);
+        // Reload subscription data
+        await loadSubscription();
+      } else {
+        toast.error(result.error || 'Failed to fix billing dates');
+      }
+    } catch (error) {
+      console.error('Error fixing billing dates:', error);
+      toast.error('Failed to fix billing dates');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleQuickPlanChange = async (newPlan: 'starter' | 'professional' | 'enterprise') => {
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    const currentPlan = getCurrentPlan();
+
+    if (newPlan === currentPlan) {
+      toast.info('You are already on this plan');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const response = await fetch('http://localhost:3001/api/change-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          newPlanType: newPlan
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(`Successfully changed to ${newPlan} plan`);
+        console.log('Quick plan change successful:', result.changes);
+        // Reload subscription data
+        await loadSubscription();
+      } else {
+        toast.error(result.error || 'Failed to change plan');
+      }
+    } catch (error) {
+      console.error('Error with quick plan change:', error);
+      toast.error('Failed to change plan');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleCreateTrialSubscription = async () => {
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const response = await fetch('http://localhost:3001/api/create-trial-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(result.message || 'Trial subscription created successfully');
+        console.log('Trial subscription created:', result.subscription);
+        // Reload subscription data
+        await loadSubscription();
+      } else {
+        toast.error(result.error || 'Failed to create trial subscription');
+      }
+    } catch (error) {
+      console.error('Error creating trial subscription:', error);
+      toast.error('Failed to create trial subscription');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -224,6 +525,9 @@ export function SubscriptionManager() {
   const currentPlan = getCurrentPlan();
   const daysUntilRenewal = getDaysUntilRenewal();
   const renewalDate = getFormattedRenewalDate();
+  const isCurrentlyTrialing = isTrialActive();
+  const trialDaysRemaining = getTrialDaysRemaining();
+  const trialEndDate = getTrialEndDate();
 
   return (
     <div className="space-y-6">
@@ -244,14 +548,25 @@ export function SubscriptionManager() {
               <div>
                 <div className="font-semibold capitalize">{currentPlan} Plan</div>
                 <div className="text-sm text-muted-foreground">
-                  {isSubscriptionActive() ? 'Active' : 'Inactive'}
+                  {isCurrentlyTrialing ? 'Free Trial' : isSubscriptionActive() ? 'Active' : 'Inactive'}
                 </div>
               </div>
             </div>
-            <Badge variant={isSubscriptionActive() ? 'default' : 'secondary'}>
-              {isSubscriptionActive() ? 'Active' : 'Inactive'}
+            <Badge variant={isCurrentlyTrialing ? 'secondary' : isSubscriptionActive() ? 'default' : 'secondary'}>
+              {isCurrentlyTrialing ? 'Trial' : isSubscriptionActive() ? 'Active' : 'Inactive'}
             </Badge>
           </div>
+
+          {isCurrentlyTrialing && (
+            <Alert className="border-blue-200 bg-blue-50">
+              <Clock className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                <div className="font-medium mb-1">Free Trial Active</div>
+                <div>You have <span className="font-semibold">{trialDaysRemaining} days</span> remaining in your trial.</div>
+                {trialEndDate && <div className="text-sm mt-1">Trial ends: {trialEndDate}</div>}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {isSubscriptionCanceled() && (
             <Alert className="border-yellow-200 bg-yellow-50">
@@ -262,7 +577,7 @@ export function SubscriptionManager() {
             </Alert>
           )}
 
-          {renewalDate && (
+          {renewalDate && !isCurrentlyTrialing && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4" />
               <span>
@@ -272,15 +587,132 @@ export function SubscriptionManager() {
             </div>
           )}
 
-          <Button 
+          {!isCurrentlyTrialing && (
+            <Button 
+              variant="outline" 
+              className="w-full mt-4" 
+              onClick={openBillingPortal}
+              disabled={processing}
+            >
+              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+              <span className="ml-2">Manage Billing & Invoices</span>
+            </Button>
+          )}
+
+          {/* Manual Sync Button for debugging - REMOVED */}
+          {/* <Button 
             variant="outline" 
-            className="w-full mt-4" 
-            onClick={openBillingPortal}
-            disabled={processing}
+            className="w-full mt-2" 
+            onClick={handleSyncSubscription}
+            disabled={syncing}
           >
-            {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-            <span className="ml-2">Manage Billing & Invoices</span>
-          </Button>
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings className="h-4 w-4" />}
+            <span className="ml-2">Sync Subscription Status</span>
+          </Button> */}
+
+          {/* Create Trial Subscription Button */}
+          {!subscription && (
+            <Button 
+              variant="default" 
+              className="w-full mt-2 bg-blue-600 hover:bg-blue-700" 
+              onClick={handleCreateTrialSubscription}
+              disabled={syncing}
+            >
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              <span className="ml-2">Create Trial Subscription</span>
+            </Button>
+          )}
+
+          {/* Fix Trial Conversion Button */}
+          {isCurrentlyTrialing && (
+            <Button 
+              variant="outline" 
+              className="w-full mt-2" 
+              onClick={handleFixTrialConversion}
+              disabled={syncing}
+            >
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              <span className="ml-2">Fix Trial Conversion</span>
+            </Button>
+          )}
+
+          {/* Manual Upgrade Button */}
+          {isCurrentlyTrialing && (
+            <Button 
+              variant="default" 
+              className="w-full mt-2 bg-green-600 hover:bg-green-700" 
+              onClick={handleManualUpgrade}
+              disabled={syncing}
+            >
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
+              <span className="ml-2">Manual Upgrade to Paid</span>
+            </Button>
+          )}
+
+          {/* Refresh Button */}
+          <div className="mt-4">
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleRefreshSubscription}
+              disabled={syncing}
+            >
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings className="h-4 w-4" />}
+              <span className="ml-2">Refresh Subscription Data</span>
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="w-full mt-2" 
+              onClick={handleDebugSubscription}
+              disabled={syncing}
+            >
+              <Info className="h-4 w-4" />
+              <span className="ml-2">Debug Subscription Data</span>
+            </Button>
+          </div>
+
+          {/* Test Checkout Session Button - REMOVED */}
+          {/* <Button 
+            variant="outline" 
+            className="w-full mt-2 bg-yellow-100 hover:bg-yellow-200" 
+            onClick={handleTestCheckoutSession}
+            disabled={syncing}
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Info className="h-4 w-4" />}
+            <span className="ml-2">Test Checkout Session Processing</span>
+          </Button> */}
+
+          {/* Quick Plan Change Buttons - REMOVED */}
+          {/* <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-medium mb-2">Quick Plan Changes (Testing)</h4>
+            <div className="grid grid-cols-3 gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleQuickPlanChange('starter')}
+                disabled={syncing || currentPlan === 'starter'}
+              >
+                {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Starter'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleQuickPlanChange('professional')}
+                disabled={syncing || currentPlan === 'professional'}
+              >
+                {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Pro'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleQuickPlanChange('enterprise')}
+                disabled={syncing || currentPlan === 'enterprise'}
+              >
+                {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Enterprise'}
+              </Button>
+            </div>
+          </div> */}
         </CardContent>
       </Card>
 
@@ -443,7 +875,7 @@ export function SubscriptionManager() {
 
       {/* Plan Change Confirmation Dialog */}
       <Dialog open={showPlanChangeDialog} onOpenChange={setShowPlanChangeDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {planChangeType === 'upgrade' ? (
@@ -473,14 +905,41 @@ export function SubscriptionManager() {
                       </li>
                     ))}
                   </ul>
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Info className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">Pricing</span>
+                  
+                  {/* Billing Details */}
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CreditCard className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Billing Details</span>
                     </div>
-                    <p className="text-sm text-blue-700">
-                      Your subscription will be prorated. You'll only pay for the difference between plans.
-                    </p>
+                    {(() => {
+                      const billing = getBillingDetails(getCurrentPlan(), targetPlan);
+                      return (
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-blue-700">Current Plan:</span>
+                            <span className="font-medium">£{billing.currentPrice}/month</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-blue-700">New Plan:</span>
+                            <span className="font-medium">£{billing.targetPrice}/month</span>
+                          </div>
+                          <div className="flex justify-between border-t border-blue-200 pt-2">
+                            <span className="text-blue-700 font-medium">Prorated Amount:</span>
+                            <span className={`font-bold ${billing.proratedAmount > 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                              {billing.proratedAmount > 0 ? '+' : ''}£{billing.proratedAmount}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-blue-700">Billed on:</span>
+                            <span className="font-medium">{billing.nextBillingDate}</span>
+                          </div>
+                          <div className="text-xs text-blue-600 mt-2">
+                            * You'll be charged the prorated difference immediately. Your next full billing cycle will be £{billing.targetPrice}/month.
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ) : (
@@ -497,14 +956,41 @@ export function SubscriptionManager() {
                       </li>
                     ))}
                   </ul>
-                  <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-1">
-                      <AlertTriangle className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm font-medium text-orange-800">Important</span>
+                  
+                  {/* Billing Details for Downgrade */}
+                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CreditCard className="h-4 w-4 text-orange-600" />
+                      <span className="text-sm font-medium text-orange-800">Billing Details</span>
                     </div>
-                    <p className="text-sm text-orange-700">
-                      You'll keep your current features until the end of your billing period, then switch to the new plan.
-                    </p>
+                    {(() => {
+                      const billing = getBillingDetails(getCurrentPlan(), targetPlan);
+                      return (
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-orange-700">Current Plan:</span>
+                            <span className="font-medium">£{billing.currentPrice}/month</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-orange-700">New Plan:</span>
+                            <span className="font-medium">£{billing.targetPrice}/month</span>
+                          </div>
+                          <div className="flex justify-between border-t border-orange-200 pt-2">
+                            <span className="text-orange-700 font-medium">Credit Applied:</span>
+                            <span className="font-bold text-green-600">
+                              +£{Math.abs(billing.proratedAmount)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-orange-700">Effective from:</span>
+                            <span className="font-medium">{billing.nextBillingDate}</span>
+                          </div>
+                          <div className="text-xs text-orange-600 mt-2">
+                            * You'll keep current features until {billing.nextBillingDate}. Your next billing cycle will be £{billing.targetPrice}/month.
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -517,9 +1003,9 @@ export function SubscriptionManager() {
             <Button 
               variant={planChangeType === 'upgrade' ? 'default' : 'destructive'}
               onClick={confirmPlanChange}
-              disabled={processing}
+              disabled={syncing}
             >
-              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
                planChangeType === 'upgrade' ? 'Confirm Upgrade' : 'Confirm Downgrade'}
             </Button>
           </div>

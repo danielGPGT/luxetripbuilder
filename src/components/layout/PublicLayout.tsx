@@ -8,7 +8,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div className="min-h-screen w-full bg-[var(--background)]">
       <Header />
-      <main className="text-[var(--foreground)]">
+      <main className="pt-8 text-[var(--foreground)]">
         {children}
       </main>
     </div>

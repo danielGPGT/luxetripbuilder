@@ -9,7 +9,7 @@ Add these variables to your `.env.local` file in your project root:
 ```env
 # Supabase Configuration (you probably already have these)
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Stripe Configuration (NEW - you need to add these)
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key_here
@@ -125,3 +125,85 @@ VITE_STRIPE_ENTERPRISE_PRICE_ID=price_1GHI789JKL012MNO345PQR678STU901VWX234YZA56
 ```
 
 Once you have these set up, your Stripe integration will work! 🎉 
+
+## Supabase Email Confirmation Setup
+
+### For Development (Optional - Disable Email Confirmation)
+
+If you want to disable email confirmation during development:
+
+1. Go to your Supabase Dashboard
+2. Navigate to Authentication > Settings
+3. Under "Email Auth", uncheck "Enable email confirmations"
+4. Save changes
+
+### For Production (Recommended - Keep Email Confirmation)
+
+For production, keep email confirmation enabled and ensure:
+
+1. Configure your email provider in Supabase
+2. Set up proper email templates
+3. Test the email confirmation flow
+
+### Email Templates
+
+You can customize email templates in Supabase Dashboard:
+- Go to Authentication > Email Templates
+- Customize the "Confirm signup" template
+- Test the email flow
+
+## Stripe Setup
+
+1. Create a Stripe account
+2. Get your API keys from the Stripe Dashboard
+3. Create products and prices for each plan
+4. Set up webhook endpoints
+5. Configure the webhook secret
+
+## Database Setup
+
+Run the SQL migrations in the `supabase/migrations/` folder to set up:
+- User profiles table
+- Subscriptions table
+- Media library table
+- Tier system
+
+## Server Setup
+
+1. Install dependencies: `npm install`
+2. Start the server: `node server.cjs`
+3. The server will run on port 3001
+
+## Testing the Setup
+
+1. Start the development server: `npm run dev`
+2. Test the signup flow
+3. Verify email confirmation works
+4. Test subscription creation
+5. Verify webhook handling
+
+## Troubleshooting
+
+### Email Confirmation Issues
+
+If users can't confirm their email:
+1. Check spam folder
+2. Verify email templates are configured
+3. Check Supabase email settings
+4. Test with a real email address
+
+### Stripe Webhook Issues
+
+If webhooks aren't working:
+1. Use Stripe CLI: `stripe listen --forward-to localhost:3001/api/webhook`
+2. Check webhook secret configuration
+3. Verify server is running
+4. Check webhook endpoint logs
+
+### Database Connection Issues
+
+If database operations fail:
+1. Verify Supabase URL and key
+2. Check RLS policies
+3. Ensure tables exist
+4. Verify user permissions 

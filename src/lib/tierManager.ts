@@ -106,20 +106,36 @@ export class TierManager {
     if (!this.currentUser) return;
 
     try {
+      // First try to get any subscription (active, trialing, etc.)
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', this.currentUser)
-        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
 
       if (error) {
         console.error('Error loading subscription:', error);
         // Handle different error types
         if (error.code === 'PGRST116') {
-          // No subscription found, create a starter one
-          console.log('No subscription found, creating starter subscription');
-          await this.createSubscription(this.currentUser, 'starter');
+          // No subscription found, check if we should create one
+          console.log('No subscription found, checking if we should create one');
+          
+          // Only create if this is a new user (no existing subscriptions at all)
+          const { data: existingSubs, error: checkError } = await supabase
+            .from('subscriptions')
+            .select('id')
+            .eq('user_id', this.currentUser)
+            .limit(1);
+
+          if (checkError || !existingSubs || existingSubs.length === 0) {
+            console.log('Creating starter subscription for new user');
+            await this.createSubscription(this.currentUser, 'starter');
+          } else {
+            console.log('Subscription exists but query failed, using starter as fallback');
+            this.currentPlan = 'starter';
+          }
         } else if (error.code === '42703' || error.code === '42P01') {
           // Table doesn't exist
           console.warn('Subscriptions table not found, defaulting to starter plan');
@@ -145,8 +161,22 @@ export class TierManager {
     if (!this.currentUser) return;
 
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+      // First check if we can access the user's subscription (this tests authentication)
+      const { data: subscriptionData, error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', this.currentUser)
+        .limit(1);
 
+      if (subscriptionError && (subscriptionError.code === '406' || subscriptionError.code === '403')) {
+        // User is not properly authenticated yet (likely during signup process)
+        console.log('User not properly authenticated yet, skipping usage tracking');
+        this.currentUsage = this.getDefaultUsage();
+        return;
+      }
+
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
       const { data, error } = await supabase
         .from('usage_tracking')
         .select('*')
@@ -166,8 +196,8 @@ export class TierManager {
           console.warn('Usage tracking table not found. Please run the database setup script.');
           this.currentUsage = this.getDefaultUsage();
         } else if (error.code === '406') {
-          // Not acceptable - likely missing headers or content type
-          console.warn('API request format error. Please check Supabase configuration.');
+          // Not acceptable - likely missing headers or content type, or RLS policy issue
+          console.warn('API request format error or RLS policy issue. Please check Supabase configuration.');
           this.currentUsage = this.getDefaultUsage();
         } else if (error.code === '403') {
           // Forbidden - RLS policy issue
@@ -216,8 +246,38 @@ export class TierManager {
     if (!this.currentUser) return;
 
     try {
+      // First check if we can access the user's subscription (this tests authentication)
+      const { data: subscriptionData, error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', this.currentUser)
+        .limit(1);
+
+      if (subscriptionError && (subscriptionError.code === '406' || subscriptionError.code === '403')) {
+        // User is not properly authenticated yet (likely during signup process)
+        console.log('User not properly authenticated yet, skipping usage record creation');
+        this.currentUsage = this.getDefaultUsage();
+        return;
+      }
+
       const currentMonth = new Date().toISOString().slice(0, 7);
       
+      // First check if record already exists
+      const { data: existingRecord, error: checkError } = await supabase
+        .from('usage_tracking')
+        .select('id')
+        .eq('user_id', this.currentUser)
+        .eq('month', currentMonth)
+        .single();
+
+      if (existingRecord) {
+        // Record already exists, load it
+        console.log('Usage record already exists, loading existing record');
+        await this.loadCurrentUsage();
+        return;
+      }
+
+      // Create new record
       const { error } = await supabase
         .from('usage_tracking')
         .insert({
@@ -234,12 +294,15 @@ export class TierManager {
         if (error.code === '42703' || error.code === '42P01') {
           console.warn('Usage tracking table not found. Please run the database setup script.');
           this.currentUsage = this.getDefaultUsage();
-        } else if (error.code === '409') {
-          console.warn('Usage record already exists. This is normal.');
+        } else if (error.code === '409' || error.code === '23505') {
+          console.warn('Usage record already exists (race condition). Loading existing record.');
           // Try to load the existing record
           await this.loadCurrentUsage();
         } else if (error.code === '403') {
           console.warn('Access denied creating usage record. Please check RLS policies.');
+          this.currentUsage = this.getDefaultUsage();
+        } else if (error.code === '406') {
+          console.warn('API request format error. Please check Supabase configuration.');
           this.currentUsage = this.getDefaultUsage();
         } else {
           console.warn('Usage creation error, defaulting to zero usage:', error);
@@ -424,21 +487,28 @@ export class TierManager {
       const now = new Date();
       const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
+      // Use upsert to handle duplicate key errors
       const { error } = await supabase
         .from('subscriptions')
-        .insert({
+        .upsert({
           user_id: userId,
           plan_type: planType,
-          status: 'active',
+          status: 'trialing', // Start with trial status
           current_period_start: now.toISOString(),
-          current_period_end: periodEnd.toISOString(),
+          current_period_end: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days trial
           cancel_at_period_end: false,
+        }, {
+          onConflict: 'user_id'
         });
 
       if (error) {
         if (error.code === '42703') {
           console.warn('Subscriptions table not found, skipping subscription creation');
           return true; // Allow the operation to continue
+        }
+        if (error.code === '23505') {
+          console.log('Subscription already exists for user, skipping creation');
+          return true; // Subscription already exists, that's fine
         }
         console.error('Error creating subscription:', error);
         return false;
@@ -459,8 +529,7 @@ export class TierManager {
           plan_type: planType,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', userId)
-        .eq('status', 'active');
+        .eq('user_id', userId);
 
       if (error) {
         if (error.code === '42703') {
@@ -488,8 +557,7 @@ export class TierManager {
           cancel_at_period_end: true,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', userId)
-        .eq('status', 'active');
+        .eq('user_id', userId);
 
       if (error) {
         if (error.code === '42703') {

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Loader } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle, XCircle, Loader2, Mail, Lock } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { auth } from '@/lib/auth';
+import { toast } from 'sonner';
 
 interface SessionData {
   customer_email: string;
@@ -15,109 +19,206 @@ interface SessionData {
 
 const OrderConfirmation = () => {
   const [searchParams] = useSearchParams();
-  const sessionId = searchParams.get('session_id');
+  const navigate = useNavigate();
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
     if (!sessionId) {
-      setError('No session ID found.');
+      setError('No session ID found');
       setLoading(false);
       return;
     }
 
-    const fetchSessionData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`http://localhost:3001/api/checkout-session/${sessionId}`);
-        const data = await response.json();
-
+    // Fetch session data from your server
+    fetch(`http://localhost:3001/api/get-session?session_id=${sessionId}`)
+      .then(res => res.json())
+      .then(data => {
         if (data.success) {
-          setSessionData(data);
+          setSessionData(data.session);
+          setEmail(data.session.customer_email || '');
         } else {
-          setError(data.error || 'Failed to retrieve session details.');
+          setError(data.error || 'Failed to load session data');
         }
-      } catch (err) {
-        setError('An error occurred while fetching your order details.');
-      } finally {
+      })
+      .catch(err => {
+        console.error('Error fetching session:', err);
+        setError('Failed to load session data');
+      })
+      .finally(() => {
         setLoading(false);
-      }
-    };
-
-    fetchSessionData();
+      });
   }, [sessionId]);
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount / 100);
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error('Please enter your email and password');
+      return;
+    }
+
+    setSigningIn(true);
+    
+    try {
+      const result = await auth.signIn(email, password);
+      
+      if (result.user) {
+        toast.success('Welcome! Your account is now active.');
+        navigate('/dashboard');
+      } else {
+        toast.error(result.error?.message || 'Sign in failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Sign in failed');
+    } finally {
+      setSigningIn(false);
+    }
   };
 
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="flex flex-col items-center justify-center text-center">
-          <Loader className="w-12 h-12 animate-spin text-primary mb-4" />
-          <p className="text-lg">Loading your order details...</p>
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading your order details...</p>
+          </div>
         </div>
-      );
-    }
+      </MainLayout>
+    );
+  }
 
-    if (error) {
-      return (
-        <div className="flex flex-col items-center justify-center text-center">
-          <XCircle className="w-12 h-12 text-destructive mb-4" />
-          <p className="text-lg text-destructive">{error}</p>
-          <p>Please contact support if this issue persists.</p>
-        </div>
-      );
-    }
-
-    if (sessionData) {
-      return (
-        <div className="text-center">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Thank You for Your Subscription!</h2>
-          <p className="text-muted-foreground mb-6">
-            A confirmation email has been sent to <span className="font-semibold text-primary">{sessionData.customer_email}</span>.
-          </p>
-          <Card className="text-left max-w-md mx-auto">
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Plan:</span>
-                <span className="font-bold capitalize">{sessionData.plan_type}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount Paid:</span>
-                <span className="font-bold">{formatCurrency(sessionData.amount_total, sessionData.currency)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subscription Status:</span>
-                <span className="font-bold capitalize text-green-600">{sessionData.subscription_status}</span>
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6">
+              <div className="text-center">
+                <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">Error Loading Order</h2>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <Button asChild>
+                  <Link to="/signup">Try Again</Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
-          <Button asChild className="mt-8">
-            <Link to="/dashboard">Go to Your Dashboard</Link>
-          </Button>
         </div>
-      );
-    }
-
-    return null;
-  };
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
-      <div className="container mx-auto p-4 md:p-8">
-        <Card>
-          <CardContent className="p-8">
-            {renderContent()}
+      <div className="flex items-center justify-center min-h-[60vh] p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Welcome to LuxeTripBuilder!</CardTitle>
+            <p className="text-muted-foreground">
+              Your account has been created and your subscription is now active.
+            </p>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            {/* Success Message */}
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                <div className="font-medium mb-1">🎉 Payment Successful!</div>
+                <div>Your {sessionData?.plan_type} plan is now active.</div>
+                {sessionData?.plan_type === 'starter' ? (
+                  <div className="text-sm mt-1">You're on a 7-day free trial.</div>
+                ) : (
+                  <div className="text-sm mt-1">Your subscription is now active and billing.</div>
+                )}
+              </AlertDescription>
+            </Alert>
+
+            {/* Account Details */}
+            {sessionData && (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h3 className="font-medium mb-2">Account Details</h3>
+                <div className="text-sm space-y-1">
+                  <div><span className="font-medium">Email:</span> {sessionData.customer_email}</div>
+                  <div><span className="font-medium">Plan:</span> {sessionData.plan_type}</div>
+                  <div><span className="font-medium">Status:</span> Active</div>
+                </div>
+              </div>
+            )}
+
+            {/* Sign In Form */}
+            <div>
+              <h3 className="font-medium mb-3">Sign In to Your Account</h3>
+              <form onSubmit={handleSignIn} className="space-y-3">
+                <div>
+                  <label htmlFor="signin-email" className="block text-sm font-medium mb-1">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="pl-10"
+                      placeholder="Enter your email"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="signin-password" className="block text-sm font-medium mb-1">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="signin-password"
+                      type="password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="pl-10"
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={signingIn}
+                >
+                  {signingIn ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Signing In...
+                    </>
+                  ) : (
+                    'Sign In & Go to Dashboard'
+                  )}
+                </Button>
+              </form>
+            </div>
+
+            {/* Help Text */}
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Having trouble signing in?{' '}
+                <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                  Contact support
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

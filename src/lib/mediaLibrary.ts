@@ -81,14 +81,14 @@ export class MediaLibraryService {
    */
   static async generateAITagsWithGemini(imageFile: File): Promise<AITaggingResult> {
     try {
-      const prompt = `add 7 tags for this image, can be event, location, add the most relevant tags you can
+      const prompt = `add 7 tags for this image, can be event, location (locations need to be as accurate as possible), add the most relevant tags you can
 
 Respond with ONLY valid JSON in this exact format:
 {
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7"],
   "description": "Brief description of what's visible in the image",
   "category": "activity",
-  "location": "location_name_or_null",
+  "location": "location_name_or_unknown",
   "confidence": 0.85
 }`;
 

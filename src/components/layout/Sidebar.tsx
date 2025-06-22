@@ -19,7 +19,7 @@ import {
 import { useAuth } from "@/lib/AuthProvider";
 import { TierManager } from "@/lib/tierManager";
 import { QuoteService, type QuoteResponse } from "@/lib/quoteService";
-import LuxeLogo from "@/assets/Luxe.svg";
+import Logo from "@/assets/imgs/logo.svg";
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -99,7 +99,7 @@ export function Sidebar() {
       {/* Top: Logo & Collapse Button */}
       <div className="flex items-center justify-between h-20 px-4">
         <Link to="/dashboard" className="flex items-center gap-2">
-          <img src={LuxeLogo} alt="AItinerary Logo" className="h-8 w-8" />
+          <img src={Logo} alt="AItinerary Logo" className="h-8 w-8" />
           <span
             className={`font-bold text-xl transition-opacity duration-200 ${
               collapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
@@ -118,7 +118,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 mt-10">
+      <nav className="flex-1 px-2 mt-16">
         {navItems.map((item) => (
           <Link to={item.href} key={item.href}>
             <Button

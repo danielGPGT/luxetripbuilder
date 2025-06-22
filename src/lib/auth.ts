@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { User } from '@supabase/supabase-js';
+import type { User, Session } from '@supabase/supabase-js';
 
 export type UserProfile = {
   id: string;
@@ -12,7 +12,7 @@ export type UserProfile = {
 };
 
 export const auth = {
-  async signUp(email: string, password: string, name: string): Promise<void> {
+  async signUp(email: string, password: string, name: string): Promise<{ user: User | null; error?: any }> {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -20,101 +20,124 @@ export const auth = {
         data: {
           name: name, // Store name in auth metadata
         },
+        emailRedirectTo: undefined, // Disable email redirect
       },
     });
 
-    if (error) throw error;
-    if (!data.user) throw new Error('No user returned after signup');
+    if (error) {
+      return { user: null, error };
+    }
+    
+    if (!data.user) {
+      return { user: null, error: new Error('No user returned after signup') };
+    }
 
-    // The database trigger will automatically create the user profile
-    // No need to manually create it here
+    return { user: data.user };
   },
 
-  async signIn(email: string, password: string) {
+  async signIn(email: string, password: string): Promise<{ user: User | null; error?: any }> {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) throw error;
+    if (error) {
+      return { user: null, error };
+    }
 
-    return data;
+    return { user: data.user };
   },
 
-  async signOut() {
+  async signInAfterPayment(email: string, password: string): Promise<{ user: User | null; error?: any }> {
+    return this.signIn(email, password);
+  },
+
+  async signOut(): Promise<{ error?: any }> {
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    return { error };
   },
 
-  async getCurrentUser(): Promise<User | null> {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user;
-  },
-
-  async getCurrentUserProfile(): Promise<UserProfile | null> {
-    const user = await this.getCurrentUser();
-    if (!user) return null;
-
-    // Try to get existing profile
-    const { data: profile, error } = await supabase
-      .from('users')
-      .select()
-      .eq('id', user.id)
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
-      throw error;
+  async getCurrentUser(): Promise<{ user: User | null; error?: any }> {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      return { user: null, error };
     }
 
-    // If no profile exists, the trigger should have created it
-    // Let's wait a moment and try again
-    if (!profile) {
-      // Wait a bit for the trigger to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const { data: retryProfile, error: retryError } = await supabase
-        .from('users')
-        .select()
-        .eq('id', user.id)
-        .single();
-
-      if (retryError) throw retryError;
-      return retryProfile as UserProfile;
-    }
-
-    return profile as UserProfile;
+    return { user };
   },
 
-  async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
+  async getSession(): Promise<{ session: any; error?: any }> {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    return { session, error };
+  },
+
+  async resetPassword(email: string): Promise<{ error?: any }> {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return { error };
+  },
+
+  async updatePassword(password: string): Promise<{ error?: any }> {
+    const { error } = await supabase.auth.updateUser({
+      password: password,
+    });
+    return { error };
+  },
+
+  async updateProfile(updates: Partial<UserProfile>): Promise<{ user: User | null; error?: any }> {
+    const { data, error } = await supabase.auth.updateUser({
+      data: updates,
+    });
+
+    if (error) {
+      return { user: null, error };
+    }
+
+    return { user: data.user };
+  },
+
+  async getProfile(userId: string): Promise<UserProfile> {
     const { data, error } = await supabase
       .from('users')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
+      .select()
       .eq('id', userId)
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error('Profile not found');
+
+    return data as UserProfile;
+  },
+
+  async createProfile(userId: string, profile: Partial<UserProfile>): Promise<UserProfile> {
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{ id: userId, ...profile }])
       .select()
       .single();
 
     if (error) throw error;
-    if (!data) throw new Error('Failed to update profile');
+    if (!data) throw new Error('Failed to create profile');
 
     return data as UserProfile;
   },
 
   async ensureProfileExists(): Promise<void> {
-    const user = await this.getCurrentUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select()
-      .eq('id', user.id)
-      .single();
-
-    if (!profile) {
-      // The trigger should handle this, but if it doesn't, we'll wait
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      await this.getProfile(user.id);
+    } catch (error) {
+      // Profile doesn't exist, create it
+      await this.createProfile(user.id, {
+        email: user.email!,
+        name: user.user_metadata?.name || 'Unknown',
+      });
     }
+  },
+
+  onAuthStateChange(callback: (event: string, session: Session | null) => void) {
+    return supabase.auth.onAuthStateChange(callback);
   },
 }; 
