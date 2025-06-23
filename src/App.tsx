@@ -30,7 +30,6 @@ import MediaLibrary from "./pages/MediaLibrary";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import Settings from "./pages/Settings";
 import UndrawGallery from "./pages/UndrawGallery";
-import ChoosePlan from "./pages/ChoosePlan";
 import "./App.css";
 
 function App() {
@@ -143,7 +142,6 @@ function AppContent() {
                   <Route path="/media-library" element={<MediaLibrary />} />
                   <Route path="/quote/:quoteId" element={<ViewQuote />} />
                   <Route path="/order/success" element={<OrderConfirmation />} />
-                  <Route path="/choose-plan" element={<ChoosePlan />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </MainLayout>

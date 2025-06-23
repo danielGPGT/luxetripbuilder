@@ -437,7 +437,7 @@ export function Header() {
                 <Button variant="outline" size="sm">Sign In</Button>
               </Link>
               <Link to="/signup">
-                <Button size="sm">Start Free Trial</Button>
+                <Button size="sm">Start For Free</Button>
               </Link>
             </div>
           )}

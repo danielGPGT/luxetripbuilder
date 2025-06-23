@@ -1,13 +1,16 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Star, Zap, Crown, Users, Globe, Shield, Clock, MessageCircle, Loader2 } from 'lucide-react';
+import { Check, X, Star, Zap, Crown, Users, Globe, Shield, Clock, MessageCircle, Loader2, Building2, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthProvider';
 import { useStripeSubscription } from '@/hooks/useStripeSubscription';
 import { toast } from 'sonner';
 import img3 from "@/assets/imgs/spencer-davis-Ivwyqtw3PzU-unsplash.jpg";
 import { Footer } from '@/components/layout/Footer';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function Pricing() {
   const { user } = useAuth();
@@ -15,36 +18,29 @@ export function Pricing() {
     subscription,
     loading,
     processing,
-    pricing,
-    pricingLoading,
     createSubscription,
     getCurrentPlan,
-    getPlanPrice,
-    getPlanFeatures,
     isSubscriptionActive,
   } = useStripeSubscription();
 
+  const [agencySeats, setAgencySeats] = useState(5);
+
   const plans = [
     {
-      name: "Starter",
-      planType: "starter" as const,
-      price: pricingLoading ? "Loading..." : getPlanPrice('starter'),
+      name: "Free (Solo)",
+      planType: "free" as const,
+      price: "£0",
       period: "/month",
       description: "Perfect for individual travel agents",
       popular: false,
-      features: pricingLoading ? [
+      bestFor: "Best for Solo Agents",
+      features: [
+        "Basic booking tools with markup",
+        "AI itinerary generator",
         "5 itineraries per month",
         "10 PDF downloads per month",
         "Basic AI recommendations",
         "Standard templates",
-        "Basic analytics (30 days)",
-        "Email support"
-      ] : getPlanFeatures('starter').length > 0 ? getPlanFeatures('starter') : [
-        "5 itineraries per month",
-        "10 PDF downloads per month",
-        "Basic AI recommendations",
-        "Standard templates",
-        "Basic analytics (30 days)",
         "Email support"
       ],
       limitations: [
@@ -55,75 +51,90 @@ export function Pricing() {
         "No team collaboration"
       ],
       icon: <Users className="h-8 w-8" />,
-      color: "from-blue-500 to-cyan-500"
+      color: "from-blue-500 to-cyan-500",
+      cta: "Start for Free"
     },
     {
-      name: "Professional",
-      planType: "professional" as const,
-      price: pricingLoading ? "Loading..." : getPlanPrice('professional'),
+      name: "Pro (White-label)",
+      planType: "pro" as const,
+      price: "£39",
       period: "/month",
       description: "Ideal for growing travel agencies",
       popular: true,
-      features: pricingLoading ? [
+      bestFor: "Popular for Teams",
+      features: [
+        "All Free features",
+        "PDF branding & customization",
+        "Logo upload & management",
+        "Custom portal branding",
         "Unlimited itineraries",
         "Unlimited PDF downloads",
         "Full Media Library access",
         "Advanced AI features",
-        "Custom branding & white-label",
         "Analytics dashboard (1 year)",
         "API access (1000 calls/month)",
         "Priority support",
-        "Team collaboration (up to 5 users)",
-        "Bulk operations"
-      ] : getPlanFeatures('professional').length > 0 ? getPlanFeatures('professional') : [
-        "Unlimited itineraries",
-        "Unlimited PDF downloads",
-        "Full Media Library access",
-        "Advanced AI features",
-        "Custom branding & white-label",
-        "Analytics dashboard (1 year)",
-        "API access (1000 calls/month)",
-        "Priority support",
-        "Team collaboration (up to 5 users)",
         "Bulk operations"
       ],
       limitations: [],
       icon: <Crown className="h-8 w-8" />,
-      color: "from-purple-500 to-pink-500"
+      color: "from-purple-500 to-pink-500",
+      cta: "Start Pro"
+    },
+    {
+      name: "Agency",
+      planType: "agency" as const,
+      price: `£${99 + (agencySeats * 10)}`,
+      period: "/month",
+      description: "For travel agencies with multiple agents",
+      popular: false,
+      bestFor: "Best for Growing Agencies",
+      features: [
+        "All Pro features",
+        "Multi-seat dashboard (up to 10 seats)",
+        "Team collaboration tools",
+        "Role-based permissions",
+        "Shared media library",
+        "Team analytics & reporting",
+        "Bulk team operations",
+        "Advanced team management",
+        "Dedicated team support"
+      ],
+      limitations: [
+        "Limited to 10 team members",
+        "No custom integrations"
+      ],
+      icon: <Building2 className="h-8 w-8" />,
+      color: "from-green-500 to-emerald-500",
+      cta: "Start Agency",
+      seatBased: true
     },
     {
       name: "Enterprise",
       planType: "enterprise" as const,
-      price: pricingLoading ? "Loading..." : getPlanPrice('enterprise'),
+      price: "Custom",
       period: "",
       description: "For large travel organizations",
       popular: false,
-      features: pricingLoading ? [
-        "Everything in Professional",
-        "Unlimited API calls",
+      bestFor: "Best for Large Organizations",
+      features: [
+        "All Agency features",
+        "Unlimited seats",
+        "API access",
+        "Premium support",
+        "Custom integrations",
         "White-label solution",
         "Dedicated account manager",
-        "Custom integrations",
         "Training & onboarding",
         "SLA guarantee",
         "Advanced security",
         "Custom AI training",
-        "Unlimited team members"
-      ] : getPlanFeatures('enterprise').length > 0 ? getPlanFeatures('enterprise') : [
-        "Everything in Professional",
-        "Unlimited API calls",
-        "White-label solution",
-        "Dedicated account manager",
-        "Custom integrations",
-        "Training & onboarding",
-        "SLA guarantee",
-        "Advanced security",
-        "Custom AI training",
-        "Unlimited team members"
+        "24/7 phone support"
       ],
       limitations: [],
       icon: <Globe className="h-8 w-8" />,
-      color: "from-green-500 to-emerald-500"
+      color: "from-orange-500 to-red-500",
+      cta: "Contact Sales"
     }
   ];
 
@@ -166,8 +177,12 @@ export function Pricing() {
       answer: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately and are prorated."
     },
     {
-      question: "Is there a free trial available?",
-      answer: "Yes, we offer a 7-day free trial for all plans when you sign up. No credit card required to start your trial."
+      question: "Is there a free plan available?",
+      answer: "Yes, we offer a free plan that's perfect for individual travel agents. You can start using it immediately with no credit card required."
+    },
+    {
+      question: "How does seat-based billing work for Agency plans?",
+      answer: "Agency plans start at £99/month for the base plan plus £10/month per additional seat. You can add or remove seats anytime."
     },
     {
       question: "What payment methods do you accept?",
@@ -180,14 +195,10 @@ export function Pricing() {
     {
       question: "Do you offer discounts for non-profits?",
       answer: "Yes, we offer special pricing for non-profit organizations and educational institutions. Contact us for details."
-    },
-    {
-      question: "What kind of support do you provide?",
-      answer: "Starter plans include email support, Professional plans include priority support, and Enterprise plans include dedicated account management."
     }
   ];
 
-  const handleSubscribe = async (planType: 'starter' | 'professional' | 'enterprise') => {
+  const handleSubscribe = async (planType: 'free' | 'pro' | 'agency' | 'enterprise') => {
     if (!user?.email) {
       toast.error('Please log in to subscribe');
       return;
@@ -199,10 +210,16 @@ export function Pricing() {
       return;
     }
 
+    if (planType === 'free') {
+      toast.info('Free plan is already active for new users');
+      return;
+    }
+
     const result = await createSubscription(
       planType,
       user.email,
-      user.user_metadata?.name
+      user.user_metadata?.name,
+      planType === 'agency' ? { seatCount: agencySeats } : undefined
     );
 
     if (!result.success) {
@@ -225,11 +242,11 @@ export function Pricing() {
     }
 
     if (!user) {
-      return 'Get Started';
+      return plan.cta;
     }
 
     if (!isSubscriptionActive()) {
-      return 'Subscribe Now';
+      return plan.cta;
     }
 
     if (isCurrentPlan(plan.planType)) {
@@ -290,8 +307,8 @@ export function Pricing() {
           </h1>
           
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Get started with a 7-day free trial on any plan. No hidden fees, no surprises. 
-            Cancel anytime with full access until the end of your billing period.
+            Start for free with our Free plan. No hidden fees, no surprises. 
+            Upgrade anytime when you need more features.
           </p>
 
           {user && isSubscriptionActive() && (
@@ -307,12 +324,18 @@ export function Pricing() {
       {/* Pricing Cards */}
       <section className="py-24">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-8 max-w-7xl mx-auto">
             {plans.map((plan, index) => (
               <Card key={index} className={`relative ${plan.popular ? 'ring-2 ring-[var(--primary)] scale-105 shadow-xl' : 'hover:shadow-lg'} transition-all duration-300`}>
                 {plan.popular && (
                   <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[var(--primary)]">
                     Most Popular
+                  </Badge>
+                )}
+
+                {plan.bestFor && (
+                  <Badge variant="secondary" className="absolute -top-3 right-4 bg-blue-100 text-blue-800">
+                    {plan.bestFor}
                   </Badge>
                 )}
 
@@ -332,6 +355,45 @@ export function Pricing() {
                     <span className="text-muted-foreground">{plan.period}</span>
                   </div>
                   <p className="text-muted-foreground">{plan.description}</p>
+                  
+                  {/* Seat selector for Agency plan */}
+                  {plan.seatBased && (
+                    <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                      <Label htmlFor="seats" className="text-sm font-medium mb-2 block">
+                        Number of Seats: {agencySeats}
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAgencySeats(Math.max(1, agencySeats - 1))}
+                          disabled={agencySeats <= 1}
+                        >
+                          -
+                        </Button>
+                        <Input
+                          id="seats"
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={agencySeats}
+                          onChange={(e) => setAgencySeats(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
+                          className="w-16 text-center"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAgencySeats(Math.min(10, agencySeats + 1))}
+                          disabled={agencySeats >= 10}
+                        >
+                          +
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        £99 base + £10 per seat
+                      </p>
+                    </div>
+                  )}
                 </CardHeader>
                 
                 <CardContent className="space-y-6">
@@ -462,7 +524,7 @@ export function Pricing() {
               <>
                 <Link to="/signup">
                   <Button size="lg" className="bg-white text-[var(--primary)] hover:bg-white/90 text-lg px-8 py-6">
-                    Get Started
+                    Start for Free
                   </Button>
                 </Link>
                 <Link to="/login">

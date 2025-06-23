@@ -266,7 +266,7 @@ export function Home() {
                     <>
                       <Link to="/signup">
                         <Button size="lg" className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-[var(--primary-foreground)] text-lg px-8 py-6 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group">
-                          Start Free Trial
+                          Start For Free Today!
                           <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
                         </Button>
                       </Link>
@@ -775,7 +775,7 @@ export function Home() {
                   <>
                     <Link to="/signup">
                       <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-xl px-10 py-8 font-bold shadow-2xl hover:shadow-white/20 transition-all duration-300 transform hover:scale-105 group">
-                        Start Free Trial
+                        Start for Free
                         <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform duration-300" />
                       </Button>
                     </Link>
@@ -797,7 +797,7 @@ export function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-300" />
-                  <span className="text-sm font-medium">14-Day Free Trial</span>
+                  <span className="text-sm font-medium">Free Plan Available</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-300" />

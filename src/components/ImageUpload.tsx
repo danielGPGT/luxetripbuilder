@@ -112,7 +112,7 @@ export function ImageUpload({
     if (user?.id) {
       const tierManager = TierManager.getInstance();
       tierManager.initialize(user.id).then(() => {
-        setHasMediaLibraryAccess(tierManager.hasMediaLibraryAccess());
+        setHasMediaLibraryAccess(tierManager.hasFeature('media_library'));
       });
     }
   }, [user?.id]);

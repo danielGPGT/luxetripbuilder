@@ -18,11 +18,10 @@ import {
   TrendingUp,
   TrendingDown,
   Info,
-  Clock
+  Building2
 } from 'lucide-react';
 import { useStripeSubscription } from '@/hooks/useStripeSubscription';
 import { useAuth } from '@/lib/AuthProvider';
-import { StripeService } from '@/lib/stripeService';
 import { toast } from 'sonner';
 
 export function SubscriptionManager() {
@@ -31,8 +30,6 @@ export function SubscriptionManager() {
     subscription,
     loading,
     processing,
-    pricing,
-    pricingLoading,
     createSubscription,
     updateSubscription,
     cancelSubscription,
@@ -45,31 +42,12 @@ export function SubscriptionManager() {
     isSubscriptionCanceled,
     getDaysUntilRenewal,
     getFormattedRenewalDate,
-    isTrialActive,
-    getTrialDaysRemaining,
-    getTrialEndDate,
   } = useStripeSubscription();
 
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showPlanChangeDialog, setShowPlanChangeDialog] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'professional' | 'enterprise'>('professional');
   const [planChangeType, setPlanChangeType] = useState<'upgrade' | 'downgrade'>('upgrade');
-  const [targetPlan, setTargetPlan] = useState<'starter' | 'professional' | 'enterprise'>('professional');
-  const [syncing, setSyncing] = useState(false);
-
-  const handleUpgrade = async () => {
-    if (!user?.email) {
-      toast.error('User email not found');
-      return;
-    }
-
-    const result = await updateSubscription(selectedPlan);
-
-    if (result.success) {
-      setShowUpgradeDialog(false);
-    }
-  };
+  const [targetPlan, setTargetPlan] = useState<'free' | 'pro' | 'agency' | 'enterprise'>('pro');
 
   const handleCancelSubscription = async () => {
     const result = await cancelSubscription();
@@ -78,7 +56,7 @@ export function SubscriptionManager() {
     }
   };
 
-  const handlePlanChange = async (newPlan: 'starter' | 'professional' | 'enterprise') => {
+  const handlePlanChange = async (newPlan: 'free' | 'pro' | 'agency' | 'enterprise') => {
     const currentPlan = getCurrentPlan();
     
     if (newPlan === currentPlan) {
@@ -86,8 +64,8 @@ export function SubscriptionManager() {
       return;
     }
 
-    const isUpgrade = ['starter', 'professional', 'enterprise'].indexOf(newPlan) > 
-                     ['starter', 'professional', 'enterprise'].indexOf(currentPlan);
+    const planHierarchy = ['free', 'pro', 'agency', 'enterprise'];
+    const isUpgrade = planHierarchy.indexOf(newPlan) > planHierarchy.indexOf(currentPlan);
 
     setPlanChangeType(isUpgrade ? 'upgrade' : 'downgrade');
     setTargetPlan(newPlan);
@@ -95,32 +73,18 @@ export function SubscriptionManager() {
   };
 
   const confirmPlanChange = async () => {
-    if (!user?.id) {
-      toast.error('User not found');
+    if (!user?.email) {
+      toast.error('User email not found');
       return;
     }
 
     try {
-      setSyncing(true);
-      const response = await fetch('http://localhost:3001/api/change-plan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          userId: user.id, 
-          newPlanType: targetPlan
-        }),
-      });
-
-      const result = await response.json();
+      const result = await updateSubscription(targetPlan);
       
       if (result.success) {
         setShowPlanChangeDialog(false);
         const isUpgrade = planChangeType === 'upgrade';
         toast.success(`Successfully ${isUpgrade ? 'upgraded' : 'downgraded'} to ${targetPlan} plan`);
-        console.log('Plan change successful:', result.changes);
-        // Reload subscription data
         await loadSubscription();
       } else {
         toast.error(result.error || 'Failed to change plan');
@@ -128,69 +92,85 @@ export function SubscriptionManager() {
     } catch (error) {
       console.error('Error changing plan:', error);
       toast.error('Failed to change plan');
-    } finally {
-      setSyncing(false);
     }
   };
 
   const getLocalPlanFeatures = (plan: string) => {
-    // Try to get features from Stripe first
-    const stripeFeatures = getPlanFeatures(plan as 'starter' | 'professional' | 'enterprise');
-    if (stripeFeatures.length > 0) {
-      return {
-        price: getPlanPrice(plan as 'starter' | 'professional' | 'enterprise'),
-        features: stripeFeatures,
-        limitations: []
-      };
-    }
-
     // Fallback to hardcoded features if Stripe data is not available
     switch (plan) {
-      case 'starter':
+      case 'free':
         return {
-          price: getPlanPrice('starter'),
+          price: '£0',
           features: [
+            'Basic booking tools with markup',
+            'AI itinerary generator',
             '5 itineraries per month',
-            'Basic itinerary templates',
-            'Email support',
-            'Standard export formats'
+            '10 PDF downloads per month',
+            'Basic AI recommendations',
+            'Standard templates',
+            'Email support'
           ],
           limitations: [
-            'Limited to 5 itineraries',
-            'No media library access',
-            'Basic templates only'
+            'No Media Library access',
+            'No custom branding',
+            'No API access',
+            'No priority support',
+            'No team collaboration'
           ]
         };
-      case 'professional':
+      case 'pro':
         return {
-          price: getPlanPrice('professional'),
+          price: '£39',
           features: [
+            'All Free features',
+            'PDF branding & customization',
+            'Logo upload & management',
+            'Custom portal branding',
             'Unlimited itineraries',
-            'Advanced itinerary templates',
-            'Media library access',
-            'Priority email support',
-            'PDF & Word exports',
-            'Custom branding options',
-            'Advanced analytics'
+            'Unlimited PDF downloads',
+            'Full Media Library access',
+            'Advanced AI features',
+            'Analytics dashboard (1 year)',
+            'API access (1000 calls/month)',
+            'Priority support',
+            'Bulk operations'
           ],
           limitations: []
         };
+      case 'agency':
+        return {
+          price: '£99 + £10/seat',
+          features: [
+            'All Pro features',
+            'Multi-seat dashboard (up to 10 seats)',
+            'Team collaboration tools',
+            'Role-based permissions',
+            'Shared media library',
+            'Team analytics & reporting',
+            'Bulk team operations',
+            'Advanced team management',
+            'Dedicated team support'
+          ],
+          limitations: [
+            'Limited to 10 team members',
+            'No custom integrations'
+          ]
+        };
       case 'enterprise':
         return {
-          price: getPlanPrice('enterprise'),
+          price: 'Custom',
           features: [
-            'Unlimited itineraries',
-            'Advanced itinerary templates', 
-            'Media library access',
-            'Priority email support',
-            'PDF & Word exports',
-            'Custom branding options',
-            'Advanced analytics',
-            'Custom integrations',
-            'Dedicated account manager',
-            'White-label solutions',
+            'All Agency features',
+            'Unlimited seats',
             'API access',
-            'Custom feature development',
+            'Premium support',
+            'Custom integrations',
+            'White-label solution',
+            'Dedicated account manager',
+            'Training & onboarding',
+            'SLA guarantee',
+            'Advanced security',
+            'Custom AI training',
             '24/7 phone support'
           ],
           limitations: []
@@ -204,8 +184,8 @@ export function SubscriptionManager() {
     const current = getLocalPlanFeatures(currentPlan);
     const target = getLocalPlanFeatures(targetPlan);
     
-    if (['starter', 'professional', 'enterprise'].indexOf(targetPlan) > 
-        ['starter', 'professional', 'enterprise'].indexOf(currentPlan)) {
+    const planHierarchy = ['free', 'pro', 'agency', 'enterprise'];
+    if (planHierarchy.indexOf(targetPlan) > planHierarchy.indexOf(currentPlan)) {
       // Upgrade
       return {
         type: 'upgrade',
@@ -222,39 +202,14 @@ export function SubscriptionManager() {
     }
   };
 
-  const getBillingDetails = (currentPlan: string, targetPlan: string) => {
-    const planPrices = {
-      starter: 29,
-      professional: 79,
-      enterprise: 199
-    };
-
-    const currentPrice = planPrices[currentPlan as keyof typeof planPrices] || 0;
-    const targetPrice = planPrices[targetPlan as keyof typeof planPrices] || 0;
-    const priceDifference = targetPrice - currentPrice;
-
-    // Calculate prorated amount (simplified - in real app you'd get this from Stripe)
-    const daysInMonth = 30;
-    const daysRemaining = getDaysUntilRenewal() || daysInMonth;
-    const proratedAmount = Math.round((priceDifference * daysRemaining) / daysInMonth * 100) / 100;
-
-    const renewalDate = getFormattedRenewalDate();
-    const nextBillingDate = renewalDate || 'End of current period';
-
-    return {
-      currentPrice,
-      targetPrice,
-      priceDifference,
-      proratedAmount,
-      nextBillingDate,
-      daysRemaining
-    };
-  };
-
   const getPlanIcon = (plan: string) => {
     switch (plan) {
-      case 'professional':
+      case 'free':
+        return <Users className="h-5 w-5" />;
+      case 'pro':
         return <Crown className="h-5 w-5" />;
+      case 'agency':
+        return <Building2 className="h-5 w-5" />;
       case 'enterprise':
         return <Globe className="h-5 w-5" />;
       default:
@@ -264,248 +219,16 @@ export function SubscriptionManager() {
 
   const getPlanColor = (plan: string) => {
     switch (plan) {
-      case 'professional':
+      case 'free':
+        return 'bg-blue-500';
+      case 'pro':
         return 'bg-purple-500';
-      case 'enterprise':
+      case 'agency':
         return 'bg-green-500';
+      case 'enterprise':
+        return 'bg-orange-500';
       default:
         return 'bg-blue-500';
-    }
-  };
-
-  // Sync function - REMOVED
-  /*
-  const handleSyncSubscription = async () => {
-    if (!user?.id) {
-      toast.error('User not found');
-      return;
-    }
-
-    try {
-      setSyncing(true);
-      const result = await StripeService.syncSubscription(user.id);
-      
-      if (result.success) {
-        toast.success('Subscription synced successfully');
-        // Reload subscription data
-        await loadSubscription();
-      } else {
-        toast.error(result.error || 'Failed to sync subscription');
-      }
-    } catch (error) {
-      console.error('Error syncing subscription:', error);
-      toast.error('Failed to sync subscription');
-    } finally {
-      setSyncing(false);
-    }
-  };
-  */
-
-  const handleFixTrialConversion = async () => {
-    if (!user?.id) {
-      toast.error('User not found');
-      return;
-    }
-
-    try {
-      setSyncing(true);
-      const response = await fetch('http://localhost:3001/api/fix-trial-conversion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: user.id }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toast.success(result.message || 'Trial conversion fixed successfully');
-        // Reload subscription data
-        await loadSubscription();
-      } else {
-        toast.error(result.error || 'Failed to fix trial conversion');
-      }
-    } catch (error) {
-      console.error('Error fixing trial conversion:', error);
-      toast.error('Failed to fix trial conversion');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleManualUpgrade = async () => {
-    if (!user?.id) {
-      toast.error('User not found');
-      return;
-    }
-
-    try {
-      setSyncing(true);
-      const response = await fetch('http://localhost:3001/api/manual-upgrade', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          userId: user.id, 
-          planType: 'starter' // or get from current plan
-        }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toast.success(result.message || 'Manual upgrade successful');
-        console.log('Upgrade changes:', result.changes);
-        // Reload subscription data
-        await loadSubscription();
-      } else {
-        toast.error(result.error || 'Failed to upgrade manually');
-      }
-    } catch (error) {
-      console.error('Error with manual upgrade:', error);
-      toast.error('Failed to upgrade manually');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleRefreshSubscription = async () => {
-    if (!user?.id) {
-      toast.error('User not found');
-      return;
-    }
-
-    try {
-      setSyncing(true);
-      await loadSubscription();
-      toast.success('Subscription data refreshed');
-    } catch (error) {
-      console.error('Error refreshing subscription:', error);
-      toast.error('Failed to refresh subscription data');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleDebugSubscription = () => {
-    console.log('Current subscription data:', subscription);
-    console.log('Current period end:', subscription?.current_period_end);
-    console.log('Formatted renewal date:', getFormattedRenewalDate());
-    console.log('Days until renewal:', getDaysUntilRenewal());
-    toast.success('Subscription data logged to console');
-  };
-
-  const handleFixBillingDates = async () => {
-    if (!user?.id) {
-      toast.error('User not found');
-      return;
-    }
-
-    try {
-      setSyncing(true);
-      const response = await fetch('http://localhost:3001/api/fix-billing-dates', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: user.id }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toast.success(result.message || 'Billing dates fixed successfully');
-        console.log('Fix result:', result);
-        // Reload subscription data
-        await loadSubscription();
-      } else {
-        toast.error(result.error || 'Failed to fix billing dates');
-      }
-    } catch (error) {
-      console.error('Error fixing billing dates:', error);
-      toast.error('Failed to fix billing dates');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleQuickPlanChange = async (newPlan: 'starter' | 'professional' | 'enterprise') => {
-    if (!user?.id) {
-      toast.error('User not found');
-      return;
-    }
-
-    const currentPlan = getCurrentPlan();
-
-    if (newPlan === currentPlan) {
-      toast.info('You are already on this plan');
-      return;
-    }
-
-    try {
-      setSyncing(true);
-      const response = await fetch('http://localhost:3001/api/change-plan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          userId: user.id, 
-          newPlanType: newPlan
-        }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toast.success(`Successfully changed to ${newPlan} plan`);
-        console.log('Quick plan change successful:', result.changes);
-        // Reload subscription data
-        await loadSubscription();
-      } else {
-        toast.error(result.error || 'Failed to change plan');
-      }
-    } catch (error) {
-      console.error('Error with quick plan change:', error);
-      toast.error('Failed to change plan');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleCreateTrialSubscription = async () => {
-    if (!user?.id) {
-      toast.error('User not found');
-      return;
-    }
-
-    try {
-      setSyncing(true);
-      const response = await fetch('http://localhost:3001/api/create-trial-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: user.id }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toast.success(result.message || 'Trial subscription created successfully');
-        console.log('Trial subscription created:', result.subscription);
-        // Reload subscription data
-        await loadSubscription();
-      } else {
-        toast.error(result.error || 'Failed to create trial subscription');
-      }
-    } catch (error) {
-      console.error('Error creating trial subscription:', error);
-      toast.error('Failed to create trial subscription');
-    } finally {
-      setSyncing(false);
     }
   };
 
@@ -525,9 +248,6 @@ export function SubscriptionManager() {
   const currentPlan = getCurrentPlan();
   const daysUntilRenewal = getDaysUntilRenewal();
   const renewalDate = getFormattedRenewalDate();
-  const isCurrentlyTrialing = isTrialActive();
-  const trialDaysRemaining = getTrialDaysRemaining();
-  const trialEndDate = getTrialEndDate();
 
   return (
     <div className="space-y-6">
@@ -542,31 +262,20 @@ export function SubscriptionManager() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full ${getPlanColor(currentPlan)} flex items-center justify-center text-foreground`}>
+              <div className={`w-10 h-10 rounded-full ${getPlanColor(currentPlan)} flex items-center justify-center text-white`}>
                 {getPlanIcon(currentPlan)}
               </div>
               <div>
                 <div className="font-semibold capitalize">{currentPlan} Plan</div>
                 <div className="text-sm text-muted-foreground">
-                  {isCurrentlyTrialing ? 'Free Trial' : isSubscriptionActive() ? 'Active' : 'Inactive'}
+                  {isSubscriptionActive() ? 'Active' : 'Inactive'}
                 </div>
               </div>
             </div>
-            <Badge variant={isCurrentlyTrialing ? 'secondary' : isSubscriptionActive() ? 'default' : 'secondary'}>
-              {isCurrentlyTrialing ? 'Trial' : isSubscriptionActive() ? 'Active' : 'Inactive'}
+            <Badge variant={isSubscriptionActive() ? 'default' : 'secondary'}>
+              {isSubscriptionActive() ? 'Active' : 'Inactive'}
             </Badge>
           </div>
-
-          {isCurrentlyTrialing && (
-            <Alert className="border-blue-200 bg-blue-50">
-              <Clock className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
-                <div className="font-medium mb-1">Free Trial Active</div>
-                <div>You have <span className="font-semibold">{trialDaysRemaining} days</span> remaining in your trial.</div>
-                {trialEndDate && <div className="text-sm mt-1">Trial ends: {trialEndDate}</div>}
-              </AlertDescription>
-            </Alert>
-          )}
 
           {isSubscriptionCanceled() && (
             <Alert className="border-yellow-200 bg-yellow-50">
@@ -577,7 +286,7 @@ export function SubscriptionManager() {
             </Alert>
           )}
 
-          {renewalDate && !isCurrentlyTrialing && (
+          {renewalDate && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4" />
               <span>
@@ -587,7 +296,7 @@ export function SubscriptionManager() {
             </div>
           )}
 
-          {!isCurrentlyTrialing && (
+          {isSubscriptionActive() && (
             <Button 
               variant="outline" 
               className="w-full mt-4" 
@@ -598,254 +307,167 @@ export function SubscriptionManager() {
               <span className="ml-2">Manage Billing & Invoices</span>
             </Button>
           )}
-
-          {/* Manual Sync Button for debugging - REMOVED */}
-          {/* <Button 
-            variant="outline" 
-            className="w-full mt-2" 
-            onClick={handleSyncSubscription}
-            disabled={syncing}
-          >
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings className="h-4 w-4" />}
-            <span className="ml-2">Sync Subscription Status</span>
-          </Button> */}
-
-          {/* Create Trial Subscription Button */}
-          {!subscription && (
-            <Button 
-              variant="default" 
-              className="w-full mt-2 bg-blue-600 hover:bg-blue-700" 
-              onClick={handleCreateTrialSubscription}
-              disabled={syncing}
-            >
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-              <span className="ml-2">Create Trial Subscription</span>
-            </Button>
-          )}
-
-          {/* Fix Trial Conversion Button */}
-          {isCurrentlyTrialing && (
-            <Button 
-              variant="outline" 
-              className="w-full mt-2" 
-              onClick={handleFixTrialConversion}
-              disabled={syncing}
-            >
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-              <span className="ml-2">Fix Trial Conversion</span>
-            </Button>
-          )}
-
-          {/* Manual Upgrade Button */}
-          {isCurrentlyTrialing && (
-            <Button 
-              variant="default" 
-              className="w-full mt-2 bg-green-600 hover:bg-green-700" 
-              onClick={handleManualUpgrade}
-              disabled={syncing}
-            >
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
-              <span className="ml-2">Manual Upgrade to Paid</span>
-            </Button>
-          )}
-
-          {/* Refresh Button */}
-          <div className="mt-4">
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleRefreshSubscription}
-              disabled={syncing}
-            >
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings className="h-4 w-4" />}
-              <span className="ml-2">Refresh Subscription Data</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="w-full mt-2" 
-              onClick={handleDebugSubscription}
-              disabled={syncing}
-            >
-              <Info className="h-4 w-4" />
-              <span className="ml-2">Debug Subscription Data</span>
-            </Button>
-          </div>
-
-          {/* Test Checkout Session Button - REMOVED */}
-          {/* <Button 
-            variant="outline" 
-            className="w-full mt-2 bg-yellow-100 hover:bg-yellow-200" 
-            onClick={handleTestCheckoutSession}
-            disabled={syncing}
-          >
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Info className="h-4 w-4" />}
-            <span className="ml-2">Test Checkout Session Processing</span>
-          </Button> */}
-
-          {/* Quick Plan Change Buttons - REMOVED */}
-          {/* <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium mb-2">Quick Plan Changes (Testing)</h4>
-            <div className="grid grid-cols-3 gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleQuickPlanChange('starter')}
-                disabled={syncing || currentPlan === 'starter'}
-              >
-                {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Starter'}
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleQuickPlanChange('professional')}
-                disabled={syncing || currentPlan === 'professional'}
-              >
-                {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Pro'}
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleQuickPlanChange('enterprise')}
-                disabled={syncing || currentPlan === 'enterprise'}
-              >
-                {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Enterprise'}
-              </Button>
-            </div>
-          </div> */}
         </CardContent>
       </Card>
 
       {/* Plan Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Plan Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Starter Plan */}
-            <div className={`p-4 rounded-lg border-2 ${currentPlan === 'starter' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="h-4 w-4" />
-                <span className="font-semibold">Starter</span>
-                {currentPlan === 'starter' && <CheckCircle className="h-4 w-4 text-blue-500" />}
+      {currentPlan !== 'free' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Plan Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Free Plan */}
+              <div className={`p-4 rounded-lg border-2 ${currentPlan === 'free' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-4 w-4" />
+                  <span className="font-semibold">Free</span>
+                  {currentPlan === 'free' && <CheckCircle className="h-4 w-4 text-blue-500" />}
+                </div>
+                <div className="text-2xl font-bold mb-2">£0</div>
+                <div className="text-sm text-muted-foreground mb-3">
+                  Basic features for solo agents
+                </div>
+                {currentPlan !== 'free' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => handlePlanChange('free')}
+                    disabled={processing}
+                  >
+                    {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingDown className="h-4 w-4" />}
+                    Downgrade
+                  </Button>
+                )}
               </div>
-              <div className="text-2xl font-bold mb-2">{getPlanPrice('starter')}</div>
-              <div className="text-sm text-muted-foreground mb-3">
-                5 itineraries/month, Basic features
+
+              {/* Pro Plan */}
+              <div className={`p-4 rounded-lg border-2 ${currentPlan === 'pro' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Crown className="h-4 w-4" />
+                  <span className="font-semibold">Pro</span>
+                  {currentPlan === 'pro' && <CheckCircle className="h-4 w-4 text-purple-500" />}
+                </div>
+                <div className="text-2xl font-bold mb-2">£39</div>
+                <div className="text-sm text-muted-foreground mb-3">
+                  White-label features
+                </div>
+                {currentPlan !== 'pro' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => handlePlanChange('pro')}
+                    disabled={processing}
+                  >
+                    {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                      currentPlan === 'free' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                    {currentPlan === 'free' ? 'Upgrade' : 'Downgrade'}
+                  </Button>
+                )}
               </div>
-              {currentPlan !== 'starter' && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => handlePlanChange('starter')}
-                  disabled={processing}
-                >
-                  {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingDown className="h-4 w-4" />}
-                  Downgrade
-                </Button>
-              )}
+
+              {/* Agency Plan */}
+              <div className={`p-4 rounded-lg border-2 ${currentPlan === 'agency' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Building2 className="h-4 w-4" />
+                  <span className="font-semibold">Agency</span>
+                  {currentPlan === 'agency' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                </div>
+                <div className="text-2xl font-bold mb-2">£99+</div>
+                <div className="text-sm text-muted-foreground mb-3">
+                  Team collaboration
+                </div>
+                {currentPlan !== 'agency' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => handlePlanChange('agency')}
+                    disabled={processing}
+                  >
+                    {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
+                    Upgrade
+                  </Button>
+                )}
+              </div>
+
+              {/* Enterprise Plan */}
+              <div className={`p-4 rounded-lg border-2 ${currentPlan === 'enterprise' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe className="h-4 w-4" />
+                  <span className="font-semibold">Enterprise</span>
+                  {currentPlan === 'enterprise' && <CheckCircle className="h-4 w-4 text-orange-500" />}
+                </div>
+                <div className="text-2xl font-bold mb-2">Custom</div>
+                <div className="text-sm text-muted-foreground mb-3">
+                  Large organizations
+                </div>
+                {currentPlan !== 'enterprise' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => window.location.href = 'mailto:sales@luxetripbuilder.com?subject=Enterprise Plan Inquiry'}
+                    disabled={processing}
+                  >
+                    Contact Sales
+                  </Button>
+                )}
+              </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
 
-            {/* Professional Plan */}
-            <div className={`p-4 rounded-lg border-2 ${currentPlan === 'professional' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Crown className="h-4 w-4" />
-                <span className="font-semibold">Professional</span>
-                {currentPlan === 'professional' && <CheckCircle className="h-4 w-4 text-purple-500" />}
-              </div>
-              <div className="text-2xl font-bold mb-2">{getPlanPrice('professional')}</div>
-              <div className="text-sm text-muted-foreground mb-3">
-                Unlimited, Media Library, Advanced features
-              </div>
-              {currentPlan !== 'professional' && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => handlePlanChange('professional')}
-                  disabled={processing}
-                >
-                  {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-                   currentPlan === 'starter' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                  {currentPlan === 'starter' ? 'Upgrade' : 'Downgrade'}
-                </Button>
-              )}
-            </div>
-
-            {/* Enterprise Plan */}
-            <div className={`p-4 rounded-lg border-2 ${currentPlan === 'enterprise' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Globe className="h-4 w-4" />
-                <span className="font-semibold">Enterprise</span>
-                {currentPlan === 'enterprise' && <CheckCircle className="h-4 w-4 text-green-500" />}
-              </div>
-              <div className="text-2xl font-bold mb-2">{getPlanPrice('enterprise')}</div>
-              <div className="text-sm text-muted-foreground mb-3">
-                Everything + Custom solutions
-              </div>
-              {currentPlan !== 'enterprise' && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => handlePlanChange('enterprise')}
-                  disabled={processing}
-                >
-                  {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
-                  Upgrade
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Billing & Account</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Button 
-            variant="outline" 
-            className="w-full justify-start"
-            onClick={openBillingPortal}
-            disabled={processing || !isSubscriptionActive()}
-          >
-            <CreditCard className="h-4 w-4 mr-2" />
-            Manage Billing & Payment Methods
-          </Button>
-
-          {isSubscriptionActive() && !isSubscriptionCanceled() && (
-            <Button 
-            variant="outline" 
-            className="w-full justify-start text-red-600 hover:text-red-700"
-            onClick={() => setShowCancelDialog(true)}
-            disabled={processing}
-          >
-            <XCircle className="h-4 w-4 mr-2" />
-            Cancel Subscription
-          </Button>
-          )}
-
-          {isSubscriptionCanceled() && (
+      {/* Billing & Account */}
+      {isSubscriptionActive() && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing & Account</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             <Button 
               variant="outline" 
-              className="w-full justify-start text-green-600 hover:text-green-700"
-              onClick={() => updateSubscription(currentPlan)}
+              className="w-full justify-start"
+              onClick={openBillingPortal}
               disabled={processing}
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Reactivate Subscription
+              <CreditCard className="h-4 w-4 mr-2" />
+              Manage Billing & Payment Methods
             </Button>
-          )}
-        </CardContent>
-      </Card>
+
+            {!isSubscriptionCanceled() && (
+              <Button 
+                variant="outline" 
+                className="w-full justify-start text-red-600 hover:text-red-700"
+                onClick={() => setShowCancelDialog(true)}
+                disabled={processing}
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Cancel Subscription
+              </Button>
+            )}
+
+            {isSubscriptionCanceled() && (
+              <Button 
+                variant="outline" 
+                className="w-full justify-start text-green-600 hover:text-green-700"
+                onClick={() => updateSubscription(currentPlan as 'free' | 'pro' | 'agency' | 'enterprise')}
+                disabled={processing}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Reactivate Subscription
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Cancel Subscription Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
@@ -891,7 +513,7 @@ export function SubscriptionManager() {
               )}
             </DialogTitle>
             <DialogDescription>
-              {planChangeType === 'upgrade' ? (
+              {planChangeType === 'upgrade' ?
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <CheckCircle className="h-4 w-4 text-green-600" />
@@ -905,44 +527,8 @@ export function SubscriptionManager() {
                       </li>
                     ))}
                   </ul>
-                  
-                  {/* Billing Details */}
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <CreditCard className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">Billing Details</span>
-                    </div>
-                    {(() => {
-                      const billing = getBillingDetails(getCurrentPlan(), targetPlan);
-                      return (
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-blue-700">Current Plan:</span>
-                            <span className="font-medium">£{billing.currentPrice}/month</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-blue-700">New Plan:</span>
-                            <span className="font-medium">£{billing.targetPrice}/month</span>
-                          </div>
-                          <div className="flex justify-between border-t border-blue-200 pt-2">
-                            <span className="text-blue-700 font-medium">Prorated Amount:</span>
-                            <span className={`font-bold ${billing.proratedAmount > 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                              {billing.proratedAmount > 0 ? '+' : ''}£{billing.proratedAmount}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-blue-700">Billed on:</span>
-                            <span className="font-medium">{billing.nextBillingDate}</span>
-                          </div>
-                          <div className="text-xs text-blue-600 mt-2">
-                            * You'll be charged the prorated difference immediately. Your next full billing cycle will be £{billing.targetPrice}/month.
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
                 </div>
-              ) : (
+              : (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                     <AlertTriangle className="h-4 w-4 text-orange-600" />
@@ -956,57 +542,20 @@ export function SubscriptionManager() {
                       </li>
                     ))}
                   </ul>
-                  
-                  {/* Billing Details for Downgrade */}
-                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <CreditCard className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm font-medium text-orange-800">Billing Details</span>
-                    </div>
-                    {(() => {
-                      const billing = getBillingDetails(getCurrentPlan(), targetPlan);
-                      return (
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-orange-700">Current Plan:</span>
-                            <span className="font-medium">£{billing.currentPrice}/month</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-orange-700">New Plan:</span>
-                            <span className="font-medium">£{billing.targetPrice}/month</span>
-                          </div>
-                          <div className="flex justify-between border-t border-orange-200 pt-2">
-                            <span className="text-orange-700 font-medium">Credit Applied:</span>
-                            <span className="font-bold text-green-600">
-                              +£{Math.abs(billing.proratedAmount)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-orange-700">Effective from:</span>
-                            <span className="font-medium">{billing.nextBillingDate}</span>
-                          </div>
-                          <div className="text-xs text-orange-600 mt-2">
-                            * You'll keep current features until {billing.nextBillingDate}. Your next billing cycle will be £{billing.targetPrice}/month.
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
                 </div>
               )}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2 justify-end">
+          <div className="flex gap-2 justify-end mt-6">
             <Button variant="outline" onClick={() => setShowPlanChangeDialog(false)}>
               Cancel
             </Button>
             <Button 
-              variant={planChangeType === 'upgrade' ? 'default' : 'destructive'}
               onClick={confirmPlanChange}
-              disabled={syncing}
+              disabled={processing}
             >
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-               planChangeType === 'upgrade' ? 'Confirm Upgrade' : 'Confirm Downgrade'}
+              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                planChangeType === 'upgrade' ? 'Upgrade Now' : 'Downgrade Now'}
             </Button>
           </div>
         </DialogContent>

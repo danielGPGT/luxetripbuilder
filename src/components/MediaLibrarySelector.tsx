@@ -174,7 +174,7 @@ export default function MediaLibrarySelector({
   };
 
   return (
-    <TierRestriction feature="media_library" mode="inline">
+    <TierRestriction type="media_library">
       <div className="flex flex-col h-full">
         {/* Upload Section */}
         <div className="flex items-center gap-4 mb-4 p-4 bg-muted rounded-lg">
@@ -236,7 +236,7 @@ export default function MediaLibrarySelector({
         </div>
 
         {/* Masonry Grid */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -276,7 +276,7 @@ export default function MediaLibrarySelector({
                   )}
                   
                   {/* Hover overlay */}
-                  <div 
+                  <div
                     className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                     onClick={() => handleSelect(item)}
                   >

@@ -103,9 +103,10 @@ export function useStripeSubscription() {
   };
 
   const createSubscription = async (
-    planType: 'starter' | 'professional' | 'enterprise',
+    planType: 'free' | 'pro' | 'agency' | 'enterprise',
     customerEmail: string,
-    customerName?: string
+    customerName?: string,
+    options?: { seatCount?: number }
   ) => {
     if (!user?.id) {
       toast.error('Please log in to create a subscription');
@@ -118,7 +119,8 @@ export function useStripeSubscription() {
         user.id,
         planType,
         customerEmail,
-        customerName
+        customerName,
+        options
       );
 
       if (result.success) {
@@ -137,7 +139,7 @@ export function useStripeSubscription() {
     }
   };
 
-  const updateSubscription = async (newPlanType: 'starter' | 'professional' | 'enterprise') => {
+  const updateSubscription = async (newPlanType: 'free' | 'pro' | 'agency' | 'enterprise') => {
     if (!user?.id) {
       toast.error('Please log in to update your subscription');
       return { success: false };
@@ -222,12 +224,13 @@ export function useStripeSubscription() {
     }
   };
 
-  const getPlanPrice = (planType: 'starter' | 'professional' | 'enterprise') => {
+  const getPlanPrice = (planType: 'free' | 'pro' | 'agency' | 'enterprise') => {
     if (!pricing || !pricing[planType]) {
       // Fallback to hardcoded prices if Stripe pricing is not available
       const fallbackPrices = {
-        starter: '£29',
-        professional: '£79',
+        free: '£0',
+        pro: '£39',
+        agency: '£99 + £10/seat',
         enterprise: 'Custom'
       };
       return fallbackPrices[planType];
@@ -241,7 +244,7 @@ export function useStripeSubscription() {
     return plan.productName || 'Custom';
   };
 
-  const getPlanFeatures = (planType: 'starter' | 'professional' | 'enterprise') => {
+  const getPlanFeatures = (planType: 'free' | 'pro' | 'agency' | 'enterprise') => {
     if (!pricing || !pricing[planType]) {
       // Fallback to hardcoded features if Stripe pricing is not available
       return [];
@@ -251,7 +254,7 @@ export function useStripeSubscription() {
   };
 
   const getCurrentPlan = () => {
-    return subscription?.plan_type || 'starter';
+    return subscription?.plan_type || 'free';
   };
 
   const isSubscriptionActive = () => {
@@ -262,45 +265,16 @@ export function useStripeSubscription() {
     return subscription?.cancel_at_period_end === true;
   };
 
-  const isTrialActive = () => {
-    if (!subscription) return false;
-    return subscription.status === 'trialing' && new Date(subscription.current_period_end) > new Date();
-  };
-
   const hasAccess = () => {
     if (!subscription) return false;
     
     // Active subscription
     if (subscription.status === 'active') return true;
     
-    // Active trial
-    if (subscription.status === 'trialing' && new Date(subscription.current_period_end) > new Date()) return true;
-    
     // Canceled but still within period
     if (subscription.cancel_at_period_end && new Date(subscription.current_period_end) > new Date()) return true;
     
     return false;
-  };
-
-  const getTrialDaysRemaining = () => {
-    if (!subscription || subscription.status !== 'trialing') return 0;
-    
-    const endDate = new Date(subscription.current_period_end);
-    const now = new Date();
-    const diffTime = endDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays > 0 ? diffDays : 0;
-  };
-
-  const getTrialEndDate = () => {
-    if (!subscription || subscription.status !== 'trialing') return null;
-    
-    return new Date(subscription.current_period_end).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
   };
 
   const getDaysUntilRenewal = () => {
@@ -346,10 +320,7 @@ export function useStripeSubscription() {
     getCurrentPlan,
     isSubscriptionActive,
     isSubscriptionCanceled,
-    isTrialActive,
     hasAccess,
-    getTrialDaysRemaining,
-    getTrialEndDate,
     getDaysUntilRenewal,
     getFormattedRenewalDate,
   };

@@ -47,13 +47,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check if user has access (active subscription or active trial)
+  // Check if user has access (active subscription or free plan)
   // Add a small delay to prevent rapid re-renders
   const accessCheck = hasAccess();
   if (!accessCheck) {
     setCheckAttempts(prev => prev + 1);
-    // Redirect to choose plan page with trial expired message
-    return <Navigate to="/choose-plan" state={{ trialExpired: true }} replace />;
+    // Redirect to pricing page since we removed trial system
+    return <Navigate to="/pricing" state={{ upgradeRequired: true }} replace />;
   }
 
   return <>{children}</>;

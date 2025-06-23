@@ -13,15 +13,20 @@ const initializeStripe = async () => {
 
 // Stripe Product IDs for each tier
 const STRIPE_PRODUCTS = {
-  starter: import.meta.env.VITE_STRIPE_STARTER_PRICE_ID,
-  professional: import.meta.env.VITE_STRIPE_PROFESSIONAL_PRICE_ID,
+  free: null, // Free plan doesn't need Stripe product
+  pro: import.meta.env.VITE_STRIPE_PRO_PRICE_ID,
+  agency: import.meta.env.VITE_STRIPE_AGENCY_PRICE_ID,
   enterprise: import.meta.env.VITE_STRIPE_ENTERPRISE_PRICE_ID,
 };
 
 export interface SubscriptionData {
   id: string;
   status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired';
-  plan_type: 'starter' | 'professional' | 'enterprise';
+  plan_type: 'free' | 'pro' | 'agency' | 'enterprise';
+  seat_count?: number;
+  team_name?: string;
+  base_price?: number;
+  seat_price?: number;
   current_period_start: string;
   current_period_end: string;
   cancel_at_period_end: boolean;
@@ -35,12 +40,42 @@ export class StripeService {
    */
   static async createSubscription(
     userId: string | null,
-    planType: 'starter' | 'professional' | 'enterprise',
+    planType: 'free' | 'pro' | 'agency' | 'enterprise',
     customerEmail: string,
     customerName?: string,
+    options?: { seatCount?: number },
     signupData?: { email: string; password: string; name: string }
   ): Promise<{ success: boolean; subscriptionId?: string; error?: string }> {
     try {
+      // Handle free plan differently - no Stripe checkout needed
+      if (planType === 'free') {
+        // Create free subscription directly in database
+        const { data, error } = await supabase
+          .from('subscriptions')
+          .insert({
+            user_id: userId,
+            plan_type: 'free',
+            status: 'active',
+            seat_count: 1,
+            base_price: 0,
+            seat_price: 0,
+            current_period_start: new Date().toISOString(),
+            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+            cancel_at_period_end: false,
+            stripe_subscription_id: null,
+            stripe_customer_id: null
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating free subscription:', error);
+          return { success: false, error: 'Failed to create free subscription' };
+        }
+
+        return { success: true, subscriptionId: data.id };
+      }
+
       const stripe = await initializeStripe();
       if (!stripe) {
         throw new Error('Stripe failed to initialize');
@@ -52,6 +87,7 @@ export class StripeService {
         planType,
         customerEmail,
         customerName,
+        options,
         signupData
       );
 
@@ -84,9 +120,10 @@ export class StripeService {
    */
   static async createCheckoutSession(
     userId: string | null,
-    planType: 'starter' | 'professional' | 'enterprise',
+    planType: 'free' | 'pro' | 'agency' | 'enterprise',
     customerEmail: string,
     customerName?: string,
+    options?: { seatCount?: number },
     signupData?: { email: string; password: string; name: string }
   ): Promise<{ success: boolean; sessionId?: string; error?: string }> {
     try {
@@ -106,6 +143,7 @@ export class StripeService {
           customerEmail,
           userId, // Can be null for new signups
           planType,
+          seatCount: options?.seatCount,
           signupData, // Include signup data for account creation after payment
           successUrl: `${window.location.origin}/order/success?session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/pricing?subscription=cancelled`,
@@ -152,7 +190,7 @@ export class StripeService {
         return null;
       }
       
-      // First try to get any subscription (active, trialing, etc.)
+      // Get the most recent subscription
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
@@ -165,17 +203,20 @@ export class StripeService {
         console.error('❌ Database error fetching subscription:', error);
         if (error.code === 'PGRST116') {
           console.log('ℹ️ No subscription found for user');
-          // Try to create a trial subscription
+          // Create a free subscription for new users
           try {
-            console.log('🔄 Attempting to create trial subscription for user:', userId);
+            console.log('🔄 Creating free subscription for user:', userId);
             const { data: newSub, error: createError } = await supabase
               .from('subscriptions')
               .insert({
                 user_id: userId,
-                plan_type: 'starter',
-                status: 'trialing',
+                plan_type: 'free',
+                status: 'active',
+                seat_count: 1,
+                base_price: 0,
+                seat_price: 0,
                 current_period_start: new Date().toISOString(),
-                current_period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+                current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
                 cancel_at_period_end: false,
                 stripe_subscription_id: null,
                 stripe_customer_id: null
@@ -184,14 +225,14 @@ export class StripeService {
               .single();
             
             if (createError) {
-              console.error('❌ Failed to create trial subscription:', createError);
+              console.error('❌ Failed to create free subscription:', createError);
               return null;
             }
             
-            console.log('✅ Created trial subscription:', newSub);
+            console.log('✅ Created free subscription:', newSub);
             return newSub;
           } catch (createError) {
-            console.error('❌ Error creating trial subscription:', createError);
+            console.error('❌ Error creating free subscription:', createError);
             return null;
           }
         }
@@ -220,7 +261,7 @@ export class StripeService {
    */
   static async updateSubscription(
     userId: string,
-    newPlanType: 'starter' | 'professional' | 'enterprise'
+    newPlanType: 'free' | 'pro' | 'agency' | 'enterprise'
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const currentSubscription = await this.getCurrentSubscription(userId);

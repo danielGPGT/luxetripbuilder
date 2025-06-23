@@ -34,7 +34,7 @@ export function Sidebar() {
       setLoading(true);
       const tierManager = TierManager.getInstance();
       tierManager.initialize(user.id).then(() => {
-        setHasMediaLibraryAccess(tierManager.hasMediaLibraryAccess());
+        setHasMediaLibraryAccess(tierManager.hasFeature('media_library'));
       });
 
       // Load recent quotes instead of itineraries
