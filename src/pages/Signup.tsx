@@ -12,6 +12,7 @@ import { auth } from '@/lib/auth';
 import { useAuth } from '@/lib/AuthProvider';
 import { StripeService } from '@/lib/stripeService';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 const planInfo = {
   free: {
@@ -105,6 +106,10 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [agencyName, setAgencyName] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("");
   
   // UI state
   const [isLoading, setIsLoading] = useState(false);
@@ -220,40 +225,141 @@ export default function Signup() {
     }
   }, [user, navigate]);
 
-  const handleFreeSignup = async () => {
+  async function uploadLogo(file: File, userEmail: string): Promise<string | null> {
+    // Only attempt upload if userEmail is present and bucket exists
+    if (!userEmail) {
+      setError('Cannot upload logo: missing user email');
+      return null;
+    }
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${userEmail}-${Date.now()}.${fileExt}`;
     try {
-      // Create user account with Supabase Auth
-      const { user, error } = await auth.signUp(email, password, name);
+      // Check if bucket exists (optional: skip if you know it exists)
+      // const { data: buckets } = await supabase.storage.listBuckets();
+      // if (!buckets?.find(b => b.id === 'logos')) {
+      //   setError('Logo upload bucket does not exist');
+      //   return null;
+      // }
+      const { data, error } = await supabase.storage
+        .from('logos')
+        .upload(filePath, file);
+      if (error) {
+        setError('Logo upload failed: ' + error.message);
+        return null;
+      }
+      const { data: publicUrlData } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+      const publicUrl = publicUrlData?.publicUrl;
+      if (!publicUrl) {
+        setError('Failed to get public URL for uploaded logo');
+        return null;
+      }
+      console.log('Logo uploaded successfully:', publicUrl);
+      return publicUrl;
+    } catch (err: any) {
+      setError('Logo upload error: ' + (err.message || err.toString()));
+      return null;
+    }
+  }
 
+  const handleFreeSignup = async (logoUrlParam?: string) => {
+    try {
+      // 1. Create the user
+      const { user, error } = await auth.signUp(email, password, name, phone, agencyName, logoUrlParam || "");
       if (error) {
         throw error;
       }
-
-      if (user) {
-        toast.success("Account created successfully! Welcome to AItinerary.");
-        navigate("/dashboard");
+      if (!user) {
+        setError('Signup failed: No user returned');
+        return;
       }
+      // 2. Wait for the team to be created (poll for up to 5 seconds)
+      let team = null;
+      for (let i = 0; i < 10; i++) {
+        const { data: foundTeam } = await supabase
+          .from('teams')
+          .select('id')
+          .eq('owner_id', user.id)
+          .single();
+        if (foundTeam && foundTeam.id) {
+          team = foundTeam;
+          break;
+        }
+        await new Promise(res => setTimeout(res, 500));
+      }
+      if (!team) {
+        setError('Signup failed: Team was not created. Please try again.');
+        return;
+      }
+      // 3. Create a free subscription for the team
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .insert({
+          team_id: team.id,
+          user_id: user.id,
+          plan_type: 'free',
+          status: 'active',
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          cancel_at_period_end: false
+        })
+        .select()
+        .single();
+      if (subError || !subscription) {
+        setError('Signup failed: Could not create subscription.');
+        return;
+      }
+      // 4. Link the team to the subscription
+      await supabase
+        .from('teams')
+        .update({ subscription_id: subscription.id })
+        .eq('id', team.id);
+      // 5. Link the subscription to the team (redundant, but ensures both are set)
+      await supabase
+        .from('subscriptions')
+        .update({ team_id: team.id })
+        .eq('id', subscription.id);
+      toast.success("Account created successfully! Welcome to AItinerary.");
+      navigate("/dashboard");
     } catch (err: any) {
       setError(err.message || "Signup failed");
     }
   };
 
-  const handlePaidSignup = async () => {
+  const handlePaidSignup = async (logoUrlParam?: string) => {
     try {
-      // Create Stripe checkout session with signup data
       const result = await StripeService.createSubscription(
-        null, // No userId yet - will be created after payment
+        null,
         localSelectedPlan,
         email,
         name,
-        undefined, // No seat count for now
-        { email, password, name } // Pass signup data for account creation after payment
+        undefined,
+        { email, password, name, phone, agency_name: agencyName, logo_url: logoUrlParam || "" }
       );
-      
       if (result.success) {
-        toast.success("Redirecting to secure payment...");
-        // Stripe will handle the redirect to checkout
-        // After successful payment, user will be redirected to success page
+        if (result.error && result.error.includes('Redirect failed')) {
+          // If redirect failed but session was created, try manual redirect
+          toast.success('Payment session created. Redirecting to checkout...');
+          // Try to redirect manually using the session ID
+          const stripe = await import('@stripe/stripe-js').then(m => m.loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY));
+          if (stripe && result.subscriptionId) {
+            const { error } = await stripe.redirectToCheckout({
+              sessionId: result.subscriptionId,
+            });
+            if (error) {
+              // If redirect still fails, try direct URL
+              const urlResult = await StripeService.getCheckoutSessionUrl(result.subscriptionId);
+              if (urlResult.success && urlResult.url) {
+                window.location.href = urlResult.url;
+              } else {
+                toast.error(`Redirect failed: ${error.message}. Please try again.`);
+              }
+            }
+          }
+        } else {
+          toast.success("Redirecting to secure payment...");
+        }
       } else {
         setError(result.error || 'Failed to create subscription');
       }
@@ -264,26 +370,46 @@ export default function Signup() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!isFormValid()) return;
-    
     setIsLoading(true);
     setError("");
-    
+    let finalLogoUrl = "";
     try {
+      if (logoFile) {
+        setLogoUploading(true);
+        // Only upload logo if email is present
+        if (!email) {
+          setError('Please enter your email before uploading a logo.');
+          setLogoUploading(false);
+          setIsLoading(false);
+          return;
+        }
+        const uploadedUrl = await uploadLogo(logoFile, email);
+        if (uploadedUrl) {
+          setLogoUrl(uploadedUrl);
+          finalLogoUrl = uploadedUrl;
+        }
+        setLogoUploading(false);
+      }
+      // For free plan, handle signup and subscription creation
       if (localSelectedPlan === 'free') {
-        await handleFreeSignup();
+        await handleFreeSignup(finalLogoUrl);
+        return;
       } else if (localSelectedPlan === 'enterprise') {
-        // For enterprise, redirect to contact form
         window.location.href = 'mailto:sales@luxetripbuilder.com?subject=Enterprise Plan Inquiry&body=Name: ' + name + '%0D%0AEmail: ' + email + '%0D%0APhone: ' + phone;
         return;
       } else {
-        await handlePaidSignup();
+        // For paid plans, do NOT run any team/subscription queries here
+        // Only redirect to Stripe for payment, let webhook handle team/subscription creation
+        await handlePaidSignup(finalLogoUrl);
+        // handlePaidSignup should handle redirect to Stripe
+        return;
       }
     } catch (err: any) {
       setError(err.message || "Signup failed");
     } finally {
       setIsLoading(false);
+      setLogoUploading(false);
     }
   };
 
@@ -524,6 +650,31 @@ export default function Signup() {
                         {getFieldError('phone', phone)}
                       </div>
                     )}
+                  </div>
+                  
+                  <div style={{ animationDelay: '350ms', animation: animationStep >= 1 ? 'slideInRight 0.5s ease-out forwards' : 'none' }}>
+                    <label htmlFor="agencyName" className="block text-sm font-medium mb-2">Agency Name (optional)</label>
+                    <Input
+                      id="agencyName"
+                      type="text"
+                      value={agencyName}
+                      onChange={e => setAgencyName(e.target.value)}
+                      className="h-11"
+                      placeholder="Enter your agency name"
+                    />
+                  </div>
+                  
+                  <div style={{ animationDelay: '360ms', animation: animationStep >= 1 ? 'slideInRight 0.5s ease-out forwards' : 'none' }}>
+                    <label htmlFor="logo" className="block text-sm font-medium mb-2">Agency Logo (optional)</label>
+                    <input
+                      id="logo"
+                      type="file"
+                      accept="image/*"
+                      onChange={e => setLogoFile(e.target.files?.[0] || null)}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    />
+                    {logoUploading && <div className="text-xs text-muted-foreground mt-1">Uploading logo...</div>}
+                    {logoUrl && <img src={logoUrl} alt="Logo preview" className="mt-2 h-12" />}
                   </div>
                   
                   <div style={{ animationDelay: '400ms', animation: animationStep >= 1 ? 'slideInRight 0.5s ease-out forwards' : 'none' }}>

@@ -30,6 +30,8 @@ import MediaLibrary from "./pages/MediaLibrary";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import Settings from "./pages/Settings";
 import UndrawGallery from "./pages/UndrawGallery";
+import TeamInvitation from './pages/TeamInvitation';
+import TeamInvitationSignup from './pages/TeamInvitationSignup';
 import "./App.css";
 
 function App() {
@@ -120,6 +122,16 @@ function AppContent() {
         <Route path="/undraw-gallery" element={
           <PublicLayout>
             <UndrawGallery />
+          </PublicLayout>
+        } />
+        <Route path="/team-invite" element={
+          <PublicLayout>
+            <TeamInvitation />
+          </PublicLayout>
+        } />
+        <Route path="/team-invitation-signup" element={
+          <PublicLayout>
+            <TeamInvitationSignup />
           </PublicLayout>
         } />
         {/* Protected routes with sidebar */}

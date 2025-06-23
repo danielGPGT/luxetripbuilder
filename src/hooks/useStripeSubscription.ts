@@ -15,24 +15,17 @@ export function useStripeSubscription() {
 
   const loadSubscription = useCallback(async () => {
     if (!user?.id) {
-      console.log('⚠️ No user ID available, skipping subscription load');
       setLoading(false);
       return;
     }
-
     try {
       setLoading(true);
       console.log('🔄 Loading subscription for user:', user.id);
       
-      // Ensure user is authenticated
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) {
-        console.error('❌ User not authenticated');
-        setSubscription(null);
-        return;
-      }
-      
+      // Use the StripeService which already handles team-based subscription lookup
       const currentSubscription = await StripeService.getCurrentSubscription(user.id);
+      console.log('📋 Subscription loaded:', currentSubscription);
+      
       setSubscription(currentSubscription);
 
       // Update tier manager with subscription data
@@ -42,7 +35,6 @@ export function useStripeSubscription() {
       }
     } catch (error) {
       console.error('❌ Error loading subscription:', error);
-      // Don't show toast for subscription loading errors to avoid spam
       setSubscription(null);
     } finally {
       setLoading(false);
@@ -112,7 +104,10 @@ export function useStripeSubscription() {
       toast.error('Please log in to create a subscription');
       return { success: false };
     }
-
+    if (planType === 'enterprise') {
+      // Enterprise handled in UI, do not attempt subscription
+      return { success: false, error: 'Enterprise plans are custom. Please contact sales.' };
+    }
     try {
       setProcessing(true);
       const result = await StripeService.createSubscription(
@@ -124,7 +119,28 @@ export function useStripeSubscription() {
       );
 
       if (result.success) {
-        toast.success('Redirecting to checkout...');
+        if (result.error && result.error.includes('Redirect failed')) {
+          // If redirect failed but session was created, try manual redirect
+          toast.success('Payment session created. Redirecting to checkout...');
+          // Try to redirect manually using the session ID
+          const stripe = await import('@stripe/stripe-js').then(m => m.loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY));
+          if (stripe && result.subscriptionId) {
+            const { error } = await stripe.redirectToCheckout({
+              sessionId: result.subscriptionId,
+            });
+            if (error) {
+              // If redirect still fails, try direct URL
+              const urlResult = await StripeService.getCheckoutSessionUrl(result.subscriptionId);
+              if (urlResult.success && urlResult.url) {
+                window.location.href = urlResult.url;
+              } else {
+                toast.error(`Redirect failed: ${error.message}. Please try again.`);
+              }
+            }
+          }
+        } else {
+          toast.success('Redirecting to checkout...');
+        }
       } else {
         toast.error(result.error || 'Failed to create subscription');
       }
@@ -266,14 +282,35 @@ export function useStripeSubscription() {
   };
 
   const hasAccess = () => {
-    if (!subscription) return false;
+    console.log('🔍 Checking access for user:', user?.id);
+    console.log('📋 Current subscription:', subscription);
     
-    // Active subscription
-    if (subscription.status === 'active') return true;
+    // If user has a subscription (either direct or team-based), check it
+    if (subscription) {
+      console.log('✅ User has subscription:', {
+        status: subscription.status,
+        plan_type: subscription.plan_type,
+        team_id: subscription.team_id,
+        current_period_end: subscription.current_period_end
+      });
+      
+      // Active subscription
+      if (subscription.status === 'active') {
+        console.log('✅ Active subscription - access granted');
+        return true;
+      }
+      
+      // Canceled but still within period
+      if (subscription.cancel_at_period_end && new Date(subscription.current_period_end) > new Date()) {
+        console.log('✅ Canceled but within period - access granted');
+        return true;
+      }
+      
+      console.log('❌ Subscription exists but not active or within period');
+      return false;
+    }
     
-    // Canceled but still within period
-    if (subscription.cancel_at_period_end && new Date(subscription.current_period_end) > new Date()) return true;
-    
+    console.log('❌ No subscription found - access denied');
     return false;
   };
 

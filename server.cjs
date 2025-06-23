@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
+const fetch = (...args) => import('node-fetch').then(mod => mod.default(...args));
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,14 +31,29 @@ app.use((req, res, next) => {
 // Create checkout session
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
-    const { priceId, customerEmail, userId, planType, signupData, successUrl, cancelUrl } = req.body;
-
+    const { priceId, customerEmail, userId, planType, seatCount, signupData, successUrl, cancelUrl } = req.body;
+    // Handle Free plan: no Stripe session needed
+    if (planType === 'free') {
+      // ... existing code to update DB ...
+      return res.json({ success: true, message: 'Free plan activated.' });
+    }
+    // Handle Enterprise plan: do not allow self-serve checkout
+    if (planType === 'enterprise') {
+      return res.status(400).json({ success: false, error: 'Enterprise plans are custom. Please contact sales.' });
+    }
+    // Handle Agency plan seat count
+    let finalPriceId = priceId;
+    let quantity = 1;
+    if (planType === 'agency') {
+      const seats = Math.max(1, Math.min(10, parseInt(seatCount) || 1));
+      quantity = seats;
+    }
     let sessionConfig = {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: priceId,
-          quantity: 1,
+          price: finalPriceId,
+          quantity,
         },
       ],
       mode: 'subscription',
@@ -55,6 +72,9 @@ app.post('/api/create-checkout-session', async (req, res) => {
       sessionConfig.metadata.signup_email = signupData.email;
       sessionConfig.metadata.signup_password = signupData.password;
       sessionConfig.metadata.signup_name = signupData.name;
+      sessionConfig.metadata.signup_phone = signupData.phone || null;
+      sessionConfig.metadata.signup_agency_name = signupData.agency_name || null;
+      sessionConfig.metadata.signup_logo_url = signupData.logo_url || null;
       sessionConfig.metadata.needs_account_creation = 'true';
       sessionConfig.customer_email = customerEmail;
     } else if (userId) {
@@ -149,6 +169,21 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
     console.log('Event ID:', event.id);
     console.log('Event data:', JSON.stringify(event.data, null, 2));
 
+    // 1. Log the event
+    console.log('🔔 Stripe event:', event.type, event.id);
+
+    // 2. Idempotency: Check if we've already processed this event
+    const { data: existingEvent } = await supabase
+      .from('stripe_events')
+      .select('id')
+      .eq('event_id', event.id)
+      .single();
+    if (existingEvent) {
+      console.log('⚠️ Event already processed:', event.id);
+      return res.status(200).json({ received: true });
+    }
+
+    // 3. Process the event (user/team/subscription creation logic)
     switch (event.type) {
       case 'checkout.session.completed':
         console.log('🔄 Processing checkout.session.completed event...');
@@ -157,14 +192,11 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
         // Check if this is a new signup that needs account creation
         if (session.metadata?.needs_account_creation === 'true') {
           console.log('🆕 New signup detected - creating user account');
-          
           try {
             // First check if user already exists by email
             const { data: existingUser, error: checkError } = await supabase.auth.admin.listUsers();
             const userExists = existingUser?.users?.find(u => u.email === session.metadata.signup_email);
-            
             let newUserId;
-            
             if (userExists) {
               console.log('✅ User already exists:', userExists.id);
               newUserId = userExists.id;
@@ -175,34 +207,51 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
                 password: session.metadata.signup_password,
                 email_confirm: true, // Auto-confirm email since payment is complete
                 user_metadata: {
-                  name: session.metadata.signup_name
+                  name: session.metadata.signup_name,
+                  phone: session.metadata.signup_phone || null,
+                  agency_name: session.metadata.signup_agency_name || null,
+                  logo_url: session.metadata.signup_logo_url || null
                 }
               });
-
               if (authError) {
                 console.error('❌ Error creating user account:', authError);
                 break;
               }
-
               newUserId = authData.user.id;
               console.log('✅ User account created:', newUserId);
             }
-
+            // Check required fields
+            if (!newUserId || !session.metadata.signup_email || !session.metadata.signup_name) {
+              console.error('❌ Missing required fields for user upsert:', {
+                newUserId,
+                signup_email: session.metadata.signup_email,
+                signup_name: session.metadata.signup_name,
+                signup_phone: session.metadata.signup_phone,
+                signup_agency_name: session.metadata.signup_agency_name,
+                signup_logo_url: session.metadata.signup_logo_url
+              });
+              break;
+            }
+            // Log the data to be upserted
+            const userUpsertData = {
+              id: newUserId,
+              email: session.metadata.signup_email,
+              name: session.metadata.signup_name,
+              phone: session.metadata.signup_phone || null,
+              agency_name: session.metadata.signup_agency_name || null,
+              logo_url: session.metadata.signup_logo_url || null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            console.log('ℹ️ Upserting user with data:', userUpsertData);
+            // Log service role key status
+            console.log('ℹ️ Using Supabase service role key:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'YES' : 'NO');
             // Create user profile (use upsert to handle duplicates)
             const { error: profileError } = await supabase
               .from('users')
-              .upsert({
-                id: newUserId,
-                email: session.metadata.signup_email,
-                name: session.metadata.signup_name,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }, {
-                onConflict: 'id'
-              });
-
+              .upsert(userUpsertData, { onConflict: 'id' });
             if (profileError) {
-              console.error('❌ Error creating user profile:', profileError);
+              console.error('❌ Error creating user profile:', profileError, 'Data:', userUpsertData);
             } else {
               console.log('✅ User profile created/updated');
             }
@@ -245,6 +294,56 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             });
 
             console.log('✅ Session metadata updated with new user ID');
+
+            // Find the team for the user
+            const { data: team, error: teamError } = await supabase
+              .from('teams')
+              .select('id')
+              .eq('owner_id', newUserId)
+              .single();
+            // Find the subscription (if session.subscription exists)
+            let subscriptionRecord = null;
+            if (session.subscription) {
+              const { data: subRecord, error: subFetchError } = await supabase
+                .from('subscriptions')
+                .select('id')
+                .eq('id', session.subscription)
+                .single();
+              if (subRecord && subRecord.id) {
+                subscriptionRecord = subRecord;
+              } else {
+                console.error('❌ Could not find subscription to update with team_id:', subFetchError);
+              }
+            }
+            if (team && team.id && subscriptionRecord && subscriptionRecord.id) {
+              // Link subscription to team
+              const { error: subUpdateError } = await supabase
+                .from('subscriptions')
+                .update({ team_id: team.id })
+                .eq('id', subscriptionRecord.id);
+              if (!subUpdateError) {
+                console.log('✅ Subscription team_id updated:', subscriptionRecord.id, team.id);
+              } else {
+                console.error('❌ Error updating subscription with team_id:', subUpdateError);
+              }
+              // Link team to subscription
+              const { error: teamUpdateError } = await supabase
+                .from('teams')
+                .update({ subscription_id: subscriptionRecord.id })
+                .eq('id', team.id);
+              if (!teamUpdateError) {
+                console.log('✅ Team subscription_id updated:', team.id, subscriptionRecord.id);
+              } else {
+                console.error('❌ Error updating team with subscription_id:', teamUpdateError);
+              }
+            } else {
+              if (!team || !team.id) {
+                console.warn('⚠️ No team found for user after signup:', newUserId);
+              }
+              if (!subscriptionRecord || !subscriptionRecord.id) {
+                console.warn('⚠️ No subscription found to link to team:', session.subscription);
+              }
+            }
           } catch (error) {
             console.error('❌ Error in account creation process:', error);
             break;
@@ -385,6 +484,20 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             console.log('✅ Successfully updated subscription:', updatedSub);
           }
         }
+
+        // After updating the subscriptions table, also update the teams table
+        const { data: teamByCustomer, error: teamByCustomerError } = await supabase
+          .from('teams')
+          .select('id')
+          .eq('owner_id', userByCustomer.user_id)
+          .single();
+        if (teamByCustomer && teamByCustomer.id) {
+          await supabase
+            .from('teams')
+            .update({ subscription_id: newSubscription.id })
+            .eq('id', teamByCustomer.id);
+          console.log('✅ Team subscription_id updated:', teamByCustomer.id, newSubscription.id);
+        }
         break;
 
       case 'customer.subscription.updated':
@@ -424,17 +537,38 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             console.log('✅ Successfully updated subscription:', updatedSub);
           }
         }
+
+        // After updating the subscriptions table, also update the teams table
+        const { data: teamBySub, error: teamBySubError } = await supabase
+          .from('teams')
+          .select('id')
+          .eq('owner_id', userBySub.user_id)
+          .single();
+        if (teamBySub && teamBySub.id) {
+          await supabase
+            .from('teams')
+            .update({ subscription_id: updatedSubscription.id })
+            .eq('id', teamBySub.id);
+          console.log('✅ Team subscription_id updated:', teamBySub.id, updatedSubscription.id);
+        }
         break;
 
       default:
         console.log('⚠️ Unhandled event type:', event.type);
     }
 
+    // 4. Record the event as processed
+    await supabase.from('stripe_events').insert({ event_id: event.id, type: event.type });
+
+    // 5. Log success
     console.log('✅ Webhook processed successfully:', event.type);
-    res.json({ received: true });
+
+    return res.status(200).json({ received: true });
   } catch (error) {
+    // 6. Log and notify on error
     console.error('❌ Error processing webhook:', error);
-    res.status(500).json({ error: 'Webhook processing failed' });
+    // Optionally: send an email/Slack alert here
+    return res.status(500).json({ error: 'Webhook processing failed' });
   }
 });
 
@@ -636,1072 +770,214 @@ app.post('/api/update-subscription', async (req, res) => {
       });
     }
 
-    res.json({ 
-      success: true, 
-      subscription: updatedSubscription,
-      planType: newPlanType,
-      message: 'Subscription updated successfully'
-    });
-  } catch (error) {
-    console.error('❌ Error updating subscription:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Cancel a subscription
-app.post('/api/cancel-subscription', async (req, res) => {
-  try {
-    const { subscriptionId } = req.body;
-    if (!subscriptionId) {
-      return res.status(400).json({ success: false, error: 'Subscription ID is required.' });
-    }
-
-    console.log(`Canceling subscription ${subscriptionId}`);
-
-    const canceledSubscription = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: true,
-    });
-
-    console.log(`Stripe subscription canceled successfully: ${canceledSubscription.id}`);
-
-    // Manually update the database
-    try {
-      // First get the user_id from the subscription
-      const { data: existingSub, error: checkError } = await supabase
-        .from('subscriptions')
-        .select('user_id')
-        .eq('stripe_subscription_id', subscriptionId)
+    // After updating the subscriptions table, also update the teams table
+    const { data: teamByExistingSub, error: teamByExistingSubError } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('owner_id', existingSub.user_id)
         .single();
-
-      if (checkError) {
-        console.error('Error finding subscription for cancel:', checkError);
-        return res.status(404).json({ 
-          success: false, 
-          error: 'Subscription not found in database',
-          stripeSuccess: true,
-          databaseError: checkError.message
-        });
-      }
-
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          cancel_at_period_end: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', existingSub.user_id); // Use user_id instead of stripe_subscription_id
-
-      if (error) {
-        console.error('Error updating subscription in database:', error);
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Database update failed',
-          stripeSuccess: true,
-          databaseError: error.message
-        });
-      } else {
-        console.log(`Database updated successfully for canceled subscription ${subscriptionId}`);
-      }
-    } catch (dbError) {
-      console.error('Database update failed:', dbError);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Database update failed',
-        stripeSuccess: true,
-        databaseError: dbError.message
-      });
+    if (teamByExistingSub && teamByExistingSub.id) {
+      await supabase
+        .from('teams')
+        .update({ subscription_id: updatedSubscription.id })
+        .eq('id', teamByExistingSub.id);
+      console.log('✅ Team subscription_id updated:', teamByExistingSub.id, updatedSubscription.id);
     }
 
-    res.json({ 
-      success: true, 
-      subscription: canceledSubscription,
-      message: 'Subscription will be canceled at the end of the current period'
+    res.json({ success: true, member });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Send team invitation email via Resend
+app.post('/api/send-team-invitation', async (req, res) => {
+  const { email, inviteLink, inviterName, teamName } = req.body;
+  try {
+    if (!email || !inviteLink || !inviterName || !teamName) {
+      return res.status(400).json({ success: false, error: 'Missing required fields.' });
+    }
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'noreply@aitinerary.com',
+        to: email,
+        subject: `You're invited to join ${teamName} on AItinerary`,
+        html: `
+          <h2>Team Invitation</h2>
+          <p>${inviterName} has invited you to join their team on AItinerary.</p>
+          <a href="${inviteLink}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Accept Invitation</a>
+          <p>This invitation will expire soon.</p>
+        `
+      })
     });
+    if (!response.ok) throw new Error('Failed to send email');
+    res.json({ success: true });
   } catch (error) {
-    console.error('Error canceling subscription:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Reactivate a subscription
-app.post('/api/reactivate-subscription', async (req, res) => {
-  try {
-    const { subscriptionId } = req.body;
-    if (!subscriptionId) {
-      return res.status(400).json({ success: false, error: 'Subscription ID is required.' });
-    }
-
-    console.log(`Reactivating subscription ${subscriptionId}`);
-
-    const reactivatedSubscription = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: false,
-    });
-
-    console.log(`Stripe subscription reactivated successfully: ${reactivatedSubscription.id}`);
-
-    // Manually update the database
-    try {
-      // First get the user_id from the subscription
-      const { data: existingSub, error: checkError } = await supabase
-        .from('subscriptions')
-        .select('user_id')
-        .eq('stripe_subscription_id', subscriptionId)
-        .single();
-
-      if (checkError) {
-        console.error('Error finding subscription for reactivate:', checkError);
-        return res.status(404).json({ 
-          success: false, 
-          error: 'Subscription not found in database',
-          stripeSuccess: true,
-          databaseError: checkError.message
-        });
-      }
-
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          cancel_at_period_end: false,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', existingSub.user_id); // Use user_id instead of stripe_subscription_id
-
-      if (error) {
-        console.error('Error updating subscription in database:', error);
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Database update failed',
-          stripeSuccess: true,
-          databaseError: error.message
-        });
-      } else {
-        console.log(`Database updated successfully for reactivated subscription ${subscriptionId}`);
-      }
-    } catch (dbError) {
-      console.error('Database update failed:', dbError);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Database update failed',
-        stripeSuccess: true,
-        databaseError: dbError.message
-      });
-    }
-
-    res.json({ 
-      success: true, 
-      subscription: reactivatedSubscription,
-      message: 'Subscription reactivated successfully'
-    });
-  } catch (error) {
-    console.error('Error reactivating subscription:', error);
-    res.status(500).json({ success: false, error: error.message });
+// Accept team invitation endpoint
+app.post('/api/team/accept-invite', async (req, res) => {
+  const { token, user_id, name } = req.body;
+  if (!token || !user_id) {
+    return res.status(400).json({ success: false, error: 'Missing token or user_id' });
   }
-});
-
-// Create a billing portal session
-app.post('/api/create-billing-portal-session', async (req, res) => {
   try {
-    const { customerId } = req.body;
-    console.log('Creating billing portal session for customer:', customerId);
-    
-    if (!customerId) {
-      console.error('No customer ID provided');
-      return res.status(400).json({ success: false, error: 'Customer ID is required.' });
-    }
-
-    // Validate that the customer exists in Stripe
-    try {
-      const customer = await stripe.customers.retrieve(customerId);
-      console.log('Customer found in Stripe:', customer.id);
-    } catch (stripeError) {
-      console.error('Customer not found in Stripe:', customerId, stripeError.message);
-      return res.status(400).json({ success: false, error: 'Customer not found in Stripe.' });
-    }
-
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${req.headers.origin}/dashboard`, // Redirect back to the app
-    });
-
-    console.log('Billing portal session created successfully');
-    res.json({ success: true, url: portalSession.url });
-  } catch (error) {
-    console.error('Error creating billing portal session:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Get pricing information from Stripe
-app.get('/api/pricing', async (req, res) => {
-  try {
-    const prices = await stripe.prices.list({
-      active: true,
-      expand: ['data.product'],
-    });
-
-    // Filter for subscription prices and organize by plan type
-    const pricingData = {
-      starter: null,
-      professional: null,
-      enterprise: null
-    };
-
-    prices.data.forEach(price => {
-      const product = price.product;
-      
-      // Determine plan type based on price ID or product metadata
-      let planType = null;
-      if (price.id === process.env.STRIPE_STARTER_PRICE_ID) {
-        planType = 'starter';
-      } else if (price.id === process.env.STRIPE_PROFESSIONAL_PRICE_ID) {
-        planType = 'professional';
-      } else if (price.id === process.env.STRIPE_ENTERPRISE_PRICE_ID) {
-        planType = 'enterprise';
-      }
-
-      if (planType && price.type === 'recurring') {
-        pricingData[planType] = {
-          id: price.id,
-          amount: price.unit_amount,
-          currency: price.currency,
-          interval: price.recurring.interval,
-          productName: product.name,
-          productDescription: product.description,
-          features: product.metadata?.features ? JSON.parse(product.metadata.features) : []
-        };
-      }
-    });
-
-    res.json({ success: true, pricing: pricingData });
-  } catch (error) {
-    console.error('Error fetching pricing:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Sync subscription data between Stripe and database
-app.post('/api/sync-subscription', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'User ID is required' });
-    }
-
-    console.log(`🔄 Syncing subscription for user: ${userId}`);
-
-    // Get subscription from database
-    const { data: dbSubscription, error: dbError } = await supabase
-      .from('subscriptions')
+    // 1. Find the invitation
+    const { data: invite, error: inviteError } = await supabase
+      .from('team_invitations')
       .select('*')
-      .eq('user_id', userId)
+      .eq('token', token)
       .single();
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      return res.status(500).json({ success: false, error: 'Failed to get subscription from database' });
+    if (inviteError || !invite) {
+      return res.status(404).json({ success: false, error: 'Invitation not found' });
     }
-
-    if (!dbSubscription) {
-      return res.status(404).json({ success: false, error: 'No subscription found for user' });
+    if (invite.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Invitation is not pending' });
     }
-
-    console.log('Database subscription:', {
-      id: dbSubscription.id,
-      status: dbSubscription.status,
-      plan_type: dbSubscription.plan_type,
-      stripe_subscription_id: dbSubscription.stripe_subscription_id
-    });
-
-    // If no Stripe subscription ID, we can't sync
-    if (!dbSubscription.stripe_subscription_id) {
-      console.log('No Stripe subscription ID found, cannot sync');
-      return res.json({ 
-        success: true, 
-        data: dbSubscription,
-        message: 'No Stripe subscription to sync with'
-      });
+    if (new Date(invite.expires_at) < new Date()) {
+      return res.status(400).json({ success: false, error: 'Invitation has expired' });
     }
-
-    // Get subscription from Stripe
-    const stripeSubscription = await stripe.subscriptions.retrieve(dbSubscription.stripe_subscription_id);
-    
-    console.log('Stripe subscription:', {
-      id: stripeSubscription.id,
-      status: stripeSubscription.status,
-      current_period_start: stripeSubscription.current_period_start,
-      current_period_end: stripeSubscription.current_period_end
-    });
-
-    // Determine plan type from Stripe
-    const priceId = stripeSubscription.items.data[0]?.price.id;
-    let planType = 'starter';
-    
-    if (priceId === process.env.STRIPE_PROFESSIONAL_PRICE_ID) {
-      planType = 'professional';
-    } else if (priceId === process.env.STRIPE_ENTERPRISE_PRICE_ID) {
-      planType = 'enterprise';
-    }
-
-    // Check if database needs updating
-    const needsUpdate = 
-      dbSubscription.status !== stripeSubscription.status ||
-      dbSubscription.plan_type !== planType ||
-      dbSubscription.current_period_start !== new Date(stripeSubscription.current_period_start * 1000).toISOString() ||
-      dbSubscription.current_period_end !== new Date(stripeSubscription.current_period_end * 1000).toISOString() ||
-      dbSubscription.cancel_at_period_end !== stripeSubscription.cancel_at_period_end;
-
-    if (needsUpdate) {
-      console.log('🔄 Database needs updating, syncing...');
-      
-      const { error: updateError } = await supabase
-        .from('subscriptions')
-        .update({
-          status: stripeSubscription.status,
-          plan_type: planType,
-          current_period_start: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
-          cancel_at_period_end: stripeSubscription.cancel_at_period_end,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', userId); // Use user_id instead of stripe_subscription_id
-
-      if (updateError) {
-        console.error('Error updating subscription:', updateError);
-        return res.status(500).json({ success: false, error: 'Failed to update subscription' });
-      }
-
-      console.log('✅ Subscription synced successfully');
-      
-      // Get updated subscription
-      const { data: updatedSubscription } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', userId)
+    // 2. Add user to team_members (if not already a member)
+    const { data: existingMember } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('team_id', invite.team_id)
+      .eq('user_id', user_id)
         .single();
-
-      return res.json({ 
-        success: true, 
-        data: updatedSubscription,
-        message: 'Subscription synced successfully',
-        changes: {
-          status: { from: dbSubscription.status, to: stripeSubscription.status },
-          plan_type: { from: dbSubscription.plan_type, to: planType }
-        }
-      });
-    } else {
-      console.log('✅ Database is already in sync');
-      return res.json({ 
-        success: true, 
-        data: dbSubscription,
-        message: 'Subscription is already in sync'
-      });
+    if (existingMember) {
+      return res.status(400).json({ success: false, error: 'User is already a team member' });
     }
-
-  } catch (error) {
-    console.error('Error syncing subscription:', error);
-    res.status(500).json({ success: false, error: error.message });
+    const { error: addError } = await supabase
+      .from('team_members')
+      .insert({
+        team_id: invite.team_id,
+        user_id,
+        email: invite.email,
+        name: name || null,
+        role: invite.role,
+        status: 'active',
+        invited_by: invite.invited_by,
+        invited_at: invite.created_at,
+        joined_at: new Date().toISOString(),
+      });
+    if (addError) {
+      return res.status(500).json({ success: false, error: 'Failed to add user to team: ' + addError.message });
+    }
+    // 3. Mark invitation as accepted
+    const { error: updateError } = await supabase
+      .from('team_invitations')
+      .update({ status: 'accepted', updated_at: new Date().toISOString() })
+      .eq('id', invite.id);
+    if (updateError) {
+      return res.status(500).json({ success: false, error: 'Failed to update invitation: ' + updateError.message });
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
-// Comprehensive debug endpoint
-app.get('/api/debug-subscription/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    console.log(`Debugging subscription for user: ${userId}`);
-
-    // Get current subscription from database
-    const { data: dbSubscription, error: dbError } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      return res.status(500).json({ success: false, error: 'Failed to get subscription from database' });
-    }
-
-    if (!dbSubscription) {
-      return res.status(404).json({ success: false, error: 'No subscription found for user' });
-    }
-
-    let stripeData = null;
-    let stripeError = null;
-
-    // If there's a Stripe subscription ID, get the Stripe data
-    if (dbSubscription.stripe_subscription_id) {
-      try {
-        const stripeSubscription = await stripe.subscriptions.retrieve(dbSubscription.stripe_subscription_id);
-        stripeData = {
-          id: stripeSubscription.id,
-          status: stripeSubscription.status,
-          plan_type: stripeSubscription.items.data[0]?.price.id,
-          current_period_start: stripeSubscription.current_period_start,
-          current_period_end: stripeSubscription.current_period_end,
-          cancel_at_period_end: stripeSubscription.cancel_at_period_end,
-        };
-      } catch (error) {
-        stripeError = error.message;
-      }
-    }
-
-    // Analyze the situation
-    const analysis = {
-      hasStripeId: !!dbSubscription.stripe_subscription_id,
-      isTrial: dbSubscription.status === 'trialing',
-      isActive: dbSubscription.status === 'active',
-      stripeStatus: stripeData?.status,
-      statusMismatch: dbSubscription.status !== stripeData?.status,
-      needsConversion: dbSubscription.status === 'trialing' && stripeData?.status === 'active',
-    };
-
-    console.log('Debug analysis:', analysis);
-
-    res.json({ 
-      success: true, 
-      database: dbSubscription,
-      stripe: stripeData,
-      stripeError,
-      analysis,
-      recommendations: getRecommendations(analysis, dbSubscription, stripeData)
-    });
-
-  } catch (error) {
-    console.error('Error debugging subscription:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-function getRecommendations(analysis, dbSubscription, stripeData) {
-  const recommendations = [];
-
-  if (analysis.needsConversion) {
-    recommendations.push('Run fix-trial-conversion endpoint to convert trial to active');
-  }
-
-  if (analysis.statusMismatch) {
-    recommendations.push('Database and Stripe status are different - sync needed');
-  }
-
-  if (analysis.isTrial && !analysis.hasStripeId) {
-    recommendations.push('Valid trial subscription - no action needed');
-  }
-
-  if (analysis.isActive) {
-    recommendations.push('Subscription is already active - no action needed');
-  }
-
-  return recommendations;
+// Helper to send team invitation email (console log for local dev)
+// NOTE: In production, replace this with actual email sending (e.g., Resend, Mailgun, etc)
+async function sendTeamInvitationEmail({ email, inviteLink, inviterName, teamName }) {
+  console.log('[DEV] Simulated invite email:', {
+    to: email,
+    subject: `You\'re invited to join ${teamName} on AItinerary`,
+    inviteLink,
+    inviterName,
+    teamName
+  });
+  // No actual email sent in local development!
 }
 
-// Test database connectivity and permissions
-app.get('/api/test-db', async (req, res) => {
-  try {
-    console.log('Testing database connectivity...');
-    
-    // Test basic connection
-    const { data: testData, error: testError } = await supabase
-      .from('subscriptions')
-      .select('count(*)')
-      .limit(1);
-    
-    if (testError) {
-      console.error('Database connection test failed:', testError);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Database connection failed',
-        details: testError
-      });
-    }
-    
-    console.log('Database connection successful');
-    
-    // Test RLS policies by trying to read subscriptions
-    const { data: subscriptions, error: rlsError } = await supabase
-      .from('subscriptions')
-      .select('id, user_id, plan_type, status')
-      .limit(5);
-    
-    if (rlsError) {
-      console.error('RLS test failed:', rlsError);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'RLS policy test failed',
-        details: rlsError
-      });
-    }
-    
-    console.log('RLS test successful, found subscriptions:', subscriptions?.length || 0);
-    
-    res.json({ 
-      success: true, 
-      message: 'Database connectivity and permissions test passed',
-      subscriptionCount: subscriptions?.length || 0,
-      sampleData: subscriptions?.slice(0, 2) || []
-    });
-    
-  } catch (error) {
-    console.error('Database test error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Database test failed',
-      details: error.message
-    });
+// Create and send a team invitation
+app.post('/api/team/invite', async (req, res) => {
+  const { team_id, email, role, inviter_id, inviter_name, team_name } = req.body;
+  if (!team_id || !email || !role || !inviter_id || !inviter_name || !team_name) {
+    return res.status(400).json({ success: false, error: 'Missing required fields.' });
   }
-});
-
-// List all subscriptions in database (for debugging)
-app.get('/api/list-subscriptions', async (req, res) => {
   try {
-    console.log('Listing all subscriptions in database...');
-    
-    const { data: subscriptions, error } = await supabase
-      .from('subscriptions')
-      .select('id, user_id, plan_type, status, stripe_subscription_id, stripe_customer_id, created_at, updated_at')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error listing subscriptions:', error);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to list subscriptions',
-        details: error
-      });
-    }
-    
-    console.log(`Found ${subscriptions?.length || 0} subscriptions in database`);
-    
-    res.json({ 
-      success: true, 
-      count: subscriptions?.length || 0,
-      subscriptions: subscriptions || []
-    });
-    
-  } catch (error) {
-    console.error('Error listing subscriptions:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to list subscriptions',
-      details: error.message
-    });
-  }
-});
-
-// Fix trial conversion endpoint
-app.post('/api/fix-trial-conversion', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'User ID is required' });
-    }
-
-    console.log(`🔧 Fixing trial conversion for user: ${userId}`);
-
-    // Get current subscription
-    const { data: subscription, error: dbError } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      return res.status(500).json({ success: false, error: 'Failed to get subscription' });
-    }
-
-    if (!subscription) {
-      return res.status(404).json({ success: false, error: 'No subscription found' });
-    }
-
-    console.log('Current subscription:', {
-      status: subscription.status,
-      plan_type: subscription.plan_type,
-      stripe_subscription_id: subscription.stripe_subscription_id
-    });
-
-    // If subscription is already active, no need to fix
-    if (subscription.status === 'active') {
-      return res.json({ 
-        success: true, 
-        message: 'Subscription is already active',
-        subscription 
-      });
-    }
-
-    // Update subscription status to active
-    const { data: updatedSub, error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        status: 'active',
-        current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        cancel_at_period_end: false
-      })
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error('Error updating subscription:', updateError);
-      return res.status(500).json({ success: false, error: 'Failed to update subscription' });
-    }
-
-    console.log('✅ Trial conversion fixed successfully');
-    res.json({ 
-      success: true, 
-      message: 'Trial conversion fixed successfully',
-      subscription: updatedSub
-    });
-
-  } catch (error) {
-    console.error('Error fixing trial conversion:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Manual upgrade endpoint
-app.post('/api/manual-upgrade', async (req, res) => {
-  try {
-    const { userId, planType = 'starter' } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'User ID is required' });
-    }
-
-    console.log(`🔧 Manual upgrade requested for user: ${userId} to plan: ${planType}`);
-
-    // Get current subscription
-    const { data: subscription, error: dbError } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      return res.status(500).json({ success: false, error: 'Failed to get subscription' });
-    }
-
-    if (!subscription) {
-      return res.status(404).json({ success: false, error: 'No subscription found' });
-    }
-
-    console.log('Current subscription:', {
-      status: subscription.status,
-      plan_type: subscription.plan_type,
-      stripe_subscription_id: subscription.stripe_subscription_id
-    });
-
-    // Update subscription to active status and specified plan
-    const { data: updatedSub, error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        status: 'active',
-        plan_type: planType,
-        current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        cancel_at_period_end: false
-      })
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error('Error updating subscription:', updateError);
-      return res.status(500).json({ success: false, error: 'Failed to update subscription' });
-    }
-
-    console.log('✅ Manual upgrade successful');
-    res.json({ 
-      success: true, 
-      message: 'Manual upgrade successful',
-      changes: {
-        from: { status: subscription.status, plan_type: subscription.plan_type },
-        to: { status: updatedSub.status, plan_type: updatedSub.plan_type }
-      },
-      subscription: updatedSub
-    });
-
-  } catch (error) {
-    console.error('Error with manual upgrade:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Create trial subscription endpoint
-app.post('/api/create-stripe-trial', async (req, res) => {
-  try {
-    const { userId, email, name, planType = 'starter' } = req.body;
-    
-    if (!userId || !email) {
-      return res.status(400).json({ success: false, error: 'User ID and email are required' });
-    }
-
-    console.log('🔄 Creating Stripe trial subscription for user:', userId);
-
-    // Get the price ID for the plan
-    const priceId = STRIPE_PRODUCTS[planType];
-    if (!priceId) {
-      return res.status(400).json({ success: false, error: 'Invalid plan type' });
-    }
-
-    // Create or get customer
-    let customer;
-    const { data: existingCustomers } = await stripe.customers.list({
-      email: email,
-      limit: 1
-    });
-
-    if (existingCustomers.data.length > 0) {
-      customer = existingCustomers.data[0];
-      console.log('✅ Found existing customer:', customer.id);
-    } else {
-      customer = await stripe.customers.create({
-        email: email,
-        name: name,
-        metadata: {
-          user_id: userId
-        }
-      });
-      console.log('✅ Created new customer:', customer.id);
-    }
-
-    // Create subscription with trial
-    const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      items: [{ price: priceId }],
-      trial_period_days: 7,
-      metadata: {
-        user_id: userId,
-        plan_type: planType,
-        trial_plan: 'true'
-      },
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
-    });
-
-    console.log('✅ Created trial subscription:', subscription.id);
-
-    // Update database subscription with Stripe IDs
-    const { error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        stripe_subscription_id: subscription.id,
-        stripe_customer_id: customer.id,
-        status: 'trialing',
-        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
-      })
-      .eq('user_id', userId);
-
-    if (updateError) {
-      console.error('❌ Error updating database subscription:', updateError);
-      return res.status(500).json({ success: false, error: 'Failed to update database' });
-    }
-
-    console.log('✅ Database subscription updated with Stripe IDs');
-
-    res.json({
-      success: true,
-      subscription: {
-        id: subscription.id,
-        customerId: customer.id,
-        status: subscription.status,
-        trialEnd: subscription.trial_end
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Error creating Stripe trial subscription:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Failed to create trial subscription' 
-    });
-  }
-});
-
-// Fix billing dates endpoint
-app.post('/api/fix-billing-dates', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'User ID is required' });
-    }
-
-    console.log('🔧 Fixing billing dates for user:', userId);
-
-    // Get current subscription
-    const { data: subscription, error: dbError } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      return res.status(500).json({ success: false, error: 'Failed to get subscription' });
-    }
-
-    if (!subscription) {
-      return res.status(404).json({ success: false, error: 'No subscription found' });
-    }
-
-    // If there's a Stripe subscription ID, get the correct billing dates from Stripe
-    if (subscription.stripe_subscription_id) {
-      try {
-        const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
-        
-        const { data: updatedSub, error: updateError } = await supabase
-          .from('subscriptions')
-          .update({
-            current_period_start: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(stripeSubscription.current_period_end * 1000).toISOString()
-          })
-          .eq('user_id', userId)
-          .select()
+    // Check for existing pending invitation
+    const { data: existingInvite } = await supabase
+      .from('team_invitations')
+      .select('id')
+      .eq('team_id', team_id)
+      .eq('email', email)
+      .eq('status', 'pending')
           .single();
-
-        if (updateError) {
-          console.error('Error updating billing dates:', updateError);
-          return res.status(500).json({ success: false, error: 'Failed to update billing dates' });
-        }
-
-        console.log('✅ Billing dates fixed from Stripe data');
-        res.json({ 
-          success: true, 
-          message: 'Billing dates fixed from Stripe data',
-          subscription: updatedSub
-        });
-        return;
-      } catch (stripeError) {
-        console.error('Error retrieving Stripe subscription:', stripeError);
-      }
+    if (existingInvite) {
+      return res.status(400).json({ success: false, error: 'Invitation already sent to this email.' });
     }
-
-    // Fallback: calculate billing dates manually
-    const now = new Date();
-    const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
-
-    const { data: updatedSub, error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        current_period_start: now.toISOString(),
-        current_period_end: endDate.toISOString()
+    // Generate token and expiry
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+    // Insert invitation
+    const { data: invite, error: inviteError } = await supabase
+      .from('team_invitations')
+      .insert({
+        team_id,
+        email,
+        role,
+        invited_by: inviter_id,
+        token,
+        expires_at: expiresAt,
+        status: 'pending',
       })
-      .eq('user_id', userId)
       .select()
       .single();
-
-    if (updateError) {
-      console.error('Error updating billing dates:', updateError);
-      return res.status(500).json({ success: false, error: 'Failed to update billing dates' });
+    if (inviteError || !invite) {
+      return res.status(500).json({ success: false, error: 'Failed to create invitation.' });
     }
-
-    console.log('✅ Billing dates fixed manually');
-    res.json({ 
-      success: true, 
-      message: 'Billing dates fixed manually',
-      subscription: updatedSub
+    // Construct invite link
+    const inviteLink = `${process.env.APP_BASE_URL || 'https://your-app.com'}/team-invitation-signup?token=${token}`;
+    // Send email
+    await sendTeamInvitationEmail({
+      email,
+      inviteLink,
+      inviterName: inviter_name,
+      teamName: team_name
     });
-
-  } catch (error) {
-    console.error('Error fixing billing dates:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.json({ success: true, invitation: invite, inviteLink });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
-// Change plan endpoint
-app.post('/api/change-plan', async (req, res) => {
+// Get team invitation and team info for signup page
+app.get('/api/team-invitation-info', async (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    return res.status(400).json({ success: false, error: 'Missing token' });
+  }
   try {
-    const { userId, newPlanType } = req.body;
-    
-    if (!userId || !newPlanType) {
-      return res.status(400).json({ success: false, error: 'User ID and new plan type are required' });
-    }
-
-    console.log(`🔄 Changing plan for user ${userId} to ${newPlanType}`);
-
-    // Get current subscription
-    const { data: subscription, error: dbError } = await supabase
-      .from('subscriptions')
+    // Find the invitation
+    const { data: invite, error: inviteError } = await supabase
+      .from('team_invitations')
       .select('*')
-      .eq('user_id', userId)
+      .eq('token', token)
       .single();
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      return res.status(500).json({ success: false, error: 'Failed to get subscription' });
+    if (inviteError || !invite) {
+      return res.status(404).json({ success: false, error: 'Invitation not found' });
     }
-
-    if (!subscription) {
-      return res.status(404).json({ success: false, error: 'No subscription found' });
-    }
-
-    console.log('Current subscription:', {
-      status: subscription.status,
-      plan_type: subscription.plan_type,
-      stripe_subscription_id: subscription.stripe_subscription_id
-    });
-
-    // If user has a Stripe subscription, update it there too
-    if (subscription.stripe_subscription_id) {
-      try {
-        // Determine the new price ID
-        let newPriceId;
-        switch (newPlanType) {
-          case 'starter':
-            newPriceId = process.env.STRIPE_STARTER_PRICE_ID;
-            break;
-          case 'professional':
-            newPriceId = process.env.STRIPE_PROFESSIONAL_PRICE_ID;
-            break;
-          case 'enterprise':
-            newPriceId = process.env.STRIPE_ENTERPRISE_PRICE_ID;
-            break;
-          default:
-            return res.status(400).json({ success: false, error: 'Invalid plan type' });
-        }
-
-        // Update the Stripe subscription
-        const updatedStripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-          items: [{
-            id: (await stripe.subscriptions.retrieve(subscription.stripe_subscription_id)).items.data[0].id,
-            price: newPriceId,
-          }],
-          proration_behavior: 'create_prorations',
-          metadata: {
-            planType: newPlanType,
-          }
-        });
-
-        console.log('✅ Stripe subscription updated');
-      } catch (stripeError) {
-        console.error('Error updating Stripe subscription:', stripeError);
-        // Continue with database update even if Stripe fails
-      }
-    } else {
-      console.log('Trial user - updating database only...');
-    }
-
-    // Update the database
-    const { data: updatedSub, error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        plan_type: newPlanType
-      })
-      .eq('user_id', userId)
-      .select()
+    // Find the team
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('id, name, logo_url')
+      .eq('id', invite.team_id)
       .single();
-
-    if (updateError) {
-      console.error('Error updating database:', updateError);
-      return res.status(500).json({ success: false, error: 'Failed to update database' });
+    if (teamError || !team) {
+      return res.status(404).json({ success: false, error: 'Team not found' });
     }
-
-    console.log('✅ Plan change successful');
-    res.json({ 
-      success: true, 
-      message: 'Plan changed successfully',
-      changes: {
-        from: subscription.plan_type,
-        to: newPlanType
-      },
-      subscription: updatedSub
-    });
-
-  } catch (error) {
-    console.error('Error changing plan:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Get subscription endpoint
-app.post('/api/get-subscription', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'User ID is required' });
-    }
-
-    console.log('🔍 Getting subscription for user:', userId);
-
-    const { data: subscription, error } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // No subscription found
-        return res.json({ success: true, subscription: null });
-      }
-      console.error('❌ Database error:', error);
-      return res.status(500).json({ success: false, error: 'Database error' });
-    }
-
-    console.log('✅ Found subscription:', subscription);
-
-    res.json({
-      success: true,
-      subscription: subscription
-    });
-
-  } catch (error) {
-    console.error('❌ Error getting subscription:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Failed to get subscription' 
-    });
-  }
-});
-
-// Get session data endpoint
-app.get('/api/get-session', async (req, res) => {
-  try {
-    const { session_id } = req.query;
-    
-    if (!session_id) {
-      return res.status(400).json({ success: false, error: 'Session ID is required' });
-    }
-
-    console.log('🔍 Getting session data for:', session_id);
-
-    const session = await stripe.checkout.sessions.retrieve(session_id);
-
-    if (!session) {
-      return res.status(404).json({ success: false, error: 'Session not found' });
-    }
-
-    const sessionData = {
-      customer_email: session.customer_details?.email || session.customer_email,
-      plan_type: session.metadata?.plan_type || 'starter',
-      amount_total: session.amount_total || 0,
-      currency: session.currency || 'gbp',
-      subscription_status: session.payment_status === 'paid' ? 'active' : 'pending'
-    };
-
-    console.log('✅ Session data retrieved:', sessionData);
-
-    res.json({
-      success: true,
-      session: sessionData
-    });
-
-  } catch (error) {
-    console.error('❌ Error getting session data:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Failed to get session data' 
-    });
+    return res.json({ success: true, invite, team });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 

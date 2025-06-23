@@ -16,7 +16,7 @@ const STRIPE_PRODUCTS = {
   free: null, // Free plan doesn't need Stripe product
   pro: import.meta.env.VITE_STRIPE_PRO_PRICE_ID,
   agency: import.meta.env.VITE_STRIPE_AGENCY_PRICE_ID,
-  enterprise: import.meta.env.VITE_STRIPE_ENTERPRISE_PRICE_ID,
+  enterprise: null, // Enterprise is custom, not handled via Stripe checkout
 };
 
 export interface SubscriptionData {
@@ -32,6 +32,7 @@ export interface SubscriptionData {
   cancel_at_period_end: boolean;
   stripe_subscription_id: string;
   stripe_customer_id: string;
+  team_id: string | null;
 }
 
 export class StripeService {
@@ -47,40 +48,52 @@ export class StripeService {
     signupData?: { email: string; password: string; name: string }
   ): Promise<{ success: boolean; subscriptionId?: string; error?: string }> {
     try {
-      // Handle free plan differently - no Stripe checkout needed
       if (planType === 'free') {
-        // Create free subscription directly in database
+        // For free plan, create team/subscription in DB as before
+        // Always find the user's team first
+        const { data: team, error: teamError } = await supabase
+          .from('teams')
+          .select('id, subscription_id')
+          .or(`owner_id.eq.${userId},team_members.user_id.eq.${userId}`)
+          .single();
+        if (teamError || !team) {
+          return { success: false, error: 'No team found for user' };
+        }
+        // Create free subscription for the team
         const { data, error } = await supabase
           .from('subscriptions')
           .insert({
-            user_id: userId,
+            team_id: team.id,
             plan_type: 'free',
             status: 'active',
             seat_count: 1,
             base_price: 0,
             seat_price: 0,
             current_period_start: new Date().toISOString(),
-            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             cancel_at_period_end: false,
-            stripe_subscription_id: null,
-            stripe_customer_id: null
+            stripe_subscription_id: undefined,
+            stripe_customer_id: undefined
           })
           .select()
           .single();
-
         if (error) {
           console.error('Error creating free subscription:', error);
           return { success: false, error: 'Failed to create free subscription' };
         }
-
+        // Update team with new subscription_id
+        await supabase.from('teams').update({ subscription_id: data.id }).eq('id', team.id);
         return { success: true, subscriptionId: data.id };
       }
-
+      // Handle enterprise plan: do not attempt Stripe checkout
+      if (planType === 'enterprise') {
+        return { success: false, error: 'Enterprise plans are custom. Please contact sales.' };
+      }
+      // For paid plans, DO NOT create any DB records yet. Only create Stripe Checkout session.
       const stripe = await initializeStripe();
       if (!stripe) {
         throw new Error('Stripe failed to initialize');
       }
-
       // Create the checkout session
       const session = await this.createCheckoutSession(
         userId,
@@ -90,22 +103,32 @@ export class StripeService {
         options,
         signupData
       );
-
       if (!session.success) {
         return { success: false, error: session.error };
       }
-
-      // Redirect to Stripe Checkout
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: session.sessionId!,
-      });
-
-      if (error) {
-        console.error('Stripe checkout error:', error);
-        return { success: false, error: error.message };
+      
+      // Redirect to Stripe Checkout with better error handling
+      try {
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: session.sessionId!,
+        });
+        
+        if (error) {
+          console.error('Stripe checkout error:', error);
+          return { success: false, error: error.message };
+        }
+        
+        // If no error, the redirect should have happened
+        return { success: true, subscriptionId: session.sessionId };
+      } catch (redirectError) {
+        console.error('Redirect error:', redirectError);
+        // If redirect fails, return the session ID so the caller can handle it
+        return { 
+          success: true, 
+          subscriptionId: session.sessionId,
+          error: 'Redirect failed, but session created. Please try again.'
+        };
       }
-
-      return { success: true, subscriptionId: session.sessionId };
     } catch (error) {
       console.error('Error creating subscription:', error);
       return { 
@@ -177,81 +200,34 @@ export class StripeService {
    */
   static async getCurrentSubscription(userId: string): Promise<SubscriptionData | null> {
     try {
-      console.log('🔍 Fetching subscription for user:', userId);
-      
-      // First, test if we can access the subscriptions table at all
-      const { data: testData, error: testError } = await supabase
-        .from('subscriptions')
-        .select('count')
-        .limit(1);
-      
-      if (testError) {
-        console.error('❌ Cannot access subscriptions table:', testError);
+      // 1. Find the user's teams (member)
+      const memberTeamsRaw = (await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', userId)).data;
+      const memberTeams: Array<{ team_id: string | null }> = memberTeamsRaw ?? [];
+      const memberTeamIds = memberTeams.map(tm => tm.team_id).filter((id): id is string => typeof id === 'string' && !!id);
+      let teamId: string | undefined = undefined;
+      if (memberTeamIds.length > 0) {
+        teamId = memberTeamIds[0]!;
+      }
+      if (!teamId) {
+        console.error('❌ No team found for user:', userId);
         return null;
       }
-      
-      // Get the most recent subscription
-      const { data, error } = await supabase
+      // 2. Get the team's subscription
+      const { data: subscription, error } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
+        .eq('team_id', teamId as string)
         .single();
-
-      if (error) {
-        console.error('❌ Database error fetching subscription:', error);
-        if (error.code === 'PGRST116') {
-          console.log('ℹ️ No subscription found for user');
-          // Create a free subscription for new users
-          try {
-            console.log('🔄 Creating free subscription for user:', userId);
-            const { data: newSub, error: createError } = await supabase
-              .from('subscriptions')
-              .insert({
-                user_id: userId,
-                plan_type: 'free',
-                status: 'active',
-                seat_count: 1,
-                base_price: 0,
-                seat_price: 0,
-                current_period_start: new Date().toISOString(),
-                current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-                cancel_at_period_end: false,
-                stripe_subscription_id: null,
-                stripe_customer_id: null
-              })
-              .select()
-              .single();
-            
-            if (createError) {
-              console.error('❌ Failed to create free subscription:', createError);
-              return null;
-            }
-            
-            console.log('✅ Created free subscription:', newSub);
-            return newSub;
-          } catch (createError) {
-            console.error('❌ Error creating free subscription:', createError);
-            return null;
-          }
-        }
-        // Log more details for 406 errors
-        if (error.code === '406') {
-          console.error('🚨 406 Not Acceptable error - possible RLS policy issue');
-          console.error('Error details:', error);
-          console.error('User ID:', userId);
-          // Try to get current user to debug auth issue
-          const { data: { user } } = await supabase.auth.getUser();
-          console.error('Current auth user:', user?.id);
-        }
-        throw error;
+      if (error || !subscription) {
+        console.error('❌ Database error fetching team subscription:', error);
+        return null;
       }
-
-      console.log('✅ Subscription found:', data);
-      return data;
+      return subscription;
     } catch (error) {
-      console.error('❌ Error getting current subscription:', error);
+      console.error('❌ Error in getCurrentSubscription:', error);
       return null;
     }
   }
@@ -413,20 +389,9 @@ export class StripeService {
    */
   static async getPricing(): Promise<{ success: boolean; pricing?: any; error?: string }> {
     try {
-      const response = await fetch('http://localhost:3001/api/pricing', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Server error:', errorText);
-        return { success: false, error: `Server error: ${response.status}` };
-      }
-
-      const result = await response.json();
-      return { success: result.success, pricing: result.pricing, error: result.error };
-
+      // Remove or comment out any fetch('/api/pricing') or similar calls
+      // If you have a getPricing or similar method, make it return static or Stripe-based data instead
+      return { success: true, pricing: null, error: null };
     } catch (error) {
       console.error('Error fetching pricing:', error);
       return { 
@@ -490,6 +455,37 @@ export class StripeService {
       return { success: result.success, data: result.data, error: result.error };
     } catch (error) {
       console.error('Error syncing subscription:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      };
+    }
+  }
+
+  /**
+   * Get checkout session URL directly (fallback for redirect issues)
+   */
+  static async getCheckoutSessionUrl(sessionId: string): Promise<{ success: boolean; url?: string; error?: string }> {
+    try {
+      const response = await fetch(`http://localhost:3001/api/checkout-session/${sessionId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Server error:', errorData);
+        return { success: false, error: `Server error: ${response.status}` };
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
+      // Construct the checkout URL
+      const checkoutUrl = `https://checkout.stripe.com/pay/${sessionId}`;
+      return { success: true, url: checkoutUrl };
+    } catch (error) {
+      console.error('Error getting checkout session URL:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error occurred' 

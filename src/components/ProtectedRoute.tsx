@@ -13,7 +13,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { subscription, loading: subscriptionLoading, hasAccess } = useStripeSubscription();
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
-  const [checkAttempts, setCheckAttempts] = useState(0);
 
   useEffect(() => {
     // Only check access when both auth and subscription are loaded
@@ -21,14 +20,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       setIsChecking(false);
     }
   }, [authLoading, subscriptionLoading]);
-
-  // Prevent infinite loops by limiting check attempts
-  useEffect(() => {
-    if (checkAttempts > 5) {
-      console.error('🚨 Too many check attempts, allowing access to prevent infinite loop');
-      setIsChecking(false);
-    }
-  }, [checkAttempts]);
 
   // Show loading while checking auth and subscription
   if (authLoading || subscriptionLoading || isChecking) {
@@ -47,12 +38,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check if user has access (active subscription or free plan)
-  // Add a small delay to prevent rapid re-renders
-  const accessCheck = hasAccess();
-  if (!accessCheck) {
-    setCheckAttempts(prev => prev + 1);
-    // Redirect to pricing page since we removed trial system
+  // Redirect to pricing if user does not have access
+  if (!hasAccess()) {
     return <Navigate to="/pricing" state={{ upgradeRequired: true }} replace />;
   }
 

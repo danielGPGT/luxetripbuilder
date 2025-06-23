@@ -12,15 +12,25 @@ export type UserProfile = {
 };
 
 export const auth = {
-  async signUp(email: string, password: string, name: string): Promise<{ user: User | null; error?: any }> {
+  async signUp(
+    email: string,
+    password: string,
+    name: string,
+    phone?: string,
+    agency_name?: string,
+    logo_url?: string
+  ): Promise<{ user: User | null; error?: any }> {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          name: name, // Store name in auth metadata
+          name: name,
+          phone: phone || undefined,
+          agency_name: agency_name || undefined,
+          logo_url: logo_url || undefined,
         },
-        emailRedirectTo: undefined, // Disable email redirect
+        emailRedirectTo: undefined,
       },
     });
 

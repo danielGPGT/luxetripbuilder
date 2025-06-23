@@ -6,7 +6,6 @@ type SubscriptionStatus = 'active' | 'canceled' | 'past_due';
 
 interface Subscription {
   id: string;
-  user_id: string;
   plan_type: PlanType;
   status: SubscriptionStatus;
   current_period_start: string;
@@ -14,6 +13,7 @@ interface Subscription {
   cancel_at_period_end: boolean;
   created_at: string;
   updated_at: string;
+  team_id: string;
 }
 
 interface FeatureAccess {
@@ -152,56 +152,37 @@ export class TierManager {
 
   private async loadUserSubscription(): Promise<void> {
     if (!this.currentUser) return;
-
     try {
-      // Get the most recent subscription
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', this.currentUser)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error) {
-        console.error('Error loading subscription:', error);
-        // Handle different error types
-        if (error.code === 'PGRST116') {
-          // No subscription found, check if we should create one
-          console.log('No subscription found, checking if we should create one');
-          
-          // Only create if this is a new user (no existing subscriptions at all)
-          const { data: existingSubs, error: checkError } = await supabase
-            .from('subscriptions')
-            .select('id')
-            .eq('user_id', this.currentUser)
-            .limit(1);
-
-          if (checkError || !existingSubs || existingSubs.length === 0) {
-            console.log('Creating free subscription for new user');
-            await this.createSubscription(this.currentUser, 'free');
-          } else {
-            console.log('Subscription exists but query failed, using free as fallback');
-            this.currentPlan = 'free';
-          }
-        } else if (error.code === '42703' || error.code === '42P01') {
-          // Table doesn't exist
-          console.warn('Subscriptions table not found, defaulting to free plan');
-          this.currentPlan = 'free';
-        } else {
-          // Other error, default to free
-          console.warn('Subscription error, defaulting to free plan:', error);
-          this.currentPlan = 'free';
-        }
+      // Find the user's team (owner or member)
+      const { data: memberTeams } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', this.currentUser);
+      const memberTeamIds = memberTeams?.map(tm => tm.team_id) || [];
+      let teamId = null;
+      if (memberTeamIds.length > 0) {
+        teamId = memberTeamIds[0];
+      }
+      if (!teamId) {
+        this.subscription = null;
+        this.currentPlan = 'free';
         return;
       }
-
-      if (data) {
-        this.subscription = data;
-        this.currentPlan = data.plan_type;
+      // Fetch the team's subscription
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('team_id', teamId)
+        .single();
+      if (subError || !subscription) {
+        this.subscription = null;
+        this.currentPlan = 'free';
+      } else {
+        this.subscription = subscription;
+        this.currentPlan = subscription.plan_type;
       }
     } catch (error) {
-      console.error('Error in loadUserSubscription:', error);
+      this.subscription = null;
       this.currentPlan = 'free';
     }
   }
