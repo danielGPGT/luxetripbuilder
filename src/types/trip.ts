@@ -77,6 +77,8 @@ export const rateHawkRoomSchema = z.object({
   boardType: z.string().optional(),
   refundable: z.boolean(),
   available: z.boolean(),
+  roomGroupId: z.number().optional(),
+  images: z.array(z.string()).optional(),
 });
 
 export const selectedHotelSchema = z.object({

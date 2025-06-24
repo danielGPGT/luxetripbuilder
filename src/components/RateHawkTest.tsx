@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Search } from 'lucide-react';
 import { format } from 'date-fns';
 
 export function RateHawkTest() {
@@ -87,6 +87,11 @@ export function RateHawkTest() {
   const [formData, setFormData] = useState<any>(null);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const [shouldSearchHotels, setShouldSearchHotels] = useState(false);
+
+  const handleSearchHotels = () => {
+    setShouldSearchHotels(true);
+  };
 
   const onSubmit = (data: TripIntake) => {
     console.log('✅ Form submitted:', data);
@@ -214,6 +219,16 @@ export function RateHawkTest() {
                   </Popover>
                 </div>
               </div>
+              <div className="flex justify-center mb-6">
+                <Button 
+                  type="button" 
+                  onClick={handleSearchHotels}
+                  className="px-8 py-3 bg-primary hover:bg-primary/90 text-white font-medium"
+                >
+                  <Search className="h-5 w-5 mr-2" />
+                  Search Hotels
+                </Button>
+              </div>
               <div className="p-4 bg-blue-50 rounded-lg mb-4">
                 <h4 className="font-semibold text-blue-800 mb-2">Debug Info:</h4>
                 <p className="text-sm text-blue-700">
@@ -223,7 +238,7 @@ export function RateHawkTest() {
                   Adults: {form.watch('travelerInfo.travelers.adults')}
                 </p>
               </div>
-              <StepHotelSelection />
+              <StepHotelSelection shouldSearch={shouldSearchHotels} onSearchComplete={() => setShouldSearchHotels(false)} />
               <div className="flex gap-4">
                 <Button type="submit">
                   Submit Form
