@@ -39,6 +39,52 @@ export const eventFiltersSchema = z.object({
   regions: z.array(z.string()).optional(),
 });
 
+// RateHawk Hotel Selection Types
+export const rateHawkHotelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  rating: z.number(),
+  stars: z.number(),
+  address: z.object({
+    country: z.string(),
+    city: z.string(),
+    street: z.string(),
+    zip: z.string(),
+  }),
+  location: z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+  }),
+  images: z.array(z.string()),
+  amenities: z.array(z.string()),
+  description: z.string().optional(),
+});
+
+export const rateHawkRoomSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  capacity: z.object({
+    adults: z.number(),
+    children: z.number(),
+  }),
+  price: z.object({
+    amount: z.number(),
+    currency: z.string(),
+    originalAmount: z.number().optional(),
+  }),
+  cancellationPolicy: z.string().optional(),
+  boardType: z.string().optional(),
+  refundable: z.boolean(),
+  available: z.boolean(),
+});
+
+export const selectedHotelSchema = z.object({
+  hotel: rateHawkHotelSchema,
+  room: rateHawkRoomSchema,
+  selectedAt: z.string(),
+});
+
 export const agentContextSchema = z.object({
   agentId: z.string(),
   marginOverride: z.number().optional(),
@@ -96,11 +142,26 @@ export const tripIntakeSchema = z.object({
     travelClass: travelClassEnum,
   }),
 
-  // Step 6: Events
+  // Step 6: Hotel Selection (NEW)
+  hotelSelection: z.object({
+    skipHotelSelection: z.boolean().default(false),
+    selectedHotel: selectedHotelSchema.optional(),
+    searchParams: z.object({
+      destination: z.string(),
+      checkIn: z.string(),
+      checkOut: z.string(),
+      adults: z.number(),
+      children: z.number(),
+      rooms: z.number(),
+      currency: z.string(),
+    }).optional(),
+  }),
+
+  // Step 7: Events
   eventRequests: z.string().default(''),
   eventTypes: z.array(z.string()).default([]),
 
-  // Step 7: Inventory (updated structure)
+  // Step 8: Inventory (updated structure)
   includeInventory: z.object({
     flights: z.boolean(),
     hotels: z.boolean(),
@@ -118,4 +179,7 @@ export type TripIntake = z.infer<typeof tripIntakeSchema>;
 export type FlightFilters = z.infer<typeof flightFiltersSchema>;
 export type HotelFilters = z.infer<typeof hotelFiltersSchema>;
 export type EventFilters = z.infer<typeof eventFiltersSchema>;
-export type AgentContext = z.infer<typeof agentContextSchema>; 
+export type AgentContext = z.infer<typeof agentContextSchema>;
+export type RateHawkHotel = z.infer<typeof rateHawkHotelSchema>;
+export type RateHawkRoom = z.infer<typeof rateHawkRoomSchema>;
+export type SelectedHotel = z.infer<typeof selectedHotelSchema>; 

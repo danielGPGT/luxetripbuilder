@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIntakeStore } from "@/store/intake";
 import { Step6Events } from './steps/Step6Events';
 import { Step6Inventory } from './steps/Step6Inventory';
+import { StepHotelSelection } from './steps/StepHotelSelection';
 import { createQuotePayload } from '@/utils/createQuotePayload';
 import { useQuoteService } from '@/hooks/useQuoteService';
 import { tripIntakeSchema, TripIntake, travelTypeEnum, toneEnum, paceEnum, accommodationEnum, experienceTypeEnum, travelClassEnum, interestsEnum } from '@/types/trip';
@@ -30,6 +31,15 @@ export function IntakeForm({ onSubmit }: { onSubmit?: (data: any) => void }) {
     defaultValues: {
       travelerInfo: {
         name: '',
+        email: '',
+        phone: '',
+        address: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: '',
+        },
         travelType: 'solo',
         transportType: 'plane',
         startDate: '',
@@ -57,6 +67,11 @@ export function IntakeForm({ onSubmit }: { onSubmit?: (data: any) => void }) {
         experienceType: 'exclusive',
         travelClass: 'business',
       },
+      hotelSelection: {
+        skipHotelSelection: false,
+        selectedHotel: undefined,
+        searchParams: undefined,
+      },
       eventRequests: '',
       eventTypes: [],
       includeInventory: { flights: false, hotels: false, events: false },
@@ -74,6 +89,13 @@ export function IntakeForm({ onSubmit }: { onSubmit?: (data: any) => void }) {
     if (step === 0) {
       fieldsToValidate = [
         'travelerInfo.name',
+        'travelerInfo.email',
+        'travelerInfo.phone',
+        'travelerInfo.address.street',
+        'travelerInfo.address.city',
+        'travelerInfo.address.state',
+        'travelerInfo.address.zipCode',
+        'travelerInfo.address.country',
         'travelerInfo.travelType',
         'travelerInfo.transportType',
         'travelerInfo.startDate',
@@ -103,6 +125,9 @@ export function IntakeForm({ onSubmit }: { onSubmit?: (data: any) => void }) {
         'budget.experienceType',
         'budget.travelClass',
       ];
+    } else if (step === 5) {
+      // Hotel selection step - no validation required as it's optional
+      fieldsToValidate = [];
     }
     const valid = await form.trigger(fieldsToValidate as any);
     if (valid) setStep((s) => s + 1);
@@ -148,6 +173,59 @@ export function IntakeForm({ onSubmit }: { onSubmit?: (data: any) => void }) {
             {form.formState.errors.travelerInfo?.name && (
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.travelerInfo.name.message}</p>
             )}
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">Email</label>
+            <Input type="email" {...form.register('travelerInfo.email')} placeholder="Enter your email" className="h-10" />
+            {form.formState.errors.travelerInfo?.email && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.travelerInfo.email.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">Phone</label>
+            <Input {...form.register('travelerInfo.phone')} placeholder="Enter your phone number" className="h-10" />
+            {form.formState.errors.travelerInfo?.phone && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.travelerInfo.phone.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">Street Address</label>
+            <Input {...form.register('travelerInfo.address.street')} placeholder="Enter your street address" className="h-10" />
+            {form.formState.errors.travelerInfo?.address?.street && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.travelerInfo.address.street.message}</p>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block mb-2 text-sm font-medium">City</label>
+              <Input {...form.register('travelerInfo.address.city')} placeholder="City" className="h-10" />
+              {form.formState.errors.travelerInfo?.address?.city && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.travelerInfo.address.city.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium">State/Province</label>
+              <Input {...form.register('travelerInfo.address.state')} placeholder="State" className="h-10" />
+              {form.formState.errors.travelerInfo?.address?.state && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.travelerInfo.address.state.message}</p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block mb-2 text-sm font-medium">ZIP/Postal Code</label>
+              <Input {...form.register('travelerInfo.address.zipCode')} placeholder="ZIP Code" className="h-10" />
+              {form.formState.errors.travelerInfo?.address?.zipCode && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.travelerInfo.address.zipCode.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium">Country</label>
+              <Input {...form.register('travelerInfo.address.country')} placeholder="Country" className="h-10" />
+              {form.formState.errors.travelerInfo?.address?.country && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.travelerInfo.address.country.message}</p>
+              )}
+            </div>
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium">Travel Type</label>
@@ -426,8 +504,19 @@ export function IntakeForm({ onSubmit }: { onSubmit?: (data: any) => void }) {
           </div>
         </div>
       )}
-      
+
+      {/* NEW: Step 5 - Hotel Selection */}
       {step === 5 && (
+        <div className="space-y-4">
+          <StepHotelSelection />
+          <div className="flex justify-between pt-4">
+            <Button type="button" variant="outline" onClick={handlePrev}>Back</Button>
+            <Button type="button" onClick={handleNext}>Next</Button>
+          </div>
+        </div>
+      )}
+      
+      {step === 6 && (
         <div className="space-y-4">
           <Step6Events />
           <Step6Inventory onBack={handlePrev} />

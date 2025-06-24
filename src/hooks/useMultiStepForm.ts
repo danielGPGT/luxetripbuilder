@@ -5,7 +5,7 @@ import { tripIntakeSchema, TripIntake } from '@/types/trip';
 
 export function useMultiStepForm() {
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 7;
+  const totalSteps = 8;
 
   const form = useForm<TripIntake>({
     resolver: zodResolver(tripIntakeSchema) as any,
@@ -41,6 +41,11 @@ export function useMultiStepForm() {
         currency: 'USD',
         experienceType: 'exclusive',
         travelClass: 'business',
+      },
+      hotelSelection: {
+        skipHotelSelection: false,
+        selectedHotel: undefined,
+        searchParams: undefined,
       },
       eventRequests: '',
       eventTypes: [],
@@ -102,8 +107,10 @@ export function useMultiStepForm() {
       case 5:
         return ['budget.amount', 'budget.currency', 'budget.experienceType', 'budget.travelClass'] as any;
       case 6:
-        return ['eventRequests', 'eventTypes'] as any;
+        return []; // Hotel selection step - no validation needed (optional step)
       case 7:
+        return ['eventRequests', 'eventTypes'] as any;
+      case 8:
         return []; // Review step - no validation needed
       default:
         return [];
@@ -116,6 +123,7 @@ export function useMultiStepForm() {
     totalSteps,
     nextStep,
     prevStep,
+    setCurrentStep,
     isFirstStep: currentStep === 1,
     isLastStep: currentStep === totalSteps,
     stepIndex: currentStep - 1,

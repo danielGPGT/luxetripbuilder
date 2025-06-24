@@ -1,0 +1,232 @@
+{
+  "address": "Kampong Chheuteal Village, Prasat Sambor, Prasat Sambor",
+  "amenity_groups": [
+    {
+      "amenities": [
+        "24-hour reception",
+        "Smoke-free property",
+        "Garden"
+      ],
+      "non_free_amenities": [],
+      "group_name": "General"
+    },
+    {
+      "amenities": [
+        "Non-smoking rooms"
+      ],
+      "non_free_amenities": [],
+      "group_name": "Rooms"
+    },
+    {
+      "amenities": [
+        "Laundry"
+      ],
+      "non_free_amenities": [
+        "Laundry"
+      ],
+      "group_name": "Services and amenities"
+    },
+    {
+      "amenities": [
+        "English"
+      ],
+      "non_free_amenities": [],
+      "group_name": "Languages Spoken"
+    },
+    {
+      "amenities": [
+        "No parking"
+      ],
+      "non_free_amenities": [],
+      "group_name": "Parking"
+    },
+    {
+      "amenities": [
+        "Beach/pool towels"
+      ],
+      "non_free_amenities": [],
+      "group_name": "Pool and beach"
+    },
+    {
+      "amenities": [
+        "Pets Not Allowed"
+      ],
+      "non_free_amenities": [],
+      "group_name": "Pets"
+    }
+  ],
+  "check_in_time": "14:00:00",
+  "check_out_time": "12:00:00",
+  "description_struct": [
+    {
+      "paragraphs": [
+        "Want to save money while travelling? It’s easy: hotel «Isanborei Homestay 2» is located in Prasat Sambor. This hotel is located 2 km from the city center."
+      ],
+      "title": "Location"
+    },
+    {
+      "paragraphs": [
+        "At the guests’ disposal, there’s also a laundry. The staff of the hotel will be happy to talk to you in English."
+      ],
+      "title": "At the hotel"
+    }
+  ],
+  "id": "_0x2bba1",
+  "hid": 6291584,
+  "images": [
+    "https://cdn.worldota.net/t/{size}/content/e8/f1/e8f1470d5985e417434890e30bd527ecf5edf124.jpeg",
+    "https://cdn.worldota.net/t/{size}/content/d4/96/d496093fb63d3c7625d442ccd0cac5481e191726.jpeg",
+    "https://cdn.worldota.net/t/{size}/content/5f/d9/5fd9a14ac6cd2602a5185d638be94c0395e111b9.jpeg",
+    "https://cdn.worldota.net/t/{size}/content/5f/ae/5fae72b4a6509f206d0581f46ef48bedcaa31b8b.jpeg",
+    "https://cdn.worldota.net/t/{size}/content/d0/64/d064fa89c49245ae32b88da263260f7093f68d16.jpeg",
+    "https://cdn.worldota.net/t/{size}/content/6f/bf/6fbf01a0be6baac26cdf8ce33fd5a86bd4dca0a0.jpeg",
+    "https://cdn.worldota.net/t/{size}/content/b9/e4/b9e4799bb77f46b628d9a55a9c67d22205e32c6d.jpeg",
+    "https://cdn.worldota.net/t/{size}/content/99/e5/99e57b47ce81e9f82b182ef077bd094820f73e1c.jpeg",
+    "https://cdn.worldota.net/t/{size}/content/7b/94/7b9499c89cfa4d3ba305d7c89be257a008b0bb49.jpeg"
+  ],
+  "images_ext": [
+    {
+      "url": "https://cdn.worldota.net/t/{size}/content/e8/f1/e8f1470d5985e417434890e30bd527ecf5edf124.jpeg",
+      "category_slug": "guest_rooms"
+    },
+    {
+      "url": "https://cdn.worldota.net/t/{size}/content/d4/96/d496093fb63d3c7625d442ccd0cac5481e191726.jpeg",
+      "category_slug": "guest_rooms"
+    },
+    {
+      "url": "https://cdn.worldota.net/t/{size}/content/5f/d9/5fd9a14ac6cd2602a5185d638be94c0395e111b9.jpeg",
+      "category_slug": "hotel_rooms"
+    },
+    {
+      "url": "https://cdn.worldota.net/t/{size}/content/5f/ae/5fae72b4a6509f206d0581f46ef48bedcaa31b8b.jpeg",
+      "category_slug": "spa"
+    },
+    {
+      "url": "https://cdn.worldota.net/t/{size}/content/d0/64/d064fa89c49245ae32b88da263260f7093f68d16.jpeg",
+      "category_slug": "beach"
+    },
+    {
+      "url": "https://cdn.worldota.net/t/{size}/content/6f/bf/6fbf01a0be6baac26cdf8ce33fd5a86bd4dca0a0.jpeg",
+      "category_slug": "beach"
+    },
+    {
+      "url": "https://cdn.worldota.net/t/{size}/content/b9/e4/b9e4799bb77f46b628d9a55a9c67d22205e32c6d.jpeg",
+      "category_slug": "outside"
+    },
+    {
+      "url": "https://cdn.worldota.net/t/{size}/content/99/e5/99e57b47ce81e9f82b182ef077bd094820f73e1c.jpeg",
+      "category_slug": "outside"
+    },
+    {
+      "url": "https://cdn.worldota.net/t/{size}/content/7b/94/7b9499c89cfa4d3ba305d7c89be257a008b0bb49.jpeg",
+      "category_slug": "bathroom"
+    }
+  ],
+  "kind": "Hotel",
+  "latitude": 12.878491,
+  "longitude": 105.0501,
+  "name": "Isanborei Homestay 2",
+  "phone": null,
+  "policy_struct": [],
+  "postal_code": null,
+  "room_groups": [
+    {
+      "room_group_id": 6,
+      "images": [],
+      "name": "Bed in Dorm",
+      "room_amenities": [
+        "shared-bathroom",
+        "towels"
+      ],
+      "rg_ext": {
+        "class": 1,
+        "quality": 0,
+        "sex": 0,
+        "bathroom": 1,
+        "bedding": 0,
+        "family": 0,
+        "capacity": 0,
+        "club": 0,
+        "bedrooms": 0,
+        "balcony": 0,
+        "floor": 0,
+        "view": 0
+      },
+      "name_struct": {
+        "bathroom": "shared bathroom",
+        "bedding_type": null,
+        "main_name": "Bed in Dorm"
+      }
+    }
+  ],
+  "region": {
+    "id": 965850015,
+    "country_code": "KH",
+    "iata": null,
+    "name": "Prasat Sambor",
+    "type": "City",
+    "type_v2": "city"
+  },
+  "star_rating": 0,
+  "email": null,
+  "serp_filters": [],
+  "deleted": false,
+  "is_closed": false,
+  "is_gender_specification_required": false,
+  "metapolicy_struct": {
+    "internet": [],
+    "meal": [],
+    "children_meal": [],
+    "extra_bed": [],
+    "cot": [],
+    "pets": [],
+    "shuttle": [],
+    "parking": [],
+    "children": [],
+    "visa": {
+      "visa_support": "unspecified"
+    },
+    "deposit": [],
+    "no_show": {
+      "availability": "unspecified",
+      "time": null,
+      "day_period": "unspecified"
+    },
+    "add_fee": [],
+    "check_in_check_out": []
+  },
+  "metapolicy_extra_info": null,
+  "star_certificate": null,
+  "facts": {
+    "floors_number": null,
+    "rooms_number": 1,
+    "year_built": null,
+    "year_renovated": null,
+    "electricity": {
+      "frequency": [
+        50
+      ],
+      "voltage": [
+        230
+      ],
+      "sockets": [
+        "a",
+        "c",
+        "g"
+      ]
+    },
+    "register": null
+  },
+  "payment_methods": [],
+  "hotel_chain": "No chain",
+  "front_desk_time_start": null,
+  "front_desk_time_end": null,
+  "keys_pickup": {
+    "type": "unspecified",
+    "phone": null,
+    "email": null,
+    "apartment_office_address": null,
+    "apartment_extra_information": null,
+    "is_contactless": false
+  }
+}

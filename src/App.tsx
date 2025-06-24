@@ -32,6 +32,7 @@ import Settings from "./pages/Settings";
 import UndrawGallery from "./pages/UndrawGallery";
 import TeamInvitation from './pages/TeamInvitation';
 import TeamInvitationSignup from './pages/TeamInvitationSignup';
+import { RateHawkTest } from './components/RateHawkTest';
 import "./App.css";
 
 function App() {
@@ -148,6 +149,7 @@ function AppContent() {
                   <Route path="/itinerary/:id" element={<ViewItinerary />} />
                   <Route path="/edit-itinerary/:id" element={<EditItinerary />} />
                   <Route path="/quote-test" element={<QuoteTest />} />
+                  <Route path="/ratehawk-test" element={<RateHawkTest />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/quotes" element={<Quotes />} />
                   <Route path="/bookings" element={<Bookings />} />

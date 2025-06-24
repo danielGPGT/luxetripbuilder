@@ -6,6 +6,7 @@ import { Step4Experience } from '@/components/forms/steps/Step4Experience';
 import { Step5Budget } from '@/components/forms/steps/Step5Budget';
 import { Step6Events } from '@/components/forms/steps/Step6Events';
 import { Step6Review } from '@/components/forms/steps/Step6Review';
+import { StepHotelSelection } from '@/components/forms/steps/StepHotelSelection';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react';
@@ -61,7 +62,11 @@ export default function NewProposal() {
     isFirstStep,
     isLastStep,
     stepIndex,
+    setCurrentStep,
   } = useMultiStepForm();
+
+  // Debug logging
+  console.log('NewProposal render:', { currentStep, totalSteps, isFirstStep, isLastStep });
 
   const { isLoaded, error } = useGoogleMapsScript();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -133,7 +138,8 @@ export default function NewProposal() {
     <Step3TripStyle key="step3" />,    // 2
     <Step4Experience key="step4" />,   // 3
     <Step5Budget key="step5" />,       // 4
-    <Step6Events key="step6" />,       // 5 - Final step
+    <StepHotelSelection key="step6" />, // 5 - Hotel Selection
+    <Step6Events key="step7" />,       // 6 - Events
   ];
 
   return (
@@ -149,7 +155,7 @@ export default function NewProposal() {
                 <Stepper 
                   currentStep={currentStep} 
                   totalSteps={totalSteps} 
-                  labels={["Traveler Info", "Destinations", "Trip Style", "Experience", "Budget", "Events", "Review"]} 
+                  labels={["Traveler Info", "Destinations", "Trip Style", "Experience", "Budget", "Hotel", "Events", "Review"]} 
                   vertical 
                 />
               </div>
@@ -178,12 +184,44 @@ export default function NewProposal() {
                       {currentStep === 3 && "Trip Style"}
                       {currentStep === 4 && "Experience Preferences"}
                       {currentStep === 5 && "Budget & Preferences"}
-                      {currentStep === 6 && "Events & Activities"}
-                      {currentStep === 7 && "Review & Generate Quote"}
+                      {currentStep === 6 && "Hotel Selection"}
+                      {currentStep === 7 && "Events & Activities"}
+                      {currentStep === 8 && "Review & Generate Quote"}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
                       Step {currentStep} of {totalSteps}
                     </p>
+                    {/* Debug button - remove in production */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <div className="mt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            // Set some default values to bypass validation
+                            form.setValue('travelerInfo.name', 'Test User');
+                            form.setValue('travelerInfo.email', 'test@example.com');
+                            form.setValue('travelerInfo.phone', '1234567890');
+                            form.setValue('travelerInfo.address.street', '123 Test St');
+                            form.setValue('travelerInfo.address.city', 'Test City');
+                            form.setValue('travelerInfo.address.state', 'Test State');
+                            form.setValue('travelerInfo.address.zipCode', '12345');
+                            form.setValue('travelerInfo.address.country', 'Test Country');
+                            form.setValue('destinations.from', 'New York');
+                            form.setValue('destinations.primary', 'Paris');
+                            form.setValue('travelerInfo.startDate', '2025-09-15');
+                            form.setValue('travelerInfo.endDate', '2025-09-20');
+                            form.setValue('style.interests', ['fine-dining']);
+                            form.setValue('budget.amount', 5000);
+                            // Jump to hotel selection step
+                            setCurrentStep(6);
+                          }}
+                        >
+                          Debug: Jump to Hotel Selection
+                        </Button>
+                      </div>
+                    )}
                   </CardHeader>
 
                   <CardContent className="px-8 py-6 flex-1">
@@ -210,9 +248,12 @@ export default function NewProposal() {
                         <Step5Budget />
                       </StepTransition>
                       <StepTransition step={6} currentStep={currentStep}>
-                        <Step6Events />
+                        <StepHotelSelection />
                       </StepTransition>
                       <StepTransition step={7} currentStep={currentStep}>
+                        <Step6Events />
+                      </StepTransition>
+                      <StepTransition step={8} currentStep={currentStep}>
                         <Step6Review />
                       </StepTransition>
                     </div>

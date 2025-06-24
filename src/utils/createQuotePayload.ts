@@ -59,6 +59,46 @@ export interface QuoteInput {
     currency: string;
     available: boolean;
   };
+  selectedHotel?: {
+    hotel: {
+      id: string;
+      name: string;
+      rating: number;
+      stars: number;
+      address: {
+        country: string;
+        city: string;
+        street: string;
+        zip: string;
+      };
+      location: {
+        latitude: number;
+        longitude: number;
+      };
+      images: string[];
+      amenities: string[];
+      description?: string;
+    };
+    room: {
+      id: string;
+      name: string;
+      type: string;
+      capacity: {
+        adults: number;
+        children: number;
+      };
+      price: {
+        amount: number;
+        currency: string;
+        originalAmount?: number;
+      };
+      cancellationPolicy?: string;
+      boardType?: string;
+      refundable: boolean;
+      available: boolean;
+    };
+    selectedAt: string;
+  };
 }
 
 export function createQuotePayload(formData: TripIntake): QuoteInput {
@@ -78,8 +118,17 @@ export function createQuotePayload(formData: TripIntake): QuoteInput {
     `EVENT FOCUSED TRIP: The main purpose of this trip is to attend ${selectedEvent.name} on ${selectedEvent.dateOfEvent}. Ticket type: ${selectedTicket?.categoryName}. This event should be the absolute centerpiece of the entire itinerary. All activities should be planned around this event, including proper transportation to/from the venue, accommodation near the event location, and complementary activities that enhance the event experience.` : 
     undefined;
   
-  // Combine existing special requests with event requests
-  const combinedSpecialRequests = [formData.experience.specialRequests, eventSpecialRequests]
+  // Create hotel-specific special requests if a hotel is selected
+  const hotelSpecialRequests = formData.hotelSelection.selectedHotel ? 
+    `HOTEL CONFIRMED: ${formData.hotelSelection.selectedHotel.hotel.name} - ${formData.hotelSelection.selectedHotel.room.name}. Price: ${formData.hotelSelection.selectedHotel.room.price.amount} ${formData.hotelSelection.selectedHotel.room.price.currency} per night. Board type: ${formData.hotelSelection.selectedHotel.room.boardType || 'Room Only'}. Cancellation policy: ${formData.hotelSelection.selectedHotel.room.cancellationPolicy || 'Standard'}.` : 
+    undefined;
+  
+  // Combine existing special requests with event and hotel requests
+  const combinedSpecialRequests = [
+    formData.experience.specialRequests, 
+    eventSpecialRequests,
+    hotelSpecialRequests
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -131,5 +180,6 @@ export function createQuotePayload(formData: TripIntake): QuoteInput {
       currency: selectedTicket.currency,
       available: selectedTicket.available,
     } : undefined,
+    selectedHotel: formData.hotelSelection.selectedHotel || undefined,
   };
 } 
