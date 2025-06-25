@@ -190,20 +190,9 @@ const ProfileSettings = () => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="text-center mb-8">
-        <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/20">
-          <User className="h-8 w-8 text-primary" />
-        </div>
-        <h3 className="text-2xl font-bold mb-2">Profile Settings</h3>
-        <p className="text-muted-foreground max-w-md mx-auto">
-          Manage your personal information and agency details. Keep your profile up to date for better client interactions.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* Avatar/Logo Section */}
-      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+      <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Building2 className="h-5 w-5 text-primary" />
@@ -217,7 +206,7 @@ const ProfileSettings = () => {
           <div className="flex items-center gap-6">
             <div className="flex-shrink-0">
               {logoUrl ? (
-                <div className="w-20 h-20 rounded-lg border-4 border-primary/10 overflow-hidden bg-white shadow-lg">
+                <div className="w-20 h-20 rounded-xl border-4 border-primary/10 overflow-hidden bg-white shadow-lg">
                   <img 
                     src={logoUrl} 
                     alt="Agency Logo" 
@@ -225,7 +214,7 @@ const ProfileSettings = () => {
                   />
                 </div>
               ) : (
-                <div className="w-20 h-20 rounded-lg border-4 border-primary/10 bg-primary/10 flex items-center justify-center">
+                <div className="w-20 h-20 rounded-xl border-4 border-primary/10 bg-primary/10 flex items-center justify-center">
                   <Building2 className="h-8 w-8 text-primary" />
                 </div>
               )}
@@ -242,7 +231,7 @@ const ProfileSettings = () => {
                     accept="image/*"
                     onChange={handleLogoChange}
                     disabled={!isEditing || isUploading}
-                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors disabled:opacity-50"
+                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors disabled:opacity-50"
                   />
                 </div>
                 {isUploading && (
@@ -261,39 +250,39 @@ const ProfileSettings = () => {
       </Card>
 
       {/* Profile Information */}
-      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-      <CardHeader>
+      <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <User className="h-5 w-5 text-primary" />
             Personal Information
-        </CardTitle>
-        <CardDescription>
+          </CardTitle>
+          <CardDescription>
             Update your contact details and agency information
-        </CardDescription>
-      </CardHeader>
+          </CardDescription>
+        </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={!isEditing}
-              placeholder="Enter your full name"
-                className="h-11"
-            />
-          </div>
-          <div className="space-y-2">
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={!isEditing}
+                placeholder="Enter your full name"
+                className="h-11 rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
-            <Input
-              id="email"
-              value={user?.email || ''}
-              disabled
-                className="h-11 bg-muted/50"
-            />
-            <p className="text-xs text-muted-foreground">Email cannot be changed</p>
-          </div>
+              <Input
+                id="email"
+                value={user?.email || ''}
+                disabled
+                className="h-11 bg-muted/50 rounded-xl"
+              />
+              <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
               <Input
@@ -302,40 +291,40 @@ const ProfileSettings = () => {
                 onChange={(e) => setPhone(e.target.value)}
                 disabled={!isEditing}
                 placeholder="Enter your phone number"
-                className="h-11"
+                className="h-11 rounded-xl"
               />
-        </div>
-        <div className="space-y-2">
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="agencyName" className="text-sm font-medium">Agency Name</Label>
-          <Input
+              <Input
                 id="agencyName"
-            value={agencyName}
-            onChange={(e) => setAgencyName(e.target.value)}
-            disabled={!isEditing}
-            placeholder="Enter your agency name"
-                className="h-11"
-          />
-        </div>
+                value={agencyName}
+                onChange={(e) => setAgencyName(e.target.value)}
+                disabled={!isEditing}
+                placeholder="Enter your agency name"
+                className="h-11 rounded-xl"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-4 pt-6 border-t border-border/50">
-          {isEditing ? (
-            <>
+        {isEditing ? (
+          <>
             <Button
               variant="outline"
               onClick={handleCancel}
               disabled={isLoading}
-              className="px-6"
+              className="px-6 rounded-xl"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
               disabled={isLoading}
-              className="px-6 bg-primary hover:bg-primary/90"
+              className="px-6 bg-primary hover:bg-primary/90 rounded-xl"
             >
               {isLoading ? (
                 <>
@@ -346,16 +335,16 @@ const ProfileSettings = () => {
                 'Save Changes'
               )}
             </Button>
-            </>
-          ) : (
+          </>
+        ) : (
           <Button
             onClick={() => setIsEditing(true)}
-            className="px-6 bg-primary hover:bg-primary/90"
+            className="px-6 bg-primary hover:bg-primary/90 rounded-xl"
           >
             Edit Profile
           </Button>
-          )}
-        </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -399,68 +388,57 @@ const SecuritySettings = () => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="text-center mb-8">
-        <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/20">
-          <Shield className="h-8 w-8 text-primary" />
-        </div>
-        <h3 className="text-2xl font-bold mb-2">Security Settings</h3>
-        <p className="text-muted-foreground max-w-md mx-auto">
-          Keep your account secure by regularly updating your password and reviewing your security settings.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* Password Change Section */}
-      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-      <CardHeader>
+      <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <KeyRound className="h-5 w-5 text-primary" />
             Change Password
-        </CardTitle>
-        <CardDescription>
+          </CardTitle>
+          <CardDescription>
             Update your password to keep your account secure
-        </CardDescription>
-      </CardHeader>
+          </CardDescription>
+        </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="currentPassword" className="text-sm font-medium">Current Password</Label>
-          <Input
+              <Input
                 id="currentPassword"
-            type="password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Enter your current password"
-                className="h-11"
-          />
-        </div>
-        <div className="space-y-2">
+                className="h-11 rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="newPassword" className="text-sm font-medium">New Password</Label>
-          <Input
+              <Input
                 id="newPassword"
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter your new password"
-                className="h-11"
-          />
-        </div>
+                className="h-11 rounded-xl"
+              />
+            </div>
           </div>
-        <div className="space-y-2">
+          <div className="space-y-2">
             <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm New Password</Label>
-          <Input
+            <Input
               id="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm your new password"
-              className="h-11"
-          />
-        </div>
+              className="h-11 rounded-xl"
+            />
+          </div>
 
           {/* Password Requirements */}
-          <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+          <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
             <h4 className="font-medium text-sm mb-2">Password Requirements</h4>
             <ul className="text-xs text-muted-foreground space-y-1">
               <li className="flex items-center gap-2">
@@ -481,7 +459,7 @@ const SecuritySettings = () => {
       </Card>
 
       {/* Security Tips */}
-      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+      <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Shield className="h-5 w-5 text-primary" />
@@ -493,7 +471,7 @@ const SecuritySettings = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
               <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <KeyRound className="h-4 w-4 text-primary" />
               </div>
@@ -502,7 +480,7 @@ const SecuritySettings = () => {
                 <p className="text-xs text-muted-foreground">Use a mix of letters, numbers, and symbols</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
               <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <Shield className="h-4 w-4 text-primary" />
               </div>
@@ -511,7 +489,7 @@ const SecuritySettings = () => {
                 <p className="text-xs text-muted-foreground">Change your password every 3-6 months</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
               <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <User className="h-4 w-4 text-primary" />
               </div>
@@ -520,7 +498,7 @@ const SecuritySettings = () => {
                 <p className="text-xs text-muted-foreground">Don't reuse passwords across accounts</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
               <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <SettingsIcon className="h-4 w-4 text-primary" />
               </div>
@@ -538,7 +516,7 @@ const SecuritySettings = () => {
         <Button
           onClick={handlePasswordChange}
           disabled={isLoading || !currentPassword || !newPassword || !confirmPassword}
-          className="px-6 bg-primary hover:bg-primary/90"
+          className="px-6 bg-primary hover:bg-primary/90 rounded-xl"
         >
           {isLoading ? (
             <>
@@ -722,22 +700,11 @@ const TeamManagement = () => {
 
   if (!canManageTeam) {
     return (
-      <div className="space-y-8">
-        {/* Header Section */}
-        <div className="text-center mb-8">
-          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/20">
-            <Users className="h-8 w-8 text-primary" />
-          </div>
-          <h3 className="text-2xl font-bold mb-2">Team Management</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Collaborate with your team members and manage permissions for better productivity.
-          </p>
-        </div>
-
+      <div className="space-y-6">
         {/* Upgrade Required Card */}
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
           <CardContent className="p-12 text-center">
-            <div className="mx-auto w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mb-6">
+            <div className="mx-auto w-20 h-20 bg-muted/50 rounded-xl flex items-center justify-center mb-6">
               <Building2 className="h-10 w-10 text-muted-foreground" />
             </div>
             <h3 className="text-xl font-semibold mb-3">Team Management Not Available</h3>
@@ -746,14 +713,14 @@ const TeamManagement = () => {
             </p>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
-                <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
                     <Users className="h-4 w-4 text-primary" />
                   </div>
                   <h4 className="font-medium text-sm mb-1">Multi-seat Dashboard</h4>
                   <p className="text-xs text-muted-foreground">Up to 10 team members</p>
                 </div>
-                <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
                     <Shield className="h-4 w-4 text-primary" />
                   </div>
@@ -761,83 +728,72 @@ const TeamManagement = () => {
                   <p className="text-xs text-muted-foreground">Control access levels</p>
                 </div>
               </div>
-              <Button asChild className="px-8 py-3 bg-primary hover:bg-primary/90">
-              <a href="/pricing">Upgrade Plan</a>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <Button asChild className="px-8 py-3 bg-primary hover:bg-primary/90 rounded-xl">
+                <a href="/pricing">Upgrade Plan</a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="text-center mb-8">
-        <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/20">
-          <Users className="h-8 w-8 text-primary" />
-        </div>
-        <h3 className="text-2xl font-bold mb-2">Team Management</h3>
-        <p className="text-muted-foreground max-w-md mx-auto">
-          Invite team members, manage permissions, and collaborate effectively with your travel agency team.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* Invite Team Member - Only show for admin/owner */}
       {canInviteMembers && (
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-      <CardHeader>
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
+          <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <User className="h-5 w-5 text-primary" />
               Invite Team Member
-        </CardTitle>
-        <CardDescription>
+            </CardTitle>
+            <CardDescription>
               Send invitations to new team members to join your agency
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="member-email" className="text-sm font-medium">Email Address</Label>
-            <Input
-              id="member-email"
-              type="email"
-              value={newMemberEmail}
-              onChange={(e) => setNewMemberEmail(e.target.value)}
-              placeholder="team@example.com"
-                  className="h-11"
-            />
-          </div>
-          <div className="space-y-2">
+                <Input
+                  id="member-email"
+                  type="email"
+                  value={newMemberEmail}
+                  onChange={(e) => setNewMemberEmail(e.target.value)}
+                  placeholder="team@example.com"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="member-name" className="text-sm font-medium">Full Name</Label>
-            <Input
-              id="member-name"
-              value={newMemberName}
-              onChange={(e) => setNewMemberName(e.target.value)}
-              placeholder="John Doe"
-                  className="h-11"
-            />
-          </div>
-        </div>
+                <Input
+                  id="member-name"
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                  placeholder="John Doe"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+            </div>
 
             <Button 
               onClick={handleInviteMember} 
               disabled={!newMemberEmail || !newMemberName || loading}
-              className="px-6 bg-primary hover:bg-primary/90"
+              className="px-6 bg-primary hover:bg-primary/90 rounded-xl"
             >
               <User className="h-4 w-4 mr-2" />
-          Invite Team Member
-        </Button>
+              Invite Team Member
+            </Button>
           </CardContent>
         </Card>
       )}
 
       {/* Show message for members who can't invite */}
       {!canInviteMembers && teamRole === 'member' && (
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
           <CardContent className="p-6 text-center">
-            <div className="mx-auto w-12 h-12 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+            <div className="mx-auto w-12 h-12 bg-muted/50 rounded-xl flex items-center justify-center mb-4">
               <Shield className="h-6 w-6 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold mb-2">Team Management Restricted</h3>
@@ -852,7 +808,7 @@ const TeamManagement = () => {
       )}
 
       {/* Team Members List */}
-      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+      <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Users className="h-5 w-5 text-primary" />
@@ -875,7 +831,7 @@ const TeamManagement = () => {
             </div>
           ) : (
             teamMembers.map((member) => (
-              <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={member.id} className="flex items-center justify-between p-3 border rounded-xl">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10">
                     <AvatarFallback className="bg-primary/10 text-primary font-semibold">
@@ -896,7 +852,7 @@ const TeamManagement = () => {
 
       {/* Pending Invitations - Only show for admin/owner */}
       {canInviteMembers && pendingInvites.length > 0 && (
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Mail className="h-5 w-5 text-primary" />
@@ -908,7 +864,7 @@ const TeamManagement = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {pendingInvites.map((invite) => (
-              <div key={invite.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={invite.id} className="flex items-center justify-between p-3 border rounded-xl">
                 <div className="flex items-center gap-3">
                   <Mail className="h-5 w-5 text-muted-foreground" />
                   <div>
@@ -926,7 +882,7 @@ const TeamManagement = () => {
       )}
 
       {/* Team Features */}
-      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+      <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Building2 className="h-5 w-5 text-primary" />
@@ -938,7 +894,7 @@ const TeamManagement = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
               <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <Users className="h-4 w-4 text-primary" />
               </div>
@@ -947,7 +903,7 @@ const TeamManagement = () => {
                 <p className="text-xs text-muted-foreground">Up to 10 team members can access the platform</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
               <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <Shield className="h-4 w-4 text-primary" />
               </div>
@@ -956,7 +912,7 @@ const TeamManagement = () => {
                 <p className="text-xs text-muted-foreground">Control what each team member can access</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
               <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <Building2 className="h-4 w-4 text-primary" />
               </div>
@@ -965,7 +921,7 @@ const TeamManagement = () => {
                 <p className="text-xs text-muted-foreground">Access and share images across your team</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
               <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <SettingsIcon className="h-4 w-4 text-primary" />
               </div>
@@ -973,10 +929,10 @@ const TeamManagement = () => {
                 <h4 className="font-medium text-sm mb-1">Team Analytics</h4>
                 <p className="text-xs text-muted-foreground">Track team performance and collaboration</p>
               </div>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
     </div>
   );
 };
@@ -1017,90 +973,82 @@ export function Settings() {
   };
 
   return (
-    <div className="relative min-h-screen bg-background overflow-hidden pt-16">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none select-none">
-        <div className="absolute top-20 right-20 w-32 h-32 bg-primary rounded-full blur-xl"></div>
-        <div className="absolute bottom-40 left-10 w-24 h-24 bg-secondary rounded-full blur-lg"></div>
-        <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-primary rounded-full blur-md"></div>
-      </div>
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        {/* Animated Section Header */}
-        <div className="mb-10 animate-fade-in-up">
-          <Badge variant="secondary" className="mb-4 bg-primary/10 text-primary border-primary/20">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Account Center
-          </Badge>
-          <h2 className="text-4xl md:text-5xl font-bold mb-2 text-foreground">Account Settings</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl">
+    <div className="mx-auto px-8 py-0 space-y-8">
+      {/* Header */}
+      <div className="flex flex-col pt-4 lg:flex-row justify-between items-start lg:items-end gap-6">
+        <div>
+          <h1 className="text-2xl font-bold">Account Settings</h1>
+          <p className="text-muted-foreground mt-2">
             Manage your account, subscription, and team with a beautiful, modern dashboard.
           </p>
         </div>
-        {/* Plan Summary */}
+      </div>
+
+      {/* Plan Summary */}
       {subscription && (
-          <Card className="mb-8 shadow-xl border-border/50 bg-card/80 backdrop-blur-sm animate-fade-in-up animation-delay-200">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                  <CreditCard className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <div className="font-semibold capitalize text-lg">{subscription.plan_type} Plan</div>
-                  <div className="text-sm text-muted-foreground">
-                    {subscription.status === 'active' ? 'Active' : subscription.status}
-                  </div>
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm pt-0 pb-0">
+          <CardContent className="p-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                <CreditCard className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold capitalize text-lg">{subscription.plan_type} Plan</div>
+                <div className="text-sm text-muted-foreground">
+                  {subscription.status === 'active' ? 'Active' : subscription.status}
                 </div>
               </div>
-              <Badge className={getPlanBadgeColor(subscription.plan_type) + ' text-base px-4 py-1 rounded-full'}>
-                {subscription.plan_type.toUpperCase()}
-              </Badge>
+            </div>
+            <Badge className={getPlanBadgeColor(subscription.plan_type) + ' text-base px-4 py-1 rounded-full'}>
+              {subscription.plan_type.toUpperCase()}
+            </Badge>
           </CardContent>
         </Card>
       )}
-        {/* Main Settings Card */}
-        <Card className="shadow-2xl border-border/50 bg-card/80 backdrop-blur-md animate-fade-in-up animation-delay-400 pt-0">
-          <CardContent className="p-0">
-      <Tabs defaultValue="subscription" className="space-y-4">
-              <TabsList className="bg-card">
-                <TabsTrigger value="subscription" className="transition-all duration-200 text-base py-4">
-            <CreditCard className="mr-2 h-4 w-4" />
-            Subscription
-          </TabsTrigger>
-                <TabsTrigger value="profile" className="transition-all duration-200 text-base py-4">
-            <User className="mr-2 h-4 w-4" />
-            Profile
-          </TabsTrigger>
-                <TabsTrigger value="team" className="transition-all duration-200 text-base py-4">
-            <Users className="mr-2 h-4 w-4" />
-            Team
-          </TabsTrigger>
-                <TabsTrigger value="security" className="transition-all duration-200 text-base py-4">
-            <KeyRound className="mr-2 h-4 w-4" />
-            Security
-          </TabsTrigger>
-        </TabsList>
-              <TabsContent value="subscription" className="space-y-4 p-8 animate-fade-in-up animation-delay-600">
-                {(teamRole === 'admin' || teamRole === 'owner') ? (
-          <SubscriptionManager />
-                ) : (
-                  <div className="text-muted-foreground">
-                    You do not have permission to view or manage billing details or change plans.
-                  </div>
-                )}
-        </TabsContent>
-              <TabsContent value="profile" className="space-y-4 p-8 animate-fade-in-up animation-delay-700">
-          <ProfileSettings />
-        </TabsContent>
-              <TabsContent value="team" className="space-y-4 p-8 animate-fade-in-up animation-delay-800">
-          <TeamManagement />
-        </TabsContent>
-              <TabsContent value="security" className="space-y-4 p-8 animate-fade-in-up animation-delay-900">
-          <SecuritySettings />
-        </TabsContent>
-      </Tabs>
-          </CardContent>
-        </Card>
-      </div>
+
+      {/* Main Settings Card */}
+      <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
+        <CardContent className="p-0">
+          <Tabs defaultValue="subscription" className="space-y-4">
+            <TabsList className="bg-card rounded-t-2xl p-1">
+              <TabsTrigger value="subscription" className="transition-all duration-200 text-base py-4 rounded-xl">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Subscription
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="transition-all duration-200 text-base py-4 rounded-xl">
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </TabsTrigger>
+              <TabsTrigger value="team" className="transition-all duration-200 text-base py-4 rounded-xl">
+                <Users className="mr-2 h-4 w-4" />
+                Team
+              </TabsTrigger>
+              <TabsTrigger value="security" className="transition-all duration-200 text-base py-4 rounded-xl">
+                <KeyRound className="mr-2 h-4 w-4" />
+                Security
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="subscription" className="space-y-4 p-8">
+              {(teamRole === 'admin' || teamRole === 'owner') ? (
+                <SubscriptionManager />
+              ) : (
+                <div className="text-muted-foreground">
+                  You do not have permission to view or manage billing details or change plans.
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="profile" className="space-y-4 p-8">
+              <ProfileSettings />
+            </TabsContent>
+            <TabsContent value="team" className="space-y-4 p-8">
+              <TeamManagement />
+            </TabsContent>
+            <TabsContent value="security" className="space-y-4 p-8">
+              <SecuritySettings />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }

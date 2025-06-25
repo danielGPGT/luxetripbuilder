@@ -59,6 +59,124 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { UsageDashboard } from '@/components/UsageDashboard';
+import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import * as React from "react";
+import { UndrawMakeItRain } from 'react-undraw-illustrations';
+import { SiStripe } from 'react-icons/si';
+
+// Interactive chart data and config for the Today summary section
+const chartData = [
+  { date: "2024-04-01", desktop: 222, mobile: 150 },
+  { date: "2024-04-02", desktop: 97, mobile: 180 },
+  { date: "2024-04-03", desktop: 167, mobile: 120 },
+  { date: "2024-04-04", desktop: 242, mobile: 260 },
+  { date: "2024-04-05", desktop: 373, mobile: 290 },
+  { date: "2024-04-06", desktop: 301, mobile: 340 },
+  { date: "2024-04-07", desktop: 245, mobile: 180 },
+  { date: "2024-04-08", desktop: 409, mobile: 320 },
+  { date: "2024-04-09", desktop: 59, mobile: 110 },
+  { date: "2024-04-10", desktop: 261, mobile: 190 },
+  { date: "2024-04-11", desktop: 327, mobile: 350 },
+  { date: "2024-04-12", desktop: 292, mobile: 210 },
+  { date: "2024-04-13", desktop: 342, mobile: 380 },
+  { date: "2024-04-14", desktop: 137, mobile: 220 },
+  { date: "2024-04-15", desktop: 120, mobile: 170 },
+  { date: "2024-04-16", desktop: 138, mobile: 190 },
+  { date: "2024-04-17", desktop: 446, mobile: 360 },
+  { date: "2024-04-18", desktop: 364, mobile: 410 },
+  { date: "2024-04-19", desktop: 243, mobile: 180 },
+  { date: "2024-04-20", desktop: 89, mobile: 150 },
+  { date: "2024-04-21", desktop: 137, mobile: 200 },
+  { date: "2024-04-22", desktop: 224, mobile: 170 },
+  { date: "2024-04-23", desktop: 138, mobile: 230 },
+  { date: "2024-04-24", desktop: 387, mobile: 290 },
+  { date: "2024-04-25", desktop: 215, mobile: 250 },
+  { date: "2024-04-26", desktop: 75, mobile: 130 },
+  { date: "2024-04-27", desktop: 383, mobile: 420 },
+  { date: "2024-04-28", desktop: 122, mobile: 180 },
+  { date: "2024-04-29", desktop: 315, mobile: 240 },
+  { date: "2024-04-30", desktop: 454, mobile: 380 },
+  { date: "2024-05-01", desktop: 165, mobile: 220 },
+  { date: "2024-05-02", desktop: 293, mobile: 310 },
+  { date: "2024-05-03", desktop: 247, mobile: 190 },
+  { date: "2024-05-04", desktop: 385, mobile: 420 },
+  { date: "2024-05-05", desktop: 481, mobile: 390 },
+  { date: "2024-05-06", desktop: 498, mobile: 520 },
+  { date: "2024-05-07", desktop: 388, mobile: 300 },
+  { date: "2024-05-08", desktop: 149, mobile: 210 },
+  { date: "2024-05-09", desktop: 227, mobile: 180 },
+  { date: "2024-05-10", desktop: 293, mobile: 330 },
+  { date: "2024-05-11", desktop: 335, mobile: 270 },
+  { date: "2024-05-12", desktop: 197, mobile: 240 },
+  { date: "2024-05-13", desktop: 197, mobile: 160 },
+  { date: "2024-05-14", desktop: 448, mobile: 490 },
+  { date: "2024-05-15", desktop: 473, mobile: 380 },
+  { date: "2024-05-16", desktop: 338, mobile: 400 },
+  { date: "2024-05-17", desktop: 499, mobile: 420 },
+  { date: "2024-05-18", desktop: 315, mobile: 350 },
+  { date: "2024-05-19", desktop: 235, mobile: 180 },
+  { date: "2024-05-20", desktop: 177, mobile: 230 },
+  { date: "2024-05-21", desktop: 82, mobile: 140 },
+  { date: "2024-05-22", desktop: 81, mobile: 120 },
+  { date: "2024-05-23", desktop: 252, mobile: 290 },
+  { date: "2024-05-24", desktop: 294, mobile: 220 },
+  { date: "2024-05-25", desktop: 201, mobile: 250 },
+  { date: "2024-05-26", desktop: 213, mobile: 170 },
+  { date: "2024-05-27", desktop: 420, mobile: 460 },
+  { date: "2024-05-28", desktop: 233, mobile: 190 },
+  { date: "2024-05-29", desktop: 78, mobile: 130 },
+  { date: "2024-05-30", desktop: 340, mobile: 280 },
+  { date: "2024-05-31", desktop: 178, mobile: 230 },
+  { date: "2024-06-01", desktop: 178, mobile: 200 },
+  { date: "2024-06-02", desktop: 470, mobile: 410 },
+  { date: "2024-06-03", desktop: 103, mobile: 160 },
+  { date: "2024-06-04", desktop: 439, mobile: 380 },
+  { date: "2024-06-05", desktop: 88, mobile: 140 },
+  { date: "2024-06-06", desktop: 294, mobile: 250 },
+  { date: "2024-06-07", desktop: 323, mobile: 370 },
+  { date: "2024-06-08", desktop: 385, mobile: 320 },
+  { date: "2024-06-09", desktop: 438, mobile: 480 },
+  { date: "2024-06-10", desktop: 155, mobile: 200 },
+  { date: "2024-06-11", desktop: 92, mobile: 150 },
+  { date: "2024-06-12", desktop: 492, mobile: 420 },
+  { date: "2024-06-13", desktop: 81, mobile: 130 },
+  { date: "2024-06-14", desktop: 426, mobile: 380 },
+  { date: "2024-06-15", desktop: 307, mobile: 350 },
+  { date: "2024-06-16", desktop: 371, mobile: 310 },
+  { date: "2024-06-17", desktop: 475, mobile: 520 },
+  { date: "2024-06-18", desktop: 107, mobile: 170 },
+  { date: "2024-06-19", desktop: 341, mobile: 290 },
+  { date: "2024-06-20", desktop: 408, mobile: 450 },
+  { date: "2024-06-21", desktop: 169, mobile: 210 },
+  { date: "2024-06-22", desktop: 317, mobile: 270 },
+  { date: "2024-06-23", desktop: 480, mobile: 530 },
+  { date: "2024-06-24", desktop: 132, mobile: 180 },
+  { date: "2024-06-25", desktop: 141, mobile: 190 },
+  { date: "2024-06-26", desktop: 434, mobile: 380 },
+  { date: "2024-06-27", desktop: 448, mobile: 490 },
+  { date: "2024-06-28", desktop: 149, mobile: 200 },
+  { date: "2024-06-29", desktop: 103, mobile: 160 },
+  { date: "2024-06-30", desktop: 446, mobile: 400 },
+];
+const chartConfig = {
+  views: {
+    label: "Page Views",
+  },
+  desktop: {
+    label: "Desktop",
+    color: "var(--chart-1)",
+  },
+  mobile: {
+    label: "Mobile",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig;
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -69,6 +187,14 @@ export function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [bookingSearchTerm, setBookingSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [activeChart, setActiveChart] = React.useState<keyof typeof chartConfig>("desktop");
+  const total = React.useMemo(
+    () => ({
+      desktop: chartData.reduce((acc, curr) => acc + curr.desktop, 0),
+      mobile: chartData.reduce((acc, curr) => acc + curr.mobile, 0),
+    }),
+    []
+  );
 
   useEffect(() => {
     if (user) {
@@ -230,6 +356,8 @@ export function Dashboard() {
   if (loading) {
     return (
       <div className="px-4 py-8 space-y-8">
+        {/* Today summary section placeholder for loading state */}
+        <div className="bg-card rounded-2xl shadow-lg p-6 mb-8 animate-pulse h-56" />
         <div className="space-y-4">
           <Skeleton className="h-12 w-64" />
           <Skeleton className="h-6 w-96" />
@@ -249,328 +377,231 @@ export function Dashboard() {
   }
 
   return (
-    <div className="mx-auto px-4 py-0 space-y-8">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl p-8 text-foreground shadow-xl">
-        <div className="absolute inset-0 bg-card" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-6 mb-8">
-            <Avatar className="h-16 w-16 border-2 border-white/10 shadow-lg">
-              <AvatarImage src={user?.user_metadata?.avatar_url} />
-              <AvatarFallback className="text-lg font-semibold text-muted-foreground">
-                {user?.email?.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.email?.split('@')[0]}</h1>
-              <p className="text-muted-foreground">Your luxury travel business dashboard</p>
+    <div className="mx-auto px-8 py-0 space-y-8">
+      {/* Today summary section */}
+      <div className=" mb-8">
+        <div className="flex flex-col lg:flex-row justify-between items-end gap-6">
+          {/* Left: Main Metrics and Chart */}
+          <div className="flex-1 w-full h-full">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-6 gap-2">
+              <div>
+                <h2 className="text-2xl font-bold">Today</h2>
+                <p className="text-muted-foreground text-sm mt-1">Your Payouts at a glance</p>
+              </div>
+              <div className="flex gap-8 items-end mt-2 sm:mt-0 flex-wrap">
+                <div className="text-right">
+                  <div className="text-muted-foreground text-sm">Gross volume</div>
+                  <div className="text-xl font-semibold">$0.00</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-muted-foreground text-sm">Yesterday</div>
+                  <div className="text-xl font-semibold">$0.00</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-muted-foreground text-sm">USD Balance</div>
+                  <div className="text-xl font-semibold">$0.00</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-muted-foreground text-sm">Payouts</div>
+                  <div className="text-xl font-semibold">$0.00</div>
+                </div>
+              </div>
+            </div>
+            {/* Improved Chart UI */}
+            <div className="rounded-xl border border-border bg-gradient-to-b from-card/95 to-card/20 p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold text-base">Payouts Overview</span>
+                  <span className="ml-2 text-xs text-muted-foreground">(last 3 months)</span>
+                </div>
+                <div className="flex gap-2">
+                  {(['desktop', 'mobile'] as const).map((key) => (
+                    <button
+                      key={key}
+                      data-active={activeChart === key}
+                      className={
+                        `px-4 py-1 rounded-lg border text-sm font-medium transition-colors ` +
+                        (activeChart === key
+                          ? "bg-primary text-primary-foreground border-primary shadow"
+                          : "bg-background text-foreground border-border hover:bg-muted/60")
+                      }
+                      onClick={() => setActiveChart(key)}
+                    >
+                      {chartConfig[key].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <ChartContainer
+                config={chartConfig}
+                className="aspect-auto h-[250px] w-full"
+              >
+                <LineChart
+                  accessibilityLayer
+                  data={chartData}
+                  margin={{ left: 12, right: 12 }}
+                >
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
+                    tickFormatter={(value) => {
+                      const date = new Date(value);
+                      return date.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      });
+                    }}
+                  />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        className="w-[150px]"
+                        nameKey="views"
+                        labelFormatter={(value) => {
+                          return new Date(value).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          });
+                        }}
+                      />
+                    }
+                  />
+                  <Line
+                    dataKey={activeChart}
+                    type="monotone"
+                    stroke={`var(--color-${activeChart})`}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ChartContainer>
+              <div className="flex items-center justify-between mt-3">
+                <div className="text-xs text-muted-foreground">
+                  Total {chartConfig[activeChart].label.toLowerCase()}: <span className="font-semibold text-foreground">{total[activeChart as 'desktop' | 'mobile'].toLocaleString()}</span>
+                </div>
+                <div className="text-xs text-muted-foreground italic">Interactive chart</div>
+              </div>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-background backdrop-blur-sm rounded-xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/15 rounded-lg">
-                  <DollarSign className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Total Revenue</span>
+          {/* Right: Info Card */}
+          <div className="w-full lg:w-96 h-full ">
+            <div className="bg-gradient-to-b from-card/95 to-card/20 rounded-xl p-6 shadow flex flex-col gap-4 border border-border h-full justify-center">
+              <div className="w-full flex justify-center mb-2">
+                <UndrawMakeItRain
+                  primaryColor="var(--primary)"
+                  secondaryColor="var(--secondary)"
+                  height="150px"
+                  className="object-contain"
+                />
+                <SiStripe className="h-8 w-8 text-[#635BFF] mt-2" />
               </div>
-              <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            </div>
-            <div className="bg-background backdrop-blur-sm rounded-xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/15 rounded-lg">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Total Quotes</span>
+              <div className="flex items-center gap-2 mb-1 justify-center">
+                <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded font-semibold">Action Required</span>
               </div>
-              <div className="text-2xl font-bold">{totalQuotes}</div>
-            </div>
-            <div className="bg-background backdrop-blur-sm rounded-xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/15 rounded-lg">
-                  <CheckCircle className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Conversion Rate</span>
+              <div className="font-bold text-lg mb-1 text-center">Connect your Stripe account</div>
+              <div className="text-muted-foreground text-sm mb-3 text-center">
+                In order to receive payouts from your bookings, you must connect your Stripe account. This enables secure and fast transfers directly to your bank.
               </div>
-              <div className="text-2xl font-bold">{conversionRate.toFixed(1)}%</div>
-            </div>
-            <div className="bg-background backdrop-blur-sm rounded-xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/15 rounded-lg">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">This Month</span>
-              </div>
-              <div className="text-2xl font-bold">{thisMonthQuotes}</div>
-            </div>
-            <div className="bg-background backdrop-blur-sm rounded-xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/15 rounded-lg">
-                  <CheckCircle className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Total Bookings</span>
-              </div>
-              <div className="text-2xl font-bold">{bookingStats?.totalBookings || 0}</div>
+              <button className="bg-primary text-primary-foreground font-semibold rounded-lg px-5 py-2 mt-2 shadow hover:bg-primary/90 transition-colors mx-auto">
+                Connect Stripe
+              </button>
             </div>
           </div>
         </div>
       </div>
+      {/* Hero Section */}
+      
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <HoverCard>
-          <HoverCardTrigger asChild>
-            <Link to="/new-proposal">
-              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border border-border/50 bg-card">
-                <CardContent className="p-6 text-center">
-                  <div className="mx-auto w-12 h-12 bg-[var(--primary)]/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-[var(--primary)]/20 transition-colors">
-                    <Plus className="h-6 w-6 text-[var(--primary)]" />
-                  </div>
-                  <h3 className="font-semibold mb-2">Create Quote</h3>
-                  <p className="text-sm text-muted-foreground">Generate a new client quote</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </HoverCardTrigger>
-          <HoverCardContent className="w-80">
-            <div className="space-y-2">
-              <h4 className="font-semibold">Create Quote</h4>
-              <p className="text-sm text-muted-foreground">
-                Use our AI-powered system to create a detailed quote with itinerary for your client.
-              </p>
-            </div>
-          </HoverCardContent>
-        </HoverCard>
-
-        <HoverCard>
-          <HoverCardTrigger asChild>
-            <Link to="/quotes">
-              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border border-border/50 bg-card">
-                <CardContent className="p-6 text-center">
-                  <div className="mx-auto w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
-                    <FileText className="h-6 w-6 text-blue-500" />
-                  </div>
-                  <h3 className="font-semibold mb-2">View Quotes</h3>
-                  <p className="text-sm text-muted-foreground">Manage all your quotes</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </HoverCardTrigger>
-          <HoverCardContent className="w-80">
-            <div className="space-y-2">
-              <h4 className="font-semibold">View Quotes</h4>
-              <p className="text-sm text-muted-foreground">
-                Review, edit, and manage all your client quotes in one place.
-              </p>
-            </div>
-          </HoverCardContent>
-        </HoverCard>
-
-        <HoverCard>
-          <HoverCardTrigger asChild>
-            <Link to="/bookings">
-              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border border-border/50 bg-card">
-                <CardContent className="p-6 text-center">
-                  <div className="mx-auto w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-500/20 transition-colors">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                  </div>
-                  <h3 className="font-semibold mb-2">Bookings</h3>
-                  <p className="text-sm text-muted-foreground">Confirmed reservations</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </HoverCardTrigger>
-          <HoverCardContent className="w-80">
-            <div className="space-y-2">
-              <h4 className="font-semibold">Bookings</h4>
-              <p className="text-sm text-muted-foreground">
-                Track all your confirmed bookings and manage client reservations.
-              </p>
-            </div>
-          </HoverCardContent>
-        </HoverCard>
-
-        <HoverCard>
-          <HoverCardTrigger asChild>
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border border-border/50 bg-card">
-              <CardContent className="p-6 text-center">
-                <div className="mx-auto w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-500/20 transition-colors">
-                  <BarChart3 className="h-6 w-6 text-purple-500" />
-                </div>
-                <h3 className="font-semibold mb-2">Analytics</h3>
-                <p className="text-sm text-muted-foreground">Business insights</p>
-              </CardContent>
-            </Card>
-          </HoverCardTrigger>
-          <HoverCardContent className="w-80">
-            <div className="space-y-2">
-              <h4 className="font-semibold">Analytics</h4>
-              <p className="text-sm text-muted-foreground">
-                View detailed analytics and performance metrics for your business.
-              </p>
-            </div>
-          </HoverCardContent>
-        </HoverCard>
-      </div>
+  
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-xl">
-          <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="quotes" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <FileText className="h-4 w-4 mr-2" />
-            Quotes
-          </TabsTrigger>
-          <TabsTrigger value="bookings" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Bookings
-          </TabsTrigger>
-          <TabsTrigger value="usage" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Target className="h-4 w-4 mr-2" />
-            Usage & Plans
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between mb-4 gap-4">
+          <TabsList className="grid grid-cols-4 p-1 rounded-xl w-fit">
+            <TabsTrigger value="overview" className="rounded-lg !text-muted-foreground !data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm transition-colors">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="quotes" className="rounded-lg !text-muted-foreground !data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm transition-colors">
+              <FileText className="h-4 w-4 mr-2" />
+              Quotes
+            </TabsTrigger>
+            <TabsTrigger value="bookings" className="rounded-lg !text-muted-foreground !data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm transition-colors">
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Bookings
+            </TabsTrigger>
+            <TabsTrigger value="usage" className="rounded-lg !text-muted-foreground !data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm transition-colors">
+              <Target className="h-4 w-4 mr-2" />
+              Usage & Plans
+            </TabsTrigger>
+          </TabsList>
+          <div className="flex gap-2 ml-auto">
+            <Link to="/bookings">
+              <Button variant="outline" className="rounded-lg px-4">View Bookings</Button>
+            </Link>
+            <Link to="/new-proposal">
+              <Button className="rounded-lg px-4">Create Proposal</Button>
+            </Link>
+          </div>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="border border-border/50 bg-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Monthly Revenue</p>
-                    <p className="text-2xl font-bold">{formatCurrency(thisMonthRevenue)}</p>
-                  </div>
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <ArrowUpRight className="h-4 w-4 text-green-600" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">+12% from last month</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/50 bg-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Pending Quotes</p>
-                    <p className="text-2xl font-bold">{pendingQuotes}</p>
-                  </div>
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Need attention</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/50 bg-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Conversion Rate</p>
-                    <p className="text-2xl font-bold">{conversionRate.toFixed(1)}%</p>
-                  </div>
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <TrendingUp className="h-4 w-4 text-blue-600" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">+5% from last month</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/50 bg-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Avg Quote Value</p>
-                    <p className="text-2xl font-bold">
-                      {totalQuotes > 0 ? formatCurrency(totalRevenue / totalQuotes) : formatCurrency(0)}
-                    </p>
-                  </div>
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <DollarSign className="h-4 w-4 text-purple-600" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Per quote</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/50 bg-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Active Bookings</p>
-                    <p className="text-2xl font-bold">{bookingStats?.confirmedBookings || 0}</p>
-                  </div>
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <CheckCircle className="h-4 w-4 text-blue-600" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Confirmed reservations</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/50 bg-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Avg Booking Value</p>
-                    <p className="text-2xl font-bold">
-                      {bookingStats ? formatCurrency(bookingStats.averageBookingValue) : formatCurrency(0)}
-                    </p>
-                  </div>
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <DollarSign className="h-4 w-4 text-purple-600" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Per booking</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/50 bg-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5" />
-                  Recent Bookings
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {bookings.slice(0, 5).map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{booking.clientName}</p>
-                          <p className="text-xs text-muted-foreground">{getTimeAgo(booking.createdAt)}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-sm">{formatCurrency(booking.totalCost, booking.currency)}</p>
-                        <Badge 
-                          variant={getStatusColor(booking.status)}
-                          className="text-xs"
-                        >
-                          {booking.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm pt-0 pb-0">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">Total Revenue</span>
+              <span className="flex items-center gap-1 text-xs font-semibold bg-muted px-2 py-0.5 rounded-full border border-border"><TrendingUp className="w-4 h-4 text-muted-foreground" />+12.5%</span>
+            </div>
+            <div className="text-3xl font-bold text-foreground mb-4">{formatCurrency(totalRevenue)}</div>
+            <div className="text-sm font-medium text-foreground flex items-center gap-1 mb-1">Trending up this month <TrendingUp className="w-4 h-4 text-muted-foreground" /></div>
+            <div className="text-xs text-muted-foreground">Visitors for the last 6 months</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-b  from-card/95 to-background/20 border border-border rounded-2xl shadow-sm pt-0 pb-0">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">Total Quotes</span>
+              <span className="flex items-center gap-1 text-xs font-semibold bg-muted px-2 py-0.5 rounded-full border border-border">-20%</span>
+            </div>
+            <div className="text-3xl font-bold text-foreground mb-4">{totalQuotes}</div>
+            <div className="text-sm font-medium text-foreground flex items-center gap-1 mb-1">Down 20% this period</div>
+            <div className="text-xs text-muted-foreground">Quote volume needs attention</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-b  from-card/95 to-background/20 border border-border rounded-2xl shadow-sm pt-0 pb-0">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">Active Bookings</span>
+              <span className="flex items-center gap-1 text-xs font-semibold bg-muted px-2 py-0.5 rounded-full border border-border"><TrendingUp className="w-4 h-4 text-muted-foreground" />+12.5%</span>
+            </div>
+            <div className="text-3xl font-bold text-foreground mb-4">{confirmedQuotes}</div>
+            <div className="text-sm font-medium text-foreground flex items-center gap-1 mb-1">Strong user retention <TrendingUp className="w-4 h-4 text-muted-foreground" /></div>
+            <div className="text-xs text-muted-foreground">Engagement exceeds targets</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-b  from-card/95 to-background/20 border border-border rounded-2xl shadow-sm pt-0 pb-0">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">Conversion Rate</span>
+              <span className="flex items-center gap-1 text-xs font-semibold bg-muted px-2 py-0.5 rounded-full border border-border">+4.5%</span>
+            </div>
+            <div className="text-3xl font-bold text-foreground mb-4">{conversionRate.toFixed(1)}%</div>
+            <div className="text-sm font-medium text-foreground flex items-center gap-1 mb-1">Steady increase <TrendingUp className="w-4 h-4 text-muted-foreground" /></div>
+            <div className="text-xs text-muted-foreground">Meets growth projections</div>
+          </CardContent>
+        </Card>
+      </div>
 
           {/* Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border border-border/50 bg-card">
+            <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
@@ -578,34 +609,42 @@ export function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {quotes.slice(0, 5).map((quote) => (
-                    <div key={quote.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
-                          <FileText className="h-4 w-4 text-[var(--primary)]" />
+                    <Link
+                      key={quote.id}
+                      to={`/quote/${quote.id}`}
+                      className="block group"
+                    >
+                      <div
+                        className="flex items-center justify-between gap-4 p-4 rounded-xl bg-muted/40 border border-border hover:bg-muted/60 hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20 group-hover:bg-[var(--primary)]/20 transition-colors">
+                            <FileText className="h-5 w-5 text-[var(--primary)]" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold truncate text-sm text-foreground">{quote.clientEmail || 'Client'}</p>
+                            <p className="text-xs text-muted-foreground truncate">{getTimeAgo(quote.createdAt)}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{quote.clientEmail || 'Client'}</p>
-                          <p className="text-xs text-muted-foreground">{getTimeAgo(quote.createdAt)}</p>
+                        <div className="flex flex-col items-end gap-1 min-w-[90px]">
+                          <span className="font-bold text-[var(--primary)] text-base">{formatCurrency(quote.totalPrice, quote.currency)}</span>
+                          <Badge 
+                            variant={getStatusColor(quote.status)}
+                            className="text-xs px-2 py-0.5 rounded-full capitalize"
+                          >
+                            {quote.status}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-sm">{formatCurrency(quote.totalPrice, quote.currency)}</p>
-                        <Badge 
-                          variant={getStatusColor(quote.status)}
-                          className="text-xs"
-                        >
-                          {quote.status}
-                        </Badge>
-                      </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border border-border/50 bg-card">
+            <Card className="border border-border bg-gradient-to-b from-card/95 to-background/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
@@ -717,9 +756,11 @@ export function Dashboard() {
                     </div>
                     
                     <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
+                      <Button variant="outline" size="sm" asChild className="flex-1">
+                        <Link to={`/quote/${quote.id}`}>
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Details
+                        </Link>
                       </Button>
                       <Button variant="outline" size="sm" className="flex-1">
                         <Edit className="h-4 w-4 mr-1" />

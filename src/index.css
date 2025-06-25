@@ -1,20 +1,53 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --font-sans: "Poppins", "sans-serif";
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+  
+  /* Ensure Poppins font weights are properly applied */
+  .font-light {
+    font-weight: 300;
+  }
+  
+  .font-normal {
+    font-weight: 400;
+  }
+  
+  .font-medium {
+    font-weight: 500;
+  }
+  
+  .font-semibold {
+    font-weight: 600;
+  }
+  
+  .font-bold {
+    font-weight: 700;
+  }
+}
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --base-50: oklch(0.9869 0.0042 280.57);
-  --base-100: oklch(0.9703 0.0084 281.74);
-  --base-200: oklch(0.9309 0.0168 282.31);
-  --base-300: oklch(0.8708 0.0252 283.4);
-  --base-400: oklch(0.7052 0.0378 286.14);
-  --base-500: oklch(0.5544 0.0504 286.81);
-  --base-600: oklch(0.4463 0.0483 286.39);
-  --base-700: oklch(0.3722 0.0441 286.47);
-  --base-800: oklch(0.2638 0.0399 288.01);
-  --base-900: oklch(0.2083 0.0347 289.9);
-  --base-950: oklch(0.1292 0.0315 290.68);
-  --base-1000: oklch(0.0781 0.0294 290.82);
+  --base-50: oklch(0.9715 0.0053 257.49);
+  --base-100: oklch(0.957 0.0106 258.56);
+  --base-200: oklch(0.9196 0.0213 259.16);
+  --base-300: oklch(0.8614 0.0319 260.48);
+  --base-400: oklch(0.6988 0.0479 263.34);
+  --base-500: oklch(0.5504 0.0638 263.98);
+  --base-600: oklch(0.4437 0.0612 263.78);
+  --base-700: oklch(0.3706 0.0559 263.8);
+  --base-800: oklch(0.2783 0.0505 265.5);
+  --base-900: oklch(0.2077 0.0439 267.26);
+  --base-950: oklch(0.1535 0.0399 268.16);
+  --base-1000: oklch(0.0779 0.0372 268.44);
+
 
   --primary-50: oklch(0.9875 0.019 90.44);
   --primary-100: oklch(0.9683 0.0472 89.05);
@@ -29,18 +62,19 @@
   --primary-950: oklch(0.2829 0.0561 71.93);
   --primary-1000: oklch(0.1949 0.0396 70.56);
 
-  --secondary-50: oklch(0.9808 0.0145 191.25);
-  --secondary-100: oklch(0.9516 0.0437 191.52);
-  --secondary-200: oklch(0.9108 0.0804 191.57);
-  --secondary-300: oklch(0.8576 0.1202 192.38);
-  --secondary-400: oklch(0.7809 0.1376 194.73);
-  --secondary-500: oklch(0.7079 0.1273 196.21);
-  --secondary-600: oklch(0.6035 0.1094 198.95);
-  --secondary-700: oklch(0.551 0.0899 200.52);
-  --secondary-800: oklch(0.4422 0.0729 202.06);
-  --secondary-900: oklch(0.3906 0.0594 203.06);
-  --secondary-950: oklch(0.2871 0.0452 205.42);
-  --secondary-1000: oklch(0.2198 0.036 206.01);
+  --secondary-50: oklch(0.983 0.0077 195.05);
+  --secondary-100: oklch(0.9539 0.0219 195.38);
+  --secondary-200: oklch(0.9134 0.04 195.59);
+  --secondary-300: oklch(0.8603 0.0606 196.45);
+  --secondary-400: oklch(0.7836 0.0704 199.35);
+  --secondary-500: oklch(0.7323 0.0652 201.14);
+  --secondary-600: oklch(0.605 0.0564 204.08);
+  --secondary-700: oklch(0.5159 0.0465 205.61);
+  --secondary-800: oklch(0.4441 0.0377 207.05);
+  --secondary-900: oklch(0.3925 0.0308 208.34);
+  --secondary-950: oklch(0.2909 0.0238 210.42);
+  --secondary-1000: oklch(0.2251 0.0192 210.99);
+
 
   --background: var(--base-50);
   --foreground: var(--base-800);

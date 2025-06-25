@@ -77,7 +77,7 @@ export default function Analytics() {
   };
 
   return (
-    <div className="px-4 mx-auto pb-8 space-y-8">
+    <div className="px-8 mx-auto pb-8 space-y-8">
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card className="bg-gradient-to-b from-card/95 to-background/10 border border-border rounded-2xl shadow-sm">

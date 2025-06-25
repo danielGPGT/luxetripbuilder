@@ -19,6 +19,13 @@ module.exports = {
       sans: ['Poppins', 'Inter', 'ui-sans-serif', 'system-ui'],
       serif: ['Playfair Display', 'ui-serif', 'Georgia'],
     },
+    fontWeight: {
+      light: '300',
+      normal: '400',
+      medium: '500',
+      semibold: '600',
+      bold: '700',
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",

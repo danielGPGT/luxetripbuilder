@@ -528,36 +528,9 @@ export function SubscriptionManager() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="text-center mb-8">
-        <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/20">
-          <CreditCard className="h-8 w-8 text-primary" />
-        </div>
-        <h3 className="text-2xl font-bold mb-2">Subscription Management</h3>
-        <p className="text-muted-foreground max-w-md mx-auto">
-          Manage your subscription, billing, and plan features to optimize your travel business.
-        </p>
-        
-        {/* Debug: Show current role */}
-        <div className="mt-4 p-2 bg-muted/30 rounded-lg border border-border/50">
-          <p className="text-xs text-muted-foreground">
-            Debug: Your current role is: <span className="font-semibold">{teamRole || 'Loading...'}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Is admin/owner: <span className="font-semibold">{(teamRole === 'admin' || teamRole === 'owner') ? 'YES' : 'NO'}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Is member: <span className="font-semibold">{teamRole === 'member' ? 'YES' : 'NO'}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Loading state: <span className="font-semibold">{loading ? 'YES' : 'NO'}</span>
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {/* Current Subscription Status */}
-      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+      <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -565,9 +538,9 @@ export function SubscriptionManager() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border/50">
+          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border/50">
             <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getPlanColor(currentPlan)} flex items-center justify-center text-white shadow-lg`}>
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getPlanColor(currentPlan)} flex items-center justify-center text-white shadow-lg`}>
                 {getPlanIcon(currentPlan)}
               </div>
               <div>
@@ -579,14 +552,14 @@ export function SubscriptionManager() {
             </div>
             <Badge 
               variant={isSubscriptionActive() ? 'default' : 'secondary'}
-              className={`${isSubscriptionActive() ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'} px-3 py-1`}
+              className={`${isSubscriptionActive() ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'} px-3 py-1 rounded-full`}
             >
               {isSubscriptionActive() ? 'Active' : 'Inactive'}
             </Badge>
           </div>
 
           {isSubscriptionCanceled() && (
-            <Alert className="border-yellow-200 bg-yellow-50/50">
+            <Alert className="border-yellow-200 bg-yellow-50/50 rounded-xl">
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-800">
                 Your subscription will be canceled at the end of the current billing period.
@@ -595,7 +568,7 @@ export function SubscriptionManager() {
           )}
 
           {renewalDate && (
-            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
+            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border border-border/50">
               <Calendar className="h-5 w-5 text-primary" />
               <div>
                 <div className="font-medium text-sm">
@@ -612,7 +585,7 @@ export function SubscriptionManager() {
 
           {isSubscriptionActive() && (
             <Button 
-              className="w-full bg-primary hover:bg-primary/90" 
+              className="w-full bg-primary hover:bg-primary/90 rounded-xl" 
               onClick={openBillingPortal}
               disabled={processing}
             >
@@ -625,7 +598,7 @@ export function SubscriptionManager() {
 
       {/* Plan Management */}
       {currentPlan !== 'free' as string && (teamRole === 'admin' || teamRole === 'owner') && (
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Settings className="h-5 w-5 text-primary" />
@@ -644,7 +617,7 @@ export function SubscriptionManager() {
                   : 'border-border bg-card/50 hover:border-blue-300'
               }`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-white">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white">
                     <Users className="h-4 w-4" />
                   </div>
                   <span className="font-semibold">Free</span>
@@ -658,7 +631,7 @@ export function SubscriptionManager() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full hover:bg-blue-50"
+                    className="w-full hover:bg-blue-50 rounded-xl"
                     onClick={() => handlePlanChange('free')}
                     disabled={processing}
                   >
@@ -675,7 +648,7 @@ export function SubscriptionManager() {
                   : 'border-border bg-card/50 hover:border-purple-300'
               }`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white">
                     <Crown className="h-4 w-4" />
                   </div>
                   <span className="font-semibold">Pro</span>
@@ -689,7 +662,7 @@ export function SubscriptionManager() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full hover:bg-purple-50"
+                    className="w-full hover:bg-purple-50 rounded-xl"
                     onClick={() => handlePlanChange('pro')}
                     disabled={processing}
                   >
@@ -707,7 +680,7 @@ export function SubscriptionManager() {
                   : 'border-border bg-card/50 hover:border-green-300'
               }`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center text-white">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center text-white">
                     <Building2 className="h-4 w-4" />
                   </div>
                   <span className="font-semibold">Agency</span>
@@ -721,7 +694,7 @@ export function SubscriptionManager() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full hover:bg-green-50"
+                    className="w-full hover:bg-green-50 rounded-xl"
                     onClick={() => handlePlanChange('agency')}
                     disabled={processing}
                   >
@@ -738,7 +711,7 @@ export function SubscriptionManager() {
                   : 'border-border bg-card/50 hover:border-orange-300'
               }`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center text-white">
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-white">
                     <Globe className="h-4 w-4" />
                   </div>
                   <span className="font-semibold">Enterprise</span>
@@ -752,7 +725,7 @@ export function SubscriptionManager() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full hover:bg-orange-50"
+                    className="w-full hover:bg-orange-50 rounded-xl"
                     onClick={() => window.location.href = 'mailto:sales@luxetripbuilder.com?subject=Enterprise Plan Inquiry'}
                     disabled={processing}
                   >
@@ -767,7 +740,7 @@ export function SubscriptionManager() {
 
       {/* Billing & Account */}
       {isSubscriptionActive() && (teamRole === 'admin' || teamRole === 'owner') && (
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Shield className="h-5 w-5 text-primary" />
@@ -780,30 +753,18 @@ export function SubscriptionManager() {
           <CardContent className="space-y-4">
             <Button 
               variant="outline" 
-              className="w-full justify-start h-12"
-              onClick={openBillingPortal}
+              className="w-full justify-start h-12 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl"
+              onClick={() => setShowCancelDialog(true)}
               disabled={processing}
             >
-              <CreditCard className="h-4 w-4 mr-3" />
-              Manage Billing & Payment Methods
+              <XCircle className="h-4 w-4 mr-3" />
+              Cancel Subscription
             </Button>
-
-            {!isSubscriptionCanceled() && (
-              <Button 
-                variant="outline" 
-                className="w-full justify-start h-12 text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => setShowCancelDialog(true)}
-                disabled={processing}
-              >
-                <XCircle className="h-4 w-4 mr-3" />
-                Cancel Subscription
-              </Button>
-            )}
 
             {isSubscriptionCanceled() && (
               <Button 
                 variant="outline" 
-                className="w-full justify-start h-12 text-green-600 hover:text-green-700 hover:bg-green-50"
+                className="w-full justify-start h-12 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-xl"
                 onClick={() => updateSubscription(currentPlan as 'free' | 'pro' | 'agency' | 'enterprise')}
                 disabled={processing}
               >
@@ -817,7 +778,7 @@ export function SubscriptionManager() {
 
       {/* Show message for members who can't access billing/plan management */}
       {teamRole === 'member' && isSubscriptionActive() && (
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Info className="h-5 w-5 text-primary" />
@@ -840,7 +801,7 @@ export function SubscriptionManager() {
 
       {/* Cancel Subscription Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -852,13 +813,14 @@ export function SubscriptionManager() {
               Are you sure you want to cancel your subscription? You'll continue to have access until the end of your current billing period.
             </p>
             <div className="flex gap-3 justify-end">
-              <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+              <Button variant="outline" onClick={() => setShowCancelDialog(false)} className="rounded-xl">
                 Keep Subscription
               </Button>
               <Button 
                 variant="destructive" 
                 onClick={handleCancelSubscription}
                 disabled={processing}
+                className="rounded-xl"
               >
                 {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancel Subscription'}
               </Button>
@@ -869,7 +831,7 @@ export function SubscriptionManager() {
 
       {/* Plan Change Confirmation Dialog */}
       <Dialog open={showPlanChangeDialog} onOpenChange={setShowPlanChangeDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {planChangeType === 'upgrade' ? (
@@ -887,7 +849,7 @@ export function SubscriptionManager() {
             <DialogDescription>
               {planChangeType === 'upgrade' ?
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium text-green-800">You'll gain access to:</span>
                   </div>
@@ -902,7 +864,7 @@ export function SubscriptionManager() {
                 </div>
               : (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-xl">
                     <AlertTriangle className="h-4 w-4 text-orange-600" />
                     <span className="text-sm font-medium text-orange-800">You'll lose access to:</span>
                   </div>
@@ -919,13 +881,13 @@ export function SubscriptionManager() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 justify-end mt-6">
-            <Button variant="outline" onClick={() => setShowPlanChangeDialog(false)}>
+            <Button variant="outline" onClick={() => setShowPlanChangeDialog(false)} className="rounded-xl">
               Cancel
             </Button>
             <Button 
               onClick={confirmPlanChange}
               disabled={processing}
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 rounded-xl"
             >
               {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
                 planChangeType === 'upgrade' ? 'Upgrade Now' : 'Downgrade Now'}
@@ -936,7 +898,7 @@ export function SubscriptionManager() {
 
       {/* Team Management */}
       {isTeamPlan && (
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Users className="h-5 w-5 text-primary" />
@@ -958,6 +920,7 @@ export function SubscriptionManager() {
                   <Button 
                     onClick={() => setShowInviteForm(!showInviteForm)}
                     size="sm"
+                    className="rounded-xl"
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Invite Member
@@ -966,7 +929,7 @@ export function SubscriptionManager() {
 
                 {/* Invitation Form */}
                 {showInviteForm && (
-                  <Card>
+                  <Card className="bg-muted/30 border border-border/50">
                     <CardHeader>
                       <CardTitle className="text-base">Invite Team Member</CardTitle>
                     </CardHeader>
@@ -982,12 +945,13 @@ export function SubscriptionManager() {
                               onChange={(e) => setInviteEmail(e.target.value)}
                               placeholder="colleague@agency.com"
                               required
+                              className="rounded-xl"
                             />
                           </div>
                           <div>
                             <Label htmlFor="invite-role">Role</Label>
                             <Select value={inviteRole} onValueChange={(value: 'admin' | 'member') => setInviteRole(value)}>
-                              <SelectTrigger>
+                              <SelectTrigger className="rounded-xl">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -998,7 +962,7 @@ export function SubscriptionManager() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button type="submit" disabled={inviting}>
+                          <Button type="submit" disabled={inviting} className="rounded-xl">
                             {inviting ? (
                               <>
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -1015,6 +979,7 @@ export function SubscriptionManager() {
                             type="button" 
                             variant="outline" 
                             onClick={() => setShowInviteForm(false)}
+                            className="rounded-xl"
                           >
                             Cancel
                           </Button>
@@ -1025,7 +990,7 @@ export function SubscriptionManager() {
                 )}
 
                 {/* Team Members - always visible */}
-                <Card>
+                <Card className="bg-muted/30 border border-border/50">
                   <CardHeader>
                     <CardTitle className="text-base">Team Members ({teamMembers.length})</CardTitle>
                   </CardHeader>
@@ -1038,7 +1003,7 @@ export function SubscriptionManager() {
                     ) : (
                       <div className="space-y-3">
                         {teamMembers.map((member) => (
-                          <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div key={member.id} className="flex items-center justify-between p-3 border rounded-xl">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback>
@@ -1061,7 +1026,7 @@ export function SubscriptionManager() {
                               {(teamRole === 'admin' || teamRole === 'owner') && member.role !== 'owner' && (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
+                                    <Button variant="ghost" size="sm" className="rounded-xl">
                                       <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
@@ -1101,14 +1066,14 @@ export function SubscriptionManager() {
 
                 {/* Pending Invitations - admin/owner only */}
                 {(teamRole === 'admin' || teamRole === 'owner') && invitations.length > 0 && (
-                  <Card>
+                  <Card className="bg-muted/30 border border-border/50">
                     <CardHeader>
                       <CardTitle className="text-base">Pending Invitations ({invitations.length})</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
                         {invitations.map((invitation) => (
-                          <div key={invitation.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div key={invitation.id} className="flex items-center justify-between p-3 border rounded-xl">
                             <div className="flex items-center gap-3">
                               <Mail className="h-5 w-5 text-muted-foreground" />
                               <div>
@@ -1126,6 +1091,7 @@ export function SubscriptionManager() {
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => handleCancelInvitation(invitation.id)}
+                                className="rounded-xl"
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -1138,7 +1104,7 @@ export function SubscriptionManager() {
                 )}
 
                 {/* Team Info - always visible */}
-                <Card>
+                <Card className="bg-muted/30 border border-border/50">
                   <CardHeader>
                     <CardTitle className="text-base">Team Information</CardTitle>
                   </CardHeader>
@@ -1171,7 +1137,7 @@ export function SubscriptionManager() {
             {/* Show read-only team info for members */}
             {teamRole === 'member' && (
               <>
-                <Card>
+                <Card className="bg-muted/30 border border-border/50">
                   <CardHeader>
                     <CardTitle className="text-base">Team Members ({teamMembers.length})</CardTitle>
                   </CardHeader>
@@ -1184,7 +1150,7 @@ export function SubscriptionManager() {
                     ) : (
                       <div className="space-y-3">
                         {teamMembers.map((member) => (
-                          <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div key={member.id} className="flex items-center justify-between p-3 border rounded-xl">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback>
@@ -1211,7 +1177,7 @@ export function SubscriptionManager() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-muted/30 border border-border/50">
                   <CardHeader>
                     <CardTitle className="text-base">Team Information</CardTitle>
                   </CardHeader>

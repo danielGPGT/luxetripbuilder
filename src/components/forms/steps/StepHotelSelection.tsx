@@ -32,6 +32,13 @@ import {
 import { cn } from '@/lib/utils';
 import { rateHawkService, type RateHawkSearchResponse, type RateHawkHotelWithRooms } from '@/lib/api/ratehawk';
 import { toast } from 'sonner';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
 interface StepHotelSelectionProps {
   shouldSearch?: boolean;
@@ -707,162 +714,178 @@ export function StepHotelSelection({ shouldSearch = false, onSearchComplete }: S
                               : undefined}
                             onValueChange={(roomId) => handleHotelSelection(hotel, roomId)}
                           >
-                            <div className="grid gap-4">
-                              {hotel.rooms.map((room) => (
-                                <div key={room.id} className="relative">
-                                  <RadioGroupItem
-                                    value={room.id}
-                                    id={room.id}
-                                    className="sr-only"
-                                  />
-                                  <Label htmlFor={room.id} className="cursor-pointer w-full">
-                                    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/20 bg-gradient-to-br from-background to-muted/50 hover:from-background hover:to-primary/5">
-                                      <CardContent className="p-0">
-                                        <div className="flex min-h-[280px] max-h-[320px]">
-                                          {/* Room Image Carousel - Left Side */}
-                                          <div className="flex-shrink-0 w-2/5 relative">
-                                            {room.images && room.images.length > 0 ? (
-                                              <div className="relative h-full">
-                                                <HotelImageCarousel
-                                                  images={room.images}
-                                                  alt={room.name}
-                                                  className="w-full h-full"
-                                                  maxHeight="h-full"
-                                                  showLightbox={true}
-                                                />
-                                                
-                                                {/* Price Badge Overlay */}
-                                                <div className="absolute bottom-3 left-3 bg-background/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-border">
-                                                  <div className="text-xl font-bold text-primary">
-                                                    {formatPrice(room.price.amount, room.price.currency)}
-                                                  </div>
-                                                  <div className="text-xs text-muted-foreground">per night</div>
-                                                </div>
-                                                
-                                                {/* Image Counter */}
-                                                {room.images.length > 1 && (
-                                                  <div className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded-full shadow-lg border border-border">
-                                                    {room.images.length} photos
-                                                  </div>
-                                                )}
-                                              </div>
-                                            ) : (
-                                              <div className="w-full h-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center border-r border-border">
-                                                <div className="text-center">
-                                                  <Bed className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                                                  <p className="text-xs text-muted-foreground">No room image</p>
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-                                          
-                                          {/* Room Details - Right Side */}
-                                          <div className="flex-1 p-4 flex flex-col">
-                                            {/* Header */}
-                                            <div className="mb-3">
-                                              <div className="flex items-start justify-between gap-3">
-                                                <div className="flex-1 min-w-0">
-                                                  <h4 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors truncate">
-                                                    {room.name}
-                                                  </h4>
-                                                  {room.description && (
-                                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                                      {room.description}
-                                                    </p>
-                                                  )}
-                                                </div>
-                                                
-                                                {/* Status Badges */}
-                                                <div className="flex flex-col gap-1 flex-shrink-0">
-                                                  {room.refundable && (
-                                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
-                                                      Free Cancellation
-                                                    </Badge>
-                                                  )}
-                                                  {room.available && (
-                                                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                                                      Available
-                                                    </Badge>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            </div>
-                                            
-                                            {/* Room Features Grid */}
-                                            <div className="grid grid-cols-2 gap-3 mb-3">
-                                              <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
-                                                <Users className="h-3 w-3 text-primary" />
-                                                <div>
-                                                  <div className="font-medium text-xs">{room.capacity?.adults || 2} adults</div>
-                                                  {room.capacity?.children > 0 && (
-                                                    <div className="text-xs text-muted-foreground">{room.capacity.children} children</div>
-                                                  )}
-                                                </div>
-                                              </div>
-                                              
-                                              {room.boardType && (
-                                                <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
-                                                  <Utensils className="h-3 w-3 text-primary" />
-                                                  <div>
-                                                    <div className="font-medium text-xs">{room.boardType}</div>
-                                                    <div className="text-xs text-muted-foreground">Meal plan</div>
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </div>
-                                            
-                                            {/* Room Amenities */}
-                                            {room.amenities && room.amenities.length > 0 && (
-                                              <div className="mb-3 flex-1">
-                                                <div className="text-xs font-semibold text-foreground mb-2 uppercase tracking-wide">Room Features</div>
-                                                <div className="flex gap-1 flex-wrap">
-                                                  {room.amenities.slice(0, 4).map((amenity) => (
-                                                    <Badge key={amenity} variant="secondary" className="text-xs bg-secondary/20 text-secondary-foreground px-2 py-1">
-                                                      {amenity}
-                                                    </Badge>
-                                                  ))}
-                                                  {room.amenities.length > 4 && (
-                                                    <Badge variant="outline" className="text-xs px-2 py-1">
-                                                      +{room.amenities.length - 4} more
-                                                    </Badge>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            )}
-                                            
-                                            {/* Price Details - Always visible */}
-                                            <div className="mt-auto pt-3 border-t border-border">
-                                              <div className="flex items-center justify-between">
-                                                <div className="text-right">
-                                                  {room.price.originalAmount && room.price.originalAmount > room.price.amount && (
-                                                    <div className="text-sm text-muted-foreground line-through">
-                                                      {formatPrice(room.price.originalAmount, room.price.currency)}
+                            <Carousel
+                              opts={{
+                                align: "start",
+                                loop: false,
+                                slidesToScroll: 3,
+                              }}
+                              className="w-full"
+                            >
+                              <CarouselContent>
+                                {/* Group rooms into sets of 3 for each carousel slide */}
+                                {Array.from({ length: Math.ceil(hotel.rooms.length / 3) }, (_, slideIndex) => (
+                                  <CarouselItem key={slideIndex} className="basis-full">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
+                                      {hotel.rooms.slice(slideIndex * 3, (slideIndex + 1) * 3).map((room) => (
+                                        <div key={room.id} className="relative">
+                                          <RadioGroupItem
+                                            value={room.id}
+                                            id={room.id}
+                                            className="sr-only"
+                                          />
+                                          <Label htmlFor={room.id} className="cursor-pointer w-full">
+                                            <Card className="group pt-0 pb-0 overflow-hidden hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/20 bg-gradient-to-br from-background to-muted/50 hover:from-background hover:to-primary/5 h-full">
+                                              <CardContent className="p-0 h-full flex flex-col">
+                                                {/* Room Image - Square aspect ratio */}
+                                                <div className="relative w-full aspect-square">
+                                                  {room.images && room.images.length > 0 ? (
+                                                    <div className="relative h-full">
+                                                      <HotelImageCarousel
+                                                        images={room.images}
+                                                        alt={room.name}
+                                                        className="w-full h-full"
+                                                        maxHeight="h-full"
+                                                        showLightbox={true}
+                                                      />
+                                                      
+                                                      {/* Price Badge Overlay */}
+                                                      <div className="absolute bottom-3 left-3 bg-background/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-border">
+                                                        <div className="text-lg font-bold text-primary">
+                                                          {formatPrice(room.price.amount, room.price.currency)}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">per night</div>
+                                                      </div>
+                                                      
+                                                      {/* Image Counter */}
+                                                      {room.images.length > 1 && (
+                                                        <div className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded-full shadow-lg border border-border">
+                                                          {room.images.length} photos
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  ) : (
+                                                    <div className="w-full h-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
+                                                      <div className="text-center">
+                                                        <Bed className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                                                        <p className="text-xs text-muted-foreground">No room image</p>
+                                                      </div>
                                                     </div>
                                                   )}
-                                                  <div className="text-xl font-bold text-primary">
-                                                    {formatPrice(room.price.amount, room.price.currency)}
+                                                </div>
+                                                
+                                                {/* Room Details - Content below image */}
+                                                <div className="flex-1 p-3 flex flex-col">
+                                                  {/* Header */}
+                                                  <div className="mb-3">
+                                                    <h4 className="font-bold text-base text-foreground group-hover:text-primary transition-colors mb-1">
+                                                      {room.name}
+                                                    </h4>
+                                                    {room.description && (
+                                                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                                                        {room.description}
+                                                      </p>
+                                                    )}
                                                   </div>
-                                                  <div className="text-xs text-muted-foreground">per night</div>
+                                                  
+                                                  {/* Status Badges */}
+                                                  <div className="flex gap-1 mb-3">
+                                                    {room.refundable && (
+                                                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+                                                        Free Cancellation
+                                                      </Badge>
+                                                    )}
+                                                    {room.available && (
+                                                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                                                        Available
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                  
+                                                  {/* Room Features Grid */}
+                                                  <div className="grid grid-cols-2 gap-2 mb-3">
+                                                    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg border border-border/50">
+                                                      <div className="p-1.5 bg-primary/10 rounded-lg">
+                                                        <Users className="h-3 w-3 text-primary" />
+                                                      </div>
+                                                      <div>
+                                                        <div className="font-semibold text-xs">{room.capacity?.adults || 2} adults</div>
+                                                        {room.capacity?.children > 0 && (
+                                                          <div className="text-xs text-muted-foreground">{room.capacity.children} children</div>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                    
+                                                    {room.boardType && (
+                                                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg border border-border/50">
+                                                        <div className="p-1.5 bg-primary/10 rounded-lg">
+                                                          <Utensils className="h-3 w-3 text-primary" />
+                                                        </div>
+                                                        <div>
+                                                          <div className="font-semibold text-xs">{room.boardType}</div>
+                                                          <div className="text-xs text-muted-foreground">Meal plan</div>
+                                                        </div>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                  
+                                                  {/* Room Amenities */}
+                                                  {room.amenities && room.amenities.length > 0 && (
+                                                    <div className="mb-3 flex-1">
+                                                      <div className="text-xs font-semibold text-foreground mb-2 uppercase tracking-wide text-primary/70">Room Features</div>
+                                                      <div className="flex gap-1 flex-wrap">
+                                                        {room.amenities.slice(0, 3).map((amenity) => (
+                                                          <Badge key={amenity} variant="secondary" className="text-xs bg-secondary/30 text-secondary-foreground px-2 py-1 border border-border/50">
+                                                            {amenity}
+                                                          </Badge>
+                                                        ))}
+                                                        {room.amenities.length > 3 && (
+                                                          <Badge variant="outline" className="text-xs px-2 py-1">
+                                                            +{room.amenities.length - 3} more
+                                                          </Badge>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                  
+                                                  {/* Price Details - Always visible */}
+                                                  <div className="mt-auto pt-3 border-t border-border/50">
+                                                    <div className="flex items-center justify-between">
+                                                      <div className="text-right">
+                                                        {room.price.originalAmount && room.price.originalAmount > room.price.amount && (
+                                                          <div className="text-xs text-muted-foreground line-through mb-1">
+                                                            {formatPrice(room.price.originalAmount, room.price.currency)}
+                                                          </div>
+                                                        )}
+                                                        <div className="text-xl font-bold text-primary">
+                                                          {formatPrice(room.price.amount, room.price.currency)}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground font-medium">per night</div>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              </CardContent>
+                                            </Card>
+                                            
+                                            {/* Selection Indicator */}
+                                            {form.watch('hotelSelection.selectedHotel')?.room.id === room.id && (
+                                              <div className="absolute top-3 right-3 z-10">
+                                                <div className="bg-primary text-primary-foreground rounded-full p-2 shadow-lg">
+                                                  <CheckCircle className="h-4 w-4" />
                                                 </div>
                                               </div>
-                                            </div>
-                                          </div>
+                                            )}
+                                          </Label>
                                         </div>
-                                      </CardContent>
-                                    </Card>
-                                    
-                                    {/* Selection Indicator */}
-                                    {form.watch('hotelSelection.selectedHotel')?.room.id === room.id && (
-                                      <div className="absolute top-3 right-3 z-10">
-                                        <div className="bg-primary text-primary-foreground rounded-full p-2 shadow-lg">
-                                          <CheckCircle className="h-4 w-4" />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </Label>
-                                </div>
-                              ))}
-                            </div>
+                                      ))}
+                                    </div>
+                                  </CarouselItem>
+                                ))}
+                              </CarouselContent>
+                              <CarouselPrevious className="left-4" />
+                              <CarouselNext className="right-4" />
+                            </Carousel>
                           </RadioGroup>
                         )}
                       </div>

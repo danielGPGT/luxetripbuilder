@@ -18,6 +18,10 @@ export interface QuoteResponse {
     zipCode: string;
     country: string;
   };
+  destination?: string;
+  startDate?: string;
+  endDate?: string;
+  clientName?: string;
   selectedEvent?: {
     id: string;
     name: string;
@@ -137,6 +141,10 @@ export class QuoteService {
         clientEmail: quote.client_email,
         clientPhone: quote.client_phone,
         clientAddress: quote.client_address,
+        destination: quote.destination,
+        startDate: quote.start_date,
+        endDate: quote.end_date,
+        clientName: quote.client_name,
         selectedEvent: quote.selected_event,
         selectedTicket: quote.selected_ticket,
       };
@@ -177,6 +185,10 @@ export class QuoteService {
         clientEmail: quote.client_email,
         clientPhone: quote.client_phone,
         clientAddress: quote.client_address,
+        destination: quote.destination,
+        startDate: quote.start_date,
+        endDate: quote.end_date,
+        clientName: quote.client_name,
         selectedEvent: quote.selected_event,
         selectedTicket: quote.selected_ticket,
       }));
@@ -222,6 +234,10 @@ export class QuoteService {
         clientEmail: quote.client_email,
         clientPhone: quote.client_phone,
         clientAddress: quote.client_address,
+        destination: quote.destination,
+        startDate: quote.start_date,
+        endDate: quote.end_date,
+        clientName: quote.client_name,
         selectedEvent: quote.selected_event,
         selectedTicket: quote.selected_ticket,
       };

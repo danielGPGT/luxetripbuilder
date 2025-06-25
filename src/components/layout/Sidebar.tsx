@@ -94,7 +94,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
       } bg-[var(--sidebar)] border-r border-[var(--sidebar-border)]`}
     >
       {/* Branding & Collapse */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--sidebar-border)]">
+      <div className="flex items-center justify-between h-16 px-4 border-[var(--sidebar-border)]">
         <Link to="/" className="flex items-center gap-2">
           <img src={Logo} alt="AItinerary Logo" className="h-10" />
         </Link>
@@ -162,7 +162,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
       </nav>
 
       {/* Bottom Section */}
-      <div className="mt-auto w-full px-2 py-4 border-t border-[var(--sidebar-border)] flex flex-col gap-2">
+      <div className="mt-auto w-full px-2 py-4 flex flex-col gap-2">
         {bottomItems.map((item) => (
           <Link to={item.href} key={item.href} tabIndex={collapsed ? -1 : 0}>
             <Button

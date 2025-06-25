@@ -225,10 +225,10 @@ async function transformRateHawkResponse(data: any) {
     const totalRooms = hotel.rates?.length || 0;
     maxRoomsFound = Math.max(maxRoomsFound, totalRooms);
     
-    // Sort rooms by price, pick up to 100 cheapest (increased to maximum)
+    // Sort rooms by price, pick up to 20 cheapest (limit to 20 rooms)
     const cheapestRooms = (hotel.rates || [])
       .sort((a: any, b: any) => a.payment_options?.payment_types?.[0]?.amount - b.payment_options?.payment_types?.[0]?.amount)
-      .slice(0, 100); // Increased to 100 rooms - absolute maximum
+      .slice(0, 20); // Limit to 20 rooms
 
     console.log(`🏨 Hotel ${hotel.id}: ${totalRooms} total rooms available, returning ${cheapestRooms.length} rooms`);
 
@@ -394,7 +394,13 @@ async function transformRateHawkResponse(data: any) {
 
   console.log('🔍 Final merged hotels:', merged.length);
 
-  return { hotels: merged };
+  // Only include hotels with 4 or 5 stars
+  const filteredMerged = merged.filter(hotel => {
+    const stars = hotel.star_rating || hotel.stars;
+    return stars === 4 || stars === 5;
+  });
+
+  return { hotels: filteredMerged };
 }
 
 // Direct HID matching function - much more efficient than fuzzy matching

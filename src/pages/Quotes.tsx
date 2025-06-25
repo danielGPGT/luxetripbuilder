@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { QuoteResponse } from '@/lib/quoteService';
 import { useQuoteService } from '@/hooks/useQuoteService';
-import { Calendar, MapPin, Users, DollarSign, Clock, Search, Filter, Download, Eye, Edit, FileText, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Users, DollarSign, Clock, Search, Filter, Download, Eye, Edit, FileText, Trash2, Plus, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Quotes() {
@@ -66,8 +66,8 @@ export default function Quotes() {
     if (searchTerm) {
       filtered = filtered.filter(quote => 
         quote.generatedItinerary?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quote.generatedItinerary?.destination?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quote.generatedItinerary?.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        quote.destination?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        quote.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         quote.clientEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         quote.clientPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         quote.id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -85,9 +85,9 @@ export default function Quotes() {
         case 'createdAt':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         case 'clientName':
-          return (a.generatedItinerary?.clientName || '').localeCompare(b.generatedItinerary?.clientName || '');
+          return (a.clientName || '').localeCompare(b.clientName || '');
         case 'destination':
-          return (a.generatedItinerary?.destination || '').localeCompare(b.generatedItinerary?.destination || '');
+          return (a.destination || '').localeCompare(b.destination || '');
         case 'totalPrice':
           return b.totalPrice - a.totalPrice;
         case 'status':
@@ -103,13 +103,22 @@ export default function Quotes() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'secondary';
       case 'confirmed':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'default';
       case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'destructive';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'secondary';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'draft': return <Clock className="h-4 w-4" />;
+      case 'confirmed': return <TrendingUp className="h-4 w-4" />;
+      case 'cancelled': return <TrendingDown className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
     }
   };
 
@@ -118,6 +127,20 @@ export default function Quotes() {
       style: 'currency',
       currency: currency || 'GBP',
     }).format(amount);
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) return 'Today';
+    if (diffInDays === 1) return 'Yesterday';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
+    return `${Math.floor(diffInDays / 365)} years ago`;
   };
 
   const getStatusCounts = () => {
@@ -130,88 +153,118 @@ export default function Quotes() {
 
   const statusCounts = getStatusCounts();
 
+  // Calculate metrics for the stats cards
+  const totalRevenue = quotes
+    .filter(q => q.status === 'confirmed')
+    .reduce((sum, q) => sum + q.totalPrice, 0);
+  
+  const conversionRate = quotes.length > 0 ? (statusCounts.confirmed / quotes.length) * 100 : 0;
+  
+  const thisMonthQuotes = quotes.filter(q => {
+    const date = new Date(q.createdAt);
+    const now = new Date();
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  }).length;
+
   return (
-    <div className="p-6">
+    <div className="mx-auto px-8 py-0 space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col pt-4 lg:flex-row justify-between items-start lg:items-end gap-6">
         <div>
-          <h1 className="text-4xl font-bold">Client Quotes</h1>
+          <h1 className="text-2xl font-bold">Client Quotes</h1>
           <p className="text-muted-foreground mt-2">
             Manage all your client quotes and itineraries
           </p>
         </div>
-        <Button asChild>
-          <Link to="/builder">
-            Create New Quote
-          </Link>
-        </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Quotes</p>
-                <p className="text-2xl font-bold">{statusCounts.all}</p>
-              </div>
-              <FileText className="h-8 w-8 text-muted-foreground" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm pt-0 pb-0">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">Total Quotes</span>
+              <span className="flex items-center gap-1 text-xs font-semibold bg-muted px-2 py-0.5 rounded-full border border-border">
+                <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                +{thisMonthQuotes}
+              </span>
             </div>
+            <div className="text-3xl font-bold text-foreground mb-4">{statusCounts.all}</div>
+            <div className="text-sm font-medium text-foreground flex items-center gap-1 mb-1">
+              {thisMonthQuotes} this month <TrendingUp className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground">Total quote volume</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Draft</p>
-                <p className="text-2xl font-bold text-yellow-600">{statusCounts.draft}</p>
-              </div>
-              <Badge className="bg-yellow-100 text-yellow-800">Draft</Badge>
+        
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm pt-0 pb-0">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">Draft Quotes</span>
+              <span className="flex items-center gap-1 text-xs font-semibold bg-muted px-2 py-0.5 rounded-full border border-border">
+                Pending
+              </span>
             </div>
+            <div className="text-3xl font-bold text-foreground mb-4">{statusCounts.draft}</div>
+            <div className="text-sm font-medium text-foreground flex items-center gap-1 mb-1">
+              Awaiting confirmation <Clock className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground">Ready for client review</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Confirmed</p>
-                <p className="text-2xl font-bold text-green-600">{statusCounts.confirmed}</p>
-              </div>
-              <Badge className="bg-green-100 text-green-800">Confirmed</Badge>
+        
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm pt-0 pb-0">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">Confirmed</span>
+              <span className="flex items-center gap-1 text-xs font-semibold bg-muted px-2 py-0.5 rounded-full border border-border">
+                <TrendingUp className="w-4 h-4" />
+                +{conversionRate.toFixed(1)}%
+              </span>
             </div>
+            <div className="text-3xl font-bold text-foreground mb-4">{statusCounts.confirmed}</div>
+            <div className="text-sm font-medium text-foreground flex items-center gap-1 mb-1">
+              Conversion rate <TrendingUp className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground">Successfully converted</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Cancelled</p>
-                <p className="text-2xl font-bold text-destructive">{statusCounts.cancelled}</p>
-              </div>
-              <Badge className="bg-red-100 text-destructive">Cancelled</Badge>
+        
+        <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm pt-0 pb-0">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">Total Revenue</span>
+              <span className="flex items-center gap-1 text-xs font-semibold bg-muted px-2 py-0.5 rounded-full border border-border">
+                <DollarSign className="w-4 h-4 text-muted-foreground" />
+                Active
+              </span>
             </div>
+            <div className="text-3xl font-bold text-foreground mb-4">{formatCurrency(totalRevenue, 'GBP')}</div>
+            <div className="text-sm font-medium text-foreground flex items-center gap-1 mb-1">
+              From confirmed quotes <TrendingUp className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground">Revenue generated</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters and Search */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+      <Card className="bg-gradient-to-b from-card/95 to-background/20 border border-border rounded-2xl shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search quotes by client, destination, or ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-12 pr-4 py-3 border border-input rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
                 />
               </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className="w-full lg:w-48 rounded-xl">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -222,7 +275,7 @@ export default function Quotes() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className="w-full lg:w-48 rounded-xl">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -237,6 +290,7 @@ export default function Quotes() {
               variant="outline" 
               onClick={loadQuotes} 
               disabled={isFetchingQuotes}
+              className="rounded-xl px-6"
             >
               {isFetchingQuotes ? 'Loading...' : 'Refresh'}
             </Button>
@@ -245,142 +299,124 @@ export default function Quotes() {
       </Card>
 
       {/* Quotes List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            All Quotes ({filteredQuotes.length} of {quotes.length})
-          </CardTitle>
+      <Card className="bg-background shadow-none p-0">
+        <CardHeader className="p-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              All Quotes ({filteredQuotes.length} of {quotes.length})
+            </CardTitle>
+            <Button asChild className="rounded-xl px-6">
+              <Link to="/new-proposal">
+                <Plus className="h-4 w-4 mr-2" />
+                Create New Quote
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {filteredQuotes.length > 0 ? (
-            <div className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredQuotes.map((quote) => (
-                <div key={quote.id} className="p-6 border rounded-lg hover:shadow-md transition-shadow bg-card">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold">
-                          {quote.generatedItinerary?.title || 'Untitled Quote'}
-                        </h3>
-                        <Badge className={getStatusColor(quote.status)}>
-                          {quote.status}
-                        </Badge>
+                <Card key={quote.id} className="group hover:shadow-lg transition-all duration-300 overflow-hidden border border-border/50 bg-card">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-[var(--primary)]" />
+                        <span className="text-sm font-medium">Quote #{quote.id.slice(0, 8)}</span>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span>{quote.generatedItinerary?.clientName || 'Unknown Client'}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>{quote.generatedItinerary?.destination || 'Destination not specified'}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{quote.generatedItinerary?.days?.length || 0} days</span>
-                        </div>
-                      </div>
+                      <Badge 
+                        variant={getStatusColor(quote.status)}
+                        className="text-xs"
+                      >
+                        {quote.status}
+                      </Badge>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-primary">
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Client</p>
+                      <p className="font-medium">{quote.clientName || quote.clientEmail || 'Not specified'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm text-muted-foreground">Destination</p>
+                      <p className="font-medium">{quote.destination || 'Not specified'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Value</p>
+                      <p className="text-xl font-bold text-[var(--primary)]">
                         {formatCurrency(quote.totalPrice, quote.currency)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(quote.createdAt).toLocaleDateString()}
-                      </div>
+                      </p>
                     </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to={`/quote/${quote.id}`}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Details
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to={`/quote/${quote.id}/edit`}>
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      Export PDF
-                    </Button>
+                    
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>{new Date(quote.createdAt).toLocaleDateString()}</span>
+                      <span>{getTimeAgo(quote.createdAt)}</span>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button variant="outline" size="sm" asChild className="flex-1 rounded-lg">
+                        <Link to={`/quote/${quote.id}`}>
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Details
+                        </Link>
+                      </Button>
+                      <Button variant="outline" size="sm" asChild className="flex-1 rounded-lg">
+                        <Link to={`/quote/${quote.id}/edit`}>
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Link>
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDeleteQuote(quote.id)}
+                        className="text-destructive hover:text-destructive rounded-lg"
+                        disabled={isDeletingQuote}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
                     {quote.status === 'draft' && (
                       <Button 
                         size="sm" 
                         onClick={() => handleConfirmQuote(quote.id)}
                         disabled={isConfirmingQuote}
+                        className="w-full rounded-lg"
                       >
                         {isConfirmingQuote ? 'Confirming...' : 'Confirm Quote'}
                       </Button>
                     )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 border-destructive"
-                          disabled={isDeletingQuote}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          {isDeletingQuote ? 'Deleting...' : 'Delete'}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Quote</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this quote? This action cannot be undone.
-                            <br />
-                            <br />
-                            <strong>Quote:</strong> {quote.generatedItinerary?.title || 'Untitled Quote'}
-                            <br />
-                            <strong>Client:</strong> {quote.generatedItinerary?.clientName || 'Unknown Client'}
-                            <br />
-                            <strong>Total:</strong> {formatCurrency(quote.totalPrice, quote.currency)}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteQuote(quote.id)}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Delete Quote
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <div className="text-muted-foreground mb-4">
-                <div className="text-muted-foreground mb-4">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium mb-2">
-                    {quotes.length === 0 ? 'No quotes yet' : 'No quotes match your filters'}
-                  </h3>
-                  <p className="text-sm">
-                    {quotes.length === 0 
-                      ? 'Create your first client quote to get started'
-                      : 'Try adjusting your search or filter criteria'
-                    }
-                  </p>
-                </div>
-                {quotes.length === 0 && (
-                  <Button asChild>
-                    <Link to="/builder">
-                      Create Your First Quote
-                    </Link>
-                  </Button>
-                )}
+            <div className="text-center py-16">
+              <div className="mx-auto w-16 h-16 bg-muted rounded-xl flex items-center justify-center mb-6">
+                <FileText className="h-8 w-8 text-muted-foreground" />
               </div>
+              <h3 className="text-lg font-semibold mb-3">
+                {quotes.length === 0 ? 'No quotes yet' : 'No quotes match your filters'}
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                {quotes.length === 0 
+                  ? 'Create your first client quote to get started'
+                  : 'Try adjusting your search or filter criteria'
+                }
+              </p>
+              {quotes.length === 0 && (
+                <Button asChild className="bg-[var(--primary)] hover:bg-[var(--primary)]/90 px-6 py-3 rounded-xl">
+                  <Link to="/builder">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Quote
+                  </Link>
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
