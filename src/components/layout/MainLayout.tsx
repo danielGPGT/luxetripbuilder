@@ -16,7 +16,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         onCollapsedChange={setSidebarCollapsed} 
       />
       <div 
-        className={`bg-sidebar transition-all duration-300 ${
+        className={`transition-all duration-300 ${
           sidebarCollapsed ? "ml-20" : "ml-72"
         }`}
       >

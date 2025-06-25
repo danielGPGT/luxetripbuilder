@@ -33,6 +33,7 @@ import UndrawGallery from "./pages/UndrawGallery";
 import TeamInvitation from './pages/TeamInvitation';
 import TeamInvitationSignup from './pages/TeamInvitationSignup';
 import { RateHawkTest } from './components/RateHawkTest';
+import Analytics from './pages/Analytics';
 import "./App.css";
 
 function App() {
@@ -135,6 +136,7 @@ function AppContent() {
             <TeamInvitationSignup />
           </PublicLayout>
         } />
+        
         {/* Protected routes with sidebar */}
         <Route
           path="/*"
@@ -143,6 +145,7 @@ function AppContent() {
               <MainLayout>
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/analytics" element={<Analytics />} />
                   <Route path="/new-proposal" element={<NewProposal />} />
                   <Route path="/new-trip" element={<div>New Trip Page (Coming Soon)</div>} />
                   <Route path="/itineraries" element={<Itineraries />} />

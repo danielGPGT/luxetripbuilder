@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { WandSparkles, Instagram, Github, Linkedin, User, Settings, LogOut, ChevronDown, Sun, Moon, Menu, X, Calendar, Clock, Phone, Mail, TrendingUp, Star, Search as SearchIcon, ChevronLeft, ChevronRight, PanelLeft, Crown } from 'lucide-react';
+import { WandSparkles, Instagram, Github, Linkedin, User, Settings, LogOut, ChevronDown, Sun, Moon, Menu, X, Calendar, Clock, Phone, Mail, TrendingUp, Star, Search as SearchIcon, ChevronLeft, ChevronRight, PanelLeft, Crown, HelpCircle, Bell, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import LuxeLogo from '@/assets/imgs/logo.svg';
 import { useTier } from '@/hooks/useTier';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface HeaderProps {
   showNavigation?: boolean;
@@ -40,8 +41,8 @@ export function Header({ showNavigation = true, sidebarCollapsed, onSidebarColla
   };
 
   return (
-    <header className="pr-4 pl-2 sticky top-0 z-50 w-full border-b h-16 bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-sidebar/60">
-      <div className=" flex h-16 items-center px-2 md:px-4 gap-2">
+    <header className="sticky top-0 z-50 w-full h-16 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className=" flex h-16 items-center px-2 md:px-4 gap-2 mx-auto">
         {/* Sidebar collapse/expand button */}
         {typeof sidebarCollapsed === 'boolean' && onSidebarCollapseToggle && (
           <Button variant="ghost" size="icon" className="mr-1" onClick={onSidebarCollapseToggle}>
@@ -66,13 +67,41 @@ export function Header({ showNavigation = true, sidebarCollapsed, onSidebarColla
         </div>
         {/* Plan badge (desktop only) */}
         <div className="hidden sm:flex items-center gap-2">
-          <Badge variant="outline" className="bg-[] text-primary px-3 py-1 shadow-sm font-semibold uppercase gap-1 flex items-center">
-            {(planLabel !== 'Free' && planLabel !== 'Pro') && (
-              <Crown className="w-3.5 h-3.5 text-yellow-400" />
-            )}
-            {planLabel}
-            <span className="text-xs text-muted-foreground">plan</span>
-          </Badge>
+          {/* New icons next to plan */}
+          <Button variant="ghost" size="icon" className="ml-1">
+            <HelpCircle className="h-5 w-5" />
+            <span className="sr-only">Help</span>
+          </Button>
+          <div className="relative">
+            <Button variant="ghost" size="icon">
+              <Bell className="h-5 w-5" />
+              <span className="sr-only">Notifications</span>
+            </Button>
+            <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
+          </div>
+          <Button variant="ghost" size="icon">
+            <Settings className="h-5 w-5" />
+            <span className="sr-only">Settings</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+          >
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button asChild size="small" className="p-1 bg-primary rounded-full hover:bg-primary/80 text-primary-foreground ml-1">
+                <Link to="/new-proposal">
+                  <Plus className="h-6 w-6" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent variant="default">+ New Proposal</TooltipContent>
+          </Tooltip>
         </div>
                 {/* Divider (desktop only) */}
         <div className="hidden sm:block h-8 w-px bg-border mx-3" />
@@ -101,16 +130,8 @@ export function Header({ showNavigation = true, sidebarCollapsed, onSidebarColla
               </Button>
             </div>
           )}
+
           {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          >
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
           {/* Auth/User Section */}
           {user ? (
             <DropdownMenu>
@@ -165,6 +186,13 @@ export function Header({ showNavigation = true, sidebarCollapsed, onSidebarColla
               </Button>
             </div>
           )}
+                              <Badge variant="outline" className="bg-[] text-primary px-3 py-1 shadow-sm font-semibold uppercase gap-1 flex items-center">
+            {(planLabel !== 'Free' && planLabel !== 'Pro') && (
+              <Crown className="w-3.5 h-3.5 text-yellow-400" />
+            )}
+            {planLabel}
+            <span className="text-xs text-muted-foreground">plan</span>
+          </Badge>
         </div>
         {/* Mobile menu button - only show if navigation is enabled */}
         {showNavigation && (

@@ -22,6 +22,7 @@ import {
   LogOut,
   Bell,
   CreditCard,
+  BarChart3,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthProvider";
 import Logo from "@/assets/imgs/logo.svg";
@@ -53,6 +54,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
   // Main navigation
   const navItems = [
     { label: "Dashboard", icon: Home, href: "/dashboard" },
+    { label: "Analytics", icon: BarChart3, href: "/analytics" },
     { label: "New Proposal", icon: FilePlus2, href: "/new-proposal" },
     { label: "Quotes", icon: FileText, href: "/quotes" },
     { label: "Bookings", icon: CheckCircle, href: "/bookings" },
@@ -93,8 +95,8 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
     >
       {/* Branding & Collapse */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--sidebar-border)]">
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <img src={Logo} alt="AItinerary Logo" className="h-8" />
+        <Link to="/" className="flex items-center gap-2">
+          <img src={Logo} alt="AItinerary Logo" className="h-10" />
         </Link>
       </div>
 
@@ -110,8 +112,8 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     active
                       ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)] font-semibold"
-                      : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)]"
-                  } ${collapsed ? "justify-center px-2" : "justify-start"}`}
+                      : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)]over:text-[var(--sidebar-pryccentoreground)]"
+                  } ${collapsed ? "justify-center px-2" : "justif)]y-start"}`}
                 >
                   <item.icon className="w-5 h-5" />
                   {!collapsed && <span className="truncate flex-1 text-left">{item.label}</span>}

@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Database } from '@/types/supabase';
 
-type PlanType = 'free' | 'pro' | 'agency' | 'enterprise';
+type PlanType = 'starter' | 'professional' | 'enterprise';
 type SubscriptionStatus = 'active' | 'canceled' | 'past_due';
 
 interface Subscription {
@@ -26,7 +26,7 @@ interface PlanLimits {
 
 // Define feature access for each plan
 const PLAN_FEATURES: Record<PlanType, FeatureAccess> = {
-  free: {
+  starter: {
     basic_booking: true,
     ai_itinerary_generator: true,
     basic_templates: true,
@@ -42,7 +42,7 @@ const PLAN_FEATURES: Record<PlanType, FeatureAccess> = {
     bulk_operations: false,
     priority_support: false,
   },
-  pro: {
+  professional: {
     basic_booking: true,
     ai_itinerary_generator: true,
     basic_templates: true,
@@ -52,22 +52,6 @@ const PLAN_FEATURES: Record<PlanType, FeatureAccess> = {
     custom_branding: true,
     api_access: true,
     team_collaboration: false,
-    white_label: true,
-    advanced_ai: true,
-    analytics: true,
-    bulk_operations: true,
-    priority_support: true,
-  },
-  agency: {
-    basic_booking: true,
-    ai_itinerary_generator: true,
-    basic_templates: true,
-    email_support: true,
-    pdf_export: true,
-    media_library: true,
-    custom_branding: true,
-    api_access: true,
-    team_collaboration: true,
     white_label: true,
     advanced_ai: true,
     analytics: true,
@@ -94,26 +78,19 @@ const PLAN_FEATURES: Record<PlanType, FeatureAccess> = {
 
 // Define usage limits for each plan
 const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
-  free: {
+  starter: {
     itineraries_per_month: 5,
     pdf_downloads_per_month: 10,
     api_calls_per_month: 0,
     team_members: 1,
     storage_gb: 1,
   },
-  pro: {
+  professional: {
     itineraries_per_month: -1, // Unlimited
     pdf_downloads_per_month: -1, // Unlimited
     api_calls_per_month: 1000,
     team_members: 1,
     storage_gb: 10,
-  },
-  agency: {
-    itineraries_per_month: -1, // Unlimited
-    pdf_downloads_per_month: -1, // Unlimited
-    api_calls_per_month: 5000,
-    team_members: 10,
-    storage_gb: 50,
   },
   enterprise: {
     itineraries_per_month: -1, // Unlimited
@@ -127,7 +104,7 @@ const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 export class TierManager {
   private static instance: TierManager;
   private currentUser: string | null = null;
-  private currentPlan: PlanType = 'free';
+  private currentPlan: PlanType = 'starter';
   private subscription: Subscription | null = null;
   private initialized = false;
 
@@ -147,43 +124,42 @@ export class TierManager {
 
     this.currentUser = userId;
     await this.loadUserSubscription();
+    
+    // If no subscription exists, create a default starter subscription
+    if (!this.subscription) {
+      const success = await this.createSubscription(userId, 'starter');
+      if (success) {
+        await this.loadUserSubscription(); // Reload after creating
+      }
+    }
+    
     this.initialized = true;
   }
 
   private async loadUserSubscription(): Promise<void> {
     if (!this.currentUser) return;
     try {
-      // Find the user's team (owner or member)
-      const { data: memberTeams } = await supabase
-        .from('team_members')
-        .select('team_id')
-        .eq('user_id', this.currentUser);
-      const memberTeamIds = memberTeams?.map(tm => tm.team_id) || [];
-      let teamId = null;
-      if (memberTeamIds.length > 0) {
-        teamId = memberTeamIds[0];
-      }
-      if (!teamId) {
-        this.subscription = null;
-        this.currentPlan = 'free';
-        return;
-      }
-      // Fetch the team's subscription
+      // Fetch the user's subscription directly
       const { data: subscription, error: subError } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('team_id', teamId)
+        .eq('user_id', this.currentUser)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
+
       if (subError || !subscription) {
         this.subscription = null;
-        this.currentPlan = 'free';
+        this.currentPlan = 'starter';
       } else {
         this.subscription = subscription;
         this.currentPlan = subscription.plan_type;
       }
     } catch (error) {
+      console.error('Error loading user subscription:', error);
       this.subscription = null;
-      this.currentPlan = 'free';
+      this.currentPlan = 'starter';
     }
   }
 
@@ -201,6 +177,10 @@ export class TierManager {
   }
 
   getLimit(limit: string): number {
+    if (!this.currentPlan || !PLAN_LIMITS[this.currentPlan]) {
+      // Fallback to starter plan if currentPlan is invalid
+      return PLAN_LIMITS['starter'][limit] || 0;
+    }
     const planLimits = PLAN_LIMITS[this.currentPlan];
     return planLimits[limit] || 0;
   }
@@ -219,6 +199,13 @@ export class TierManager {
 
   getPlanLimits(): PlanLimits {
     return PLAN_LIMITS[this.currentPlan];
+  }
+
+  getPlanInfo(): PlanLimits & FeatureAccess {
+    return {
+      ...PLAN_LIMITS[this.currentPlan],
+      ...PLAN_FEATURES[this.currentPlan],
+    };
   }
 
   isActive(): boolean {
@@ -277,7 +264,7 @@ export class TierManager {
   // Get plan upgrade suggestions based on usage
   getUpgradeSuggestions(currentUsage: Record<string, number>): PlanType[] {
     const suggestions: PlanType[] = [];
-    const planHierarchy: PlanType[] = ['free', 'pro', 'agency', 'enterprise'];
+    const planHierarchy: PlanType[] = ['starter', 'professional', 'enterprise'];
     const currentPlanIndex = planHierarchy.indexOf(this.currentPlan);
 
     // Check if user is hitting limits
@@ -310,7 +297,7 @@ export class TierManager {
 
   // Get the minimum plan required for a feature
   getMinimumPlanForFeature(feature: string): PlanType | null {
-    const planHierarchy: PlanType[] = ['free', 'pro', 'agency', 'enterprise'];
+    const planHierarchy: PlanType[] = ['starter', 'professional', 'enterprise'];
     
     for (const plan of planHierarchy) {
       if (PLAN_FEATURES[plan][feature]) {
@@ -326,7 +313,7 @@ export class TierManager {
     const minimumPlan = this.getMinimumPlanForFeature(feature);
     if (!minimumPlan) return [];
     
-    const planHierarchy: PlanType[] = ['free', 'pro', 'agency', 'enterprise'];
+    const planHierarchy: PlanType[] = ['starter', 'professional', 'enterprise'];
     const currentPlanIndex = planHierarchy.indexOf(this.currentPlan);
     const minimumPlanIndex = planHierarchy.indexOf(minimumPlan);
     
@@ -340,28 +327,39 @@ export class TierManager {
       const now = new Date();
       const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
-      // Use upsert to handle duplicate key errors
+      // First check if user already has an active subscription
+      const { data: existingSubscription, error: checkError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking existing subscription:', checkError);
+        return false;
+      }
+
+      if (existingSubscription) {
+        return true; // User already has a subscription
+      }
+
+      // Create new subscription
       const { error } = await supabase
         .from('subscriptions')
-        .upsert({
+        .insert({
           user_id: userId,
           plan_type: planType,
           status: 'active',
           current_period_start: now.toISOString(),
           current_period_end: periodEnd.toISOString(),
           cancel_at_period_end: false,
-        }, {
-          onConflict: 'user_id'
         });
 
       if (error) {
         if (error.code === '42703') {
           console.warn('Subscriptions table not found, skipping subscription creation');
           return true; // Allow the operation to continue
-        }
-        if (error.code === '23505') {
-          console.log('Subscription already exists for user, skipping creation');
-          return true; // Subscription already exists, that's fine
         }
         console.error('Error creating subscription:', error);
         return false;
@@ -377,9 +375,257 @@ export class TierManager {
   // Reset the manager (useful for testing or user logout)
   reset(): void {
     this.currentUser = null;
-    this.currentPlan = 'free';
+    this.currentPlan = 'starter';
     this.subscription = null;
     this.initialized = false;
+  }
+
+  // Get current usage for the user
+  async getCurrentUsage(): Promise<{
+    itineraries_created: number;
+    pdf_downloads: number;
+    api_calls: number;
+    limit_reached: {
+      itineraries: boolean;
+      pdf_downloads: boolean;
+      api_calls: boolean;
+    };
+  }> {
+    if (!this.currentUser) {
+      return {
+        itineraries_created: 0,
+        pdf_downloads: 0,
+        api_calls: 0,
+        limit_reached: {
+          itineraries: false,
+          pdf_downloads: false,
+          api_calls: false,
+        },
+      };
+    }
+
+    try {
+      // Get current month's usage from the database
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // Fetch usage data from the database
+      const { data: usageData, error } = await supabase
+        .from('usage_tracking')
+        .select('*')
+        .eq('user_id', this.currentUser)
+        .eq('month', monthKey)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.error('Error fetching usage data:', error);
+      }
+
+      const usage = usageData || {
+        itineraries_created: 0,
+        pdf_downloads: 0,
+        api_calls: 0,
+      };
+
+      // Ensure currentPlan is valid before checking limits
+      if (!this.currentPlan || !PLAN_LIMITS[this.currentPlan]) {
+        this.currentPlan = 'starter';
+      }
+
+      // Check if limits are reached
+      const limit_reached = {
+        itineraries: !this.canPerformAction('itineraries_per_month', usage.itineraries_created),
+        pdf_downloads: !this.canPerformAction('pdf_downloads_per_month', usage.pdf_downloads),
+        api_calls: !this.canPerformAction('api_calls_per_month', usage.api_calls),
+      };
+
+      return {
+        ...usage,
+        limit_reached,
+      };
+    } catch (error) {
+      console.error('Error getting current usage:', error);
+      return {
+        itineraries_created: 0,
+        pdf_downloads: 0,
+        api_calls: 0,
+        limit_reached: {
+          itineraries: false,
+          pdf_downloads: false,
+          api_calls: false,
+        },
+      };
+    }
+  }
+
+  // Increment usage for a specific type
+  async incrementUsage(type: 'itineraries' | 'pdf_downloads' | 'api_calls'): Promise<boolean> {
+    if (!this.currentUser) return false;
+
+    try {
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // Get current usage
+      const { data: currentUsage, error: fetchError } = await supabase
+        .from('usage_tracking')
+        .select('*')
+        .eq('user_id', this.currentUser)
+        .eq('month', monthKey)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error fetching current usage:', fetchError);
+        return false;
+      }
+
+      const usage = currentUsage || {
+        user_id: this.currentUser,
+        month: monthKey,
+        itineraries_created: 0,
+        pdf_downloads: 0,
+        api_calls: 0,
+      };
+
+      // Check if we can perform this action
+      const usageKey = `${type}_${type === 'itineraries' ? 'created' : type === 'pdf_downloads' ? 'downloads' : 'calls'}`;
+      if (!this.canPerformAction(`${type}_per_month`, usage[usageKey])) {
+        return false;
+      }
+
+      // Increment the usage
+      usage[usageKey] += 1;
+
+      // Upsert the usage data
+      const { error: upsertError } = await supabase
+        .from('usage_tracking')
+        .upsert(usage, {
+          onConflict: 'user_id,month',
+        });
+
+      if (upsertError) {
+        console.error('Error updating usage:', upsertError);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error incrementing usage:', error);
+      return false;
+    }
+  }
+
+  // Check if user can create itinerary
+  canCreateItinerary(): boolean {
+    return this.canAccess('ai_itinerary_generator');
+  }
+
+  // Check if user can download PDF
+  canDownloadPDF(): boolean {
+    return this.canAccess('pdf_export');
+  }
+
+  // Check if user can use API
+  canUseAPI(): boolean {
+    return this.canAccess('api_access');
+  }
+
+  // Check if user has custom branding
+  hasCustomBranding(): boolean {
+    return this.canAccess('custom_branding');
+  }
+
+  // Check if user has white label
+  hasWhiteLabel(): boolean {
+    return this.canAccess('white_label');
+  }
+
+  // Check if user has priority support
+  hasPrioritySupport(): boolean {
+    return this.canAccess('priority_support');
+  }
+
+  // Check if user has team collaboration
+  hasTeamCollaboration(): boolean {
+    return this.canAccess('team_collaboration');
+  }
+
+  // Check if user has advanced AI features
+  hasAdvancedAIFeatures(): boolean {
+    return this.canAccess('advanced_ai');
+  }
+
+  // Get upgrade message
+  getUpgradeMessage(): string {
+    const planHierarchy: PlanType[] = ['starter', 'professional', 'enterprise'];
+    const currentPlanIndex = planHierarchy.indexOf(this.currentPlan);
+    
+    if (currentPlanIndex >= planHierarchy.length - 1) {
+      return 'You are already on the highest tier.';
+    }
+
+    const nextPlan = planHierarchy[currentPlanIndex + 1];
+    return `Upgrade to ${nextPlan} to unlock more features and higher limits.`;
+  }
+
+  // Get limit reached message
+  getLimitReachedMessage(type: 'itineraries' | 'pdf_downloads' | 'api_calls'): string {
+    const planHierarchy: PlanType[] = ['starter', 'professional', 'enterprise'];
+    const currentPlanIndex = planHierarchy.indexOf(this.currentPlan);
+    
+    if (currentPlanIndex >= planHierarchy.length - 1) {
+      return `You have reached your ${type} limit for this month.`;
+    }
+
+    const nextPlan = planHierarchy[currentPlanIndex + 1];
+    return `You have reached your ${type} limit. Upgrade to ${nextPlan} for higher limits.`;
+  }
+
+  // Update subscription
+  async updateSubscription(userId: string, planType: PlanType): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({ plan_type: planType })
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error updating subscription:', error);
+        return false;
+      }
+
+      // Reload the subscription data
+      await this.loadUserSubscription();
+      return true;
+    } catch (error) {
+      console.error('Error in updateSubscription:', error);
+      return false;
+    }
+  }
+
+  // Cancel subscription
+  async cancelSubscription(userId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({ 
+          cancel_at_period_end: true,
+          status: 'canceled'
+        })
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error canceling subscription:', error);
+        return false;
+      }
+
+      // Reload the subscription data
+      await this.loadUserSubscription();
+      return true;
+    } catch (error) {
+      console.error('Error in cancelSubscription:', error);
+      return false;
+    }
   }
 }
 

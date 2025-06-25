@@ -40,15 +40,35 @@ export function UsageDashboard() {
       const tierManager = TierManager.getInstance();
       await tierManager.initialize(user.id);
       
-      const currentUsage = tierManager.getCurrentUsage();
+      const currentUsage = await tierManager.getCurrentUsage();
       const currentPlan = tierManager.getCurrentPlan();
-      const planLimits = tierManager.getPlanLimits();
+      const planInfo = tierManager.getPlanInfo();
       
       setUsage(currentUsage);
       setPlan(currentPlan);
-      setLimits(planLimits);
+      setLimits(planInfo);
     } catch (error) {
       console.error('Error loading usage data:', error);
+      // Set default values on error
+      setUsage({
+        itineraries_created: 0,
+        pdf_downloads: 0,
+        api_calls: 0,
+        limit_reached: {
+          itineraries: false,
+          pdf_downloads: false,
+          api_calls: false,
+        },
+      });
+      setPlan('starter');
+      setLimits({
+        itineraries_per_month: 5,
+        pdf_downloads_per_month: 10,
+        api_calls_per_month: 0,
+        media_library: false,
+        custom_branding: false,
+        team_collaboration: false,
+      });
     } finally {
       setLoading(false);
     }
@@ -108,25 +128,37 @@ export function UsageDashboard() {
     return null;
   }
 
+  // Ensure usage has the required properties with fallbacks
+  const safeUsage = {
+    itineraries_created: usage.itineraries_created || 0,
+    pdf_downloads: usage.pdf_downloads || 0,
+    api_calls: usage.api_calls || 0,
+    limit_reached: {
+      itineraries: usage.limit_reached?.itineraries || false,
+      pdf_downloads: usage.limit_reached?.pdf_downloads || false,
+      api_calls: usage.limit_reached?.api_calls || false,
+    },
+  };
+
   const usageItems = [
     {
       title: 'Itineraries Created',
-      current: usage.itineraries_created,
-      limit: limits.itineraries_per_month,
+      current: safeUsage.itineraries_created,
+      limit: limits.itineraries_per_month || 0,
       icon: <FileText className="h-4 w-4" />,
       unit: 'itineraries'
     },
     {
       title: 'PDF Downloads',
-      current: usage.pdf_downloads,
-      limit: limits.pdf_downloads_per_month,
+      current: safeUsage.pdf_downloads,
+      limit: limits.pdf_downloads_per_month || 0,
       icon: <Download className="h-4 w-4" />,
       unit: 'downloads'
     },
     {
       title: 'API Calls',
-      current: usage.api_calls,
-      limit: limits.api_calls_per_month,
+      current: safeUsage.api_calls,
+      limit: limits.api_calls_per_month || 0,
       icon: <Code className="h-4 w-4" />,
       unit: 'calls'
     }
@@ -135,24 +167,24 @@ export function UsageDashboard() {
   const featureAccess = [
     {
       title: 'Media Library',
-      hasAccess: limits.media_library_access,
+      hasAccess: limits.media_library || false,
       icon: <Image className="h-4 w-4" />
     },
     {
       title: 'Custom Branding',
-      hasAccess: limits.custom_branding,
+      hasAccess: limits.custom_branding || false,
       icon: <Crown className="h-4 w-4" />
     },
     {
       title: 'Team Collaboration',
-      hasAccess: limits.team_collaboration,
+      hasAccess: limits.team_collaboration || false,
       icon: <Users className="h-4 w-4" />
     }
   ];
 
-  const hasReachedLimits = usage.limit_reached.itineraries || 
-                          usage.limit_reached.pdf_downloads || 
-                          usage.limit_reached.api_calls;
+  const hasReachedLimits = safeUsage.limit_reached.itineraries || 
+                          safeUsage.limit_reached.pdf_downloads || 
+                          safeUsage.limit_reached.api_calls;
 
   return (
     <div className="space-y-6">
