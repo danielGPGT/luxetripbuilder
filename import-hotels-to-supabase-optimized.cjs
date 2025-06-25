@@ -25,6 +25,18 @@ const PROGRESS_FILE = 'import-progress.json';
 
 console.log('[DEBUG] About to process file:', INPUT_FILE);
 
+// Star rating filtering criteria
+const FILTER_CRITERIA = {
+  // Star rating: only 3-5 star hotels
+  minStarRating: 3,
+  
+  // Test hotels to exclude
+  excludedNames: ['test', 'Test', 'TEST', 'do not book', 'Do Not Book'],
+  
+  // Only these hotel types are allowed (everything else is excluded)
+  allowedTypes: ['Hotel', 'Resort']
+};
+
 // Optimized settings to avoid timeouts
 const BATCH_SIZE = 50; // Much smaller batches
 const MAX_CONCURRENT_BATCHES = 5; // More concurrent batches
@@ -34,6 +46,7 @@ const TIMEOUT_DELAY = 1000; // 1 second delay between batches
 
 // Performance tracking
 let totalProcessed = 0;
+let totalFiltered = 0;
 let totalBatches = 0;
 let startTime = Date.now();
 let clientIndex = 0;
@@ -61,10 +74,51 @@ function saveProgress(lineNumber) {
     fs.writeFileSync(PROGRESS_FILE, JSON.stringify({
       lastProcessedLine: lineNumber,
       timestamp: new Date().toISOString(),
-      totalProcessed: totalProcessed
+      totalProcessed: totalProcessed,
+      totalFiltered: totalFiltered
     }));
   } catch (error) {
     console.error('[ERROR] Failed to save progress:', error.message);
+  }
+}
+
+// Check if hotel meets all filtering criteria
+function meetsFilterCriteria(hotel) {
+  try {
+    // Skip test hotels
+    if (FILTER_CRITERIA.excludedNames.some(name => 
+      hotel.name && hotel.name.toLowerCase().includes(name.toLowerCase())
+    )) {
+      return false;
+    }
+    
+    // MUST have a star rating (not null) and meet minimum requirement
+    if (!hotel.star_rating || hotel.star_rating === null || hotel.star_rating < FILTER_CRITERIA.minStarRating) {
+      return false;
+    }
+    
+    // Check hotel type - must be an actual hotel
+    if (hotel.kind) {
+      const hotelType = hotel.kind.toLowerCase();
+      
+      // Check if it's in allowed types (if specified)
+      if (FILTER_CRITERIA.allowedTypes.length > 0) {
+        const isAllowedType = FILTER_CRITERIA.allowedTypes.some(type => 
+          hotelType.includes(type.toLowerCase())
+        );
+        if (!isAllowedType) {
+          return false;
+        }
+      }
+    } else {
+      // If no kind specified, exclude it
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('[ERROR] Error checking filter criteria:', error.message);
+    return false;
   }
 }
 
@@ -175,7 +229,9 @@ async function processBatchesConcurrently(batches) {
 }
 
 async function processHotelDumpOptimized(filePath) {
-  console.log('[INFO] Starting optimized hotel import to Supabase...');
+  console.log('[INFO] Starting optimized hotel import to Supabase with comprehensive filtering...');
+  console.log(`[CONFIG] Min star rating: ${FILTER_CRITERIA.minStarRating}`);
+  console.log(`[CONFIG] Allowed hotel types: ${FILTER_CRITERIA.allowedTypes.join(', ')}`);
   console.log(`[CONFIG] Batch size: ${BATCH_SIZE}, Max concurrent batches: ${MAX_CONCURRENT_BATCHES}, Clients: ${clients.length}`);
   console.log(`[CONFIG] Using individual inserts to avoid timeouts`);
   
@@ -192,6 +248,7 @@ async function processHotelDumpOptimized(filePath) {
   let pendingBatches = [];
   let processedCount = 0;
   let skippedLines = 0;
+  let filteredCount = 0;
   
   // Create readline interface for streaming
   const fileStream = fs.createReadStream(filePath, { encoding: 'utf8' });
@@ -200,7 +257,7 @@ async function processHotelDumpOptimized(filePath) {
     crlfDelay: Infinity
   });
   
-  console.log('[INFO] Starting to process file line by line...');
+  console.log('[INFO] Starting to process file line by line with comprehensive filtering...');
   
   for await (const line of rl) {
     lineCount++;
@@ -221,10 +278,15 @@ async function processHotelDumpOptimized(filePath) {
         continue;
       }
       
+      // Apply comprehensive filtering (star rating + hotel type)
+      if (meetsFilterCriteria(d)) {
       const mappedHotel = mapHotel(d);
       if (mappedHotel) {
         batch.push(mappedHotel);
         processedCount++;
+        }
+      } else {
+        filteredCount++;
       }
       
       // Process batch when it reaches the target size
@@ -247,7 +309,7 @@ async function processHotelDumpOptimized(filePath) {
           // Progress update
           const elapsed = Date.now() - startTime;
           const rate = Math.round(totalProcessed / (elapsed / 1000));
-          console.log(`[PROGRESS] Processed ${totalProcessed} hotels in ${Math.round(elapsed/1000)}s (${rate} hotels/sec) - Line ${lineCount}`);
+          console.log(`[PROGRESS] Processed ${totalProcessed} hotels, filtered ${filteredCount} in ${Math.round(elapsed/1000)}s (${rate} hotels/sec) - Line ${lineCount}`);
           
           // Memory cleanup
           if (global.gc) {
@@ -258,7 +320,7 @@ async function processHotelDumpOptimized(filePath) {
       
       // Progress indicator every 1,000 lines
       if (lineCount % 1000 === 0) {
-        console.log(`[PROGRESS] Read ${lineCount} lines, processed ${processedCount} hotels, skipped ${skippedLines} lines...`);
+        console.log(`[PROGRESS] Read ${lineCount} lines, processed ${processedCount} hotels, filtered ${filteredCount}, skipped ${skippedLines} lines...`);
       }
       
     } catch (err) {
@@ -283,6 +345,7 @@ async function processHotelDumpOptimized(filePath) {
   console.log('\n[SUMMARY] Import completed!');
   console.log(`[SUMMARY] Total lines read: ${lineCount}`);
   console.log(`[SUMMARY] Lines skipped (already processed): ${skippedLines}`);
+  console.log(`[SUMMARY] Hotels filtered out: ${filteredCount}`);
   console.log(`[SUMMARY] Total processed: ${totalProcessed}`);
   console.log(`[SUMMARY] Failed hotels: ${failedHotels.length}`);
   console.log(`[SUMMARY] Total time: ${Math.round(totalTime/1000)}s`);

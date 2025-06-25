@@ -249,7 +249,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="px-4 py-8 space-y-8">
+    <div className="px-8 py-8 space-y-8">
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl p-8 text-foreground shadow-xl">
         <div className="absolute inset-0 bg-card" />

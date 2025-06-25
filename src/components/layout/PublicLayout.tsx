@@ -1,4 +1,4 @@
-import { Header } from "./Header";
+import { PublicHeader } from "./PublicHeader";
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -7,7 +7,7 @@ interface PublicLayoutProps {
 export function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div className="min-h-screen w-full bg-[var(--background)]">
-      <Header />
+      <PublicHeader />
       <main className="pt-8 text-[var(--foreground)]">
         {children}
       </main>
