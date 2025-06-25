@@ -40,8 +40,8 @@ export function Header({ showNavigation = true, sidebarCollapsed, onSidebarColla
   };
 
   return (
-    <header className="pr-4 pl-2 sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className=" flex h-14 items-center px-2 md:px-4 gap-2">
+    <header className="pr-4 pl-2 sticky top-0 z-50 w-full border-b h-16 bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-sidebar/60">
+      <div className=" flex h-16 items-center px-2 md:px-4 gap-2">
         {/* Sidebar collapse/expand button */}
         {typeof sidebarCollapsed === 'boolean' && onSidebarCollapseToggle && (
           <Button variant="ghost" size="icon" className="mr-1" onClick={onSidebarCollapseToggle}>

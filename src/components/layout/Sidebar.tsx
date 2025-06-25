@@ -92,9 +92,9 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
       } bg-[var(--sidebar)] border-r border-[var(--sidebar-border)]`}
     >
       {/* Branding & Collapse */}
-      <div className="flex items-center justify-between h-12 my-2 px-4 border-b border-[var(--sidebar-border)]">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--sidebar-border)]">
         <Link to="/dashboard" className="flex items-center gap-2">
-          <img src={Logo} alt="AItinerary Logo" className="h-9" />
+          <img src={Logo} alt="AItinerary Logo" className="h-8" />
         </Link>
       </div>
 
