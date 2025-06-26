@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { gemini, type TripPreferences } from './gemini';
 import { QuoteInput } from '@/utils/createQuotePayload';
+import { CRMService } from './crmService';
 
 export interface QuoteResponse {
   id: string;
@@ -9,6 +10,7 @@ export interface QuoteResponse {
   currency: string;
   generatedItinerary: any;
   createdAt: string;
+  clientId?: string;
   clientEmail?: string;
   clientPhone?: string;
   clientAddress?: {
@@ -57,6 +59,38 @@ export class QuoteService {
         throw new Error('User not authenticated');
       }
 
+      // Handle client creation/linking
+      let clientId = quoteData.clientId;
+      
+      if (!clientId && quoteData.tripDetails.clientName) {
+        // Try to find existing client by name and email
+        const clients = await CRMService.searchClients(quoteData.tripDetails.clientName);
+        const existingClient = clients.find(client => 
+          client.email === quoteData.tripDetails.clientEmail ||
+          `${client.firstName} ${client.lastName}` === quoteData.tripDetails.clientName
+        );
+
+        if (existingClient) {
+          clientId = existingClient.id;
+        } else {
+          // Create new client from quote data
+          const [firstName, ...lastNameParts] = quoteData.tripDetails.clientName.split(' ');
+          const lastName = lastNameParts.join(' ');
+          
+          const newClient = await CRMService.createClient({
+            firstName,
+            lastName,
+            email: quoteData.tripDetails.clientEmail,
+            phone: quoteData.tripDetails.clientPhone,
+            address: quoteData.tripDetails.clientAddress,
+            status: 'active',
+            source: 'quote_creation',
+          });
+          
+          clientId = newClient.id;
+        }
+      }
+
       // Calculate base costs
       const baseCost = await this.calculateBaseCosts(quoteData);
       
@@ -98,6 +132,7 @@ export class QuoteService {
         .from('quotes')
         .insert({
           user_id: user.id,
+          client_id: clientId,
           client_name: quoteData.tripDetails.clientName,
           client_email: quoteData.tripDetails.clientEmail,
           client_phone: quoteData.tripDetails.clientPhone,
@@ -131,6 +166,17 @@ export class QuoteService {
         throw new Error(`Failed to save quote: ${error.message}`);
       }
 
+      // Create interaction record for the client
+      if (clientId) {
+        await CRMService.createInteraction({
+          clientId,
+          interactionType: 'quote_sent',
+          subject: `Quote for ${quoteData.tripDetails.destination}`,
+          content: `Generated quote for ${quoteData.tripDetails.destination} trip`,
+          outcome: 'Quote created and sent to client',
+        });
+      }
+
       return {
         id: quote.id,
         status: quote.status,
@@ -138,6 +184,7 @@ export class QuoteService {
         currency: quote.currency,
         generatedItinerary: quote.generated_itinerary,
         createdAt: quote.created_at,
+        clientId: quote.client_id,
         clientEmail: quote.client_email,
         clientPhone: quote.client_phone,
         clientAddress: quote.client_address,
@@ -158,7 +205,7 @@ export class QuoteService {
   /**
    * Get all quotes for the current user
    */
-  static async getUserQuotes(): Promise<QuoteResponse[]> {
+  static async getQuotes(): Promise<QuoteResponse[]> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -182,6 +229,7 @@ export class QuoteService {
         currency: quote.currency,
         generatedItinerary: quote.generated_itinerary,
         createdAt: quote.created_at,
+        clientId: quote.client_id,
         clientEmail: quote.client_email,
         clientPhone: quote.client_phone,
         clientAddress: quote.client_address,
@@ -195,6 +243,52 @@ export class QuoteService {
 
     } catch (error) {
       console.error('Fetch quotes error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get quotes for a specific client
+   */
+  static async getQuotesByClient(clientId: string): Promise<QuoteResponse[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data: quotes, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch client quotes: ${error.message}`);
+      }
+
+      return quotes.map(quote => ({
+        id: quote.id,
+        status: quote.status,
+        totalPrice: quote.total_price,
+        currency: quote.currency,
+        generatedItinerary: quote.generated_itinerary,
+        createdAt: quote.created_at,
+        clientId: quote.client_id,
+        clientEmail: quote.client_email,
+        clientPhone: quote.client_phone,
+        clientAddress: quote.client_address,
+        destination: quote.destination,
+        startDate: quote.start_date,
+        endDate: quote.end_date,
+        clientName: quote.client_name,
+        selectedEvent: quote.selected_event,
+        selectedTicket: quote.selected_ticket,
+      }));
+
+    } catch (error) {
+      console.error('Fetch client quotes error:', error);
       throw error;
     }
   }
@@ -231,6 +325,7 @@ export class QuoteService {
         currency: quote.currency,
         generatedItinerary: quote.generated_itinerary,
         createdAt: quote.created_at,
+        clientId: quote.client_id,
         clientEmail: quote.client_email,
         clientPhone: quote.client_phone,
         clientAddress: quote.client_address,

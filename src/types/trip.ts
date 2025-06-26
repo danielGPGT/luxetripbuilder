@@ -93,17 +93,20 @@ export const agentContextSchema = z.object({
 });
 
 export const tripIntakeSchema = z.object({
+  // CRM Integration
+  clientId: z.string().optional(),
+
   // Step 1: Traveler Overview
   travelerInfo: z.object({
     name: z.string().min(2, 'Name is required'),
     email: z.string().email('Valid email is required'),
     phone: z.string().min(10, 'Valid phone number is required'),
     address: z.object({
-      street: z.string().min(5, 'Street address is required'),
-      city: z.string().min(2, 'City is required'),
-      state: z.string().min(2, 'State/Province is required'),
-      zipCode: z.string().min(3, 'ZIP/Postal code is required'),
-      country: z.string().min(2, 'Country is required'),
+      street: z.string().default(''),
+      city: z.string().default(''),
+      state: z.string().default(''),
+      zipCode: z.string().default(''),
+      country: z.string().default(''),
     }),
     travelType: travelTypeEnum,
     transportType: transportTypeEnum,

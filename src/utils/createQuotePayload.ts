@@ -2,6 +2,7 @@ import { TripIntake, FlightFilters, HotelFilters, EventFilters, AgentContext } f
 import { useIntakeStore } from '@/store/intake';
 
 export interface QuoteInput {
+  clientId?: string;
   tripDetails: {
     clientName: string;
     clientEmail: string;
@@ -133,6 +134,7 @@ export function createQuotePayload(formData: TripIntake): QuoteInput {
     .join(' ');
 
   return {
+    clientId: formData.clientId,
     tripDetails: {
       clientName: formData.travelerInfo.name,
       clientEmail: formData.travelerInfo.email,

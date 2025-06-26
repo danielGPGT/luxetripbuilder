@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
-import { Loader2, Upload, Search, Edit, Trash2, RefreshCw, Eye } from 'lucide-react';
+import { Loader2, Upload, Search, Edit, Trash2, RefreshCw, Eye, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { TierRestriction } from '../components/TierRestriction';
+import UnsplashSearch from '../components/UnsplashSearch';
 
 export default function MediaLibrary() {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ export default function MediaLibrary() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   const [editingItem, setEditingItem] = useState<MediaItem | null>(null);
+  const [showUnsplashSearch, setShowUnsplashSearch] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -105,6 +107,10 @@ export default function MediaLibrary() {
     }
   };
 
+  const handleImageAdded = () => {
+    loadMediaLibrary();
+  };
+
   const handleRegenerateTags = async (mediaItemId: string) => {
     try {
       setRegeneratingTags(mediaItemId);
@@ -177,6 +183,14 @@ export default function MediaLibrary() {
           </div>
           
           <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowUnsplashSearch(true)}
+              className="flex items-center gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              Unsplash Search
+            </Button>
             <div className="relative">
               <input
                 type="file"
@@ -412,6 +426,12 @@ export default function MediaLibrary() {
             )}
           </DialogContent>
         </Dialog>
+
+        <UnsplashSearch 
+          open={showUnsplashSearch} 
+          onOpenChange={setShowUnsplashSearch}
+          onImageAdded={handleImageAdded}
+        />
       </div>
     </TierRestriction>
   );

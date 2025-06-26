@@ -93,4 +93,44 @@ export async function searchActivityImage(activity: string, destination: string)
     console.error('Error fetching Unsplash image:', error);
     return null;
   }
+}
+
+/**
+ * Search Unsplash images with a general query for media library
+ */
+export async function searchUnsplashImages(query: string, page: number = 1, perPage: number = 20): Promise<UnsplashImage[]> {
+  try {
+    if (!import.meta.env.VITE_UNSPLASH_ACCESS_KEY) {
+      console.warn('Unsplash API key not found');
+      return [];
+    }
+
+    const result = await unsplash.search.getPhotos({
+      query,
+      page,
+      perPage,
+      orientation: 'landscape',
+      orderBy: 'relevant',
+    });
+
+    if (result.response?.results) {
+      return result.response.results.map((photo: any) => ({
+        id: photo.id,
+        urls: {
+          regular: photo.urls.regular,
+          small: photo.urls.small,
+          thumb: photo.urls.thumb,
+        },
+        alt_description: photo.alt_description || query,
+        user: {
+          name: photo.user?.name || 'Unknown',
+        },
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error searching Unsplash images:', error);
+    return [];
+  }
 } 

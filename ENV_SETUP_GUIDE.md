@@ -17,6 +17,9 @@ VITE_STRIPE_STARTER_PRICE_ID=price_your_starter_price_id_here
 VITE_STRIPE_PROFESSIONAL_PRICE_ID=price_your_professional_price_id_here
 VITE_STRIPE_ENTERPRISE_PRICE_ID=price_your_enterprise_price_id_here
 
+# Unsplash Configuration (for stock photos and media library)
+VITE_UNSPLASH_ACCESS_KEY=your_unsplash_access_key_here
+
 # Optional
 VITE_APP_URL=http://localhost:5173
 ```
@@ -61,6 +64,19 @@ VITE_APP_URL=http://localhost:5173
 - Copy the Price ID (starts with `price_`)
 - Add to `VITE_STRIPE_ENTERPRISE_PRICE_ID`
 
+### **Unsplash Values** (for stock photos):
+
+#### 1. **Access Key**:
+1. Go to [Unsplash Developers](https://unsplash.com/developers)
+2. Create a new application
+3. Copy the **Access Key**
+4. Add to `VITE_UNSPLASH_ACCESS_KEY`
+
+**Note:** Unsplash has rate limits:
+- Demo applications: 50 requests per hour
+- Production applications: 5000 requests per hour
+- For production use, you may need to apply for higher limits
+
 ## 🚨 **Important Notes**
 
 ### **Test vs Live Mode:**
@@ -86,12 +102,14 @@ To verify your environment variables are working:
    ```typescript
    console.log('Stripe Key:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
    console.log('Starter Price:', import.meta.env.VITE_STRIPE_STARTER_PRICE_ID);
+   console.log('Unsplash Key:', import.meta.env.VITE_UNSPLASH_ACCESS_KEY);
    ```
 
 2. **Test the integration:**
    - Go to your Pricing page
    - Click "Subscribe" on a plan
    - You should be redirected to Stripe Checkout
+   - Go to Media Library and test Unsplash search
 
 ## 🔧 **Troubleshooting**
 
@@ -108,6 +126,11 @@ To verify your environment variables are working:
 - Verify your price IDs are correct
 - Make sure you're using test price IDs with test keys
 
+### **"Unsplash API key not found" error:**
+- Check that your `VITE_UNSPLASH_ACCESS_KEY` is correct
+- Verify your Unsplash application is active
+- Check rate limits if you're getting 403 errors
+
 ## 📋 **Complete Example**
 
 Here's what your `.env.local` should look like:
@@ -122,9 +145,12 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_51ABC123DEF456GHI789JKL012MNO345PQR678STU901
 VITE_STRIPE_STARTER_PRICE_ID=price_1ABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZA567BCD890EFG
 VITE_STRIPE_PROFESSIONAL_PRICE_ID=price_1DEF456GHI789JKL012MNO345PQR678STU901VWX234YZA567BCD890EFG123ABC
 VITE_STRIPE_ENTERPRISE_PRICE_ID=price_1GHI789JKL012MNO345PQR678STU901VWX234YZA567BCD890EFG123ABC456DEF
+
+# Unsplash
+VITE_UNSPLASH_ACCESS_KEY=your_unsplash_access_key_here
 ```
 
-Once you have these set up, your Stripe integration will work! 🎉 
+Once you have these set up, your Stripe integration and Unsplash image search will work! 🎉
 
 ## Supabase Email Confirmation Setup
 

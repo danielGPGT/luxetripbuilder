@@ -70,7 +70,7 @@ export function useQuoteService(): UseQuoteServiceReturn {
     setError(null);
     
     try {
-      const quotes = await QuoteService.getUserQuotes();
+      const quotes = await QuoteService.getQuotes();
       return quotes;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch quotes';

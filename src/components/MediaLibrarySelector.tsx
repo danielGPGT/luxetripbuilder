@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Loader2, Upload, Search, Image as ImageIcon, Sparkles, RefreshCw, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { TierRestriction } from './TierRestriction';
+import UnsplashSearch from './UnsplashSearch';
 
 interface MediaLibrarySelectorProps {
   onSelect: (mediaItem: MediaItem) => void;
@@ -32,6 +33,7 @@ export default function MediaLibrarySelector({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
+  const [showUnsplashSearch, setShowUnsplashSearch] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -173,6 +175,10 @@ export default function MediaLibrarySelector({
     500: 1
   };
 
+  const handleImageAdded = () => {
+    loadMediaLibrary();
+  };
+
   return (
     <TierRestriction type="media_library">
       <div className="flex flex-col h-full">
@@ -196,6 +202,14 @@ export default function MediaLibrarySelector({
               {uploading ? 'Uploading with AI Tagging...' : 'Upload New Images'}
             </Button>
           </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowUnsplashSearch(true)}
+            className="flex items-center gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            Unsplash
+          </Button>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Sparkles className="h-4 w-4" />
             AI-powered tagging
@@ -339,6 +353,12 @@ export default function MediaLibrarySelector({
             </div>
           </div>
         )}
+
+        <UnsplashSearch 
+          open={showUnsplashSearch} 
+          onOpenChange={setShowUnsplashSearch}
+          onImageAdded={handleImageAdded}
+        />
       </div>
     </TierRestriction>
   );

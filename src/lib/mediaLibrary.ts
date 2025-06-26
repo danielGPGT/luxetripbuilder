@@ -353,4 +353,58 @@ Respond with ONLY valid JSON in this exact format:
       throw error;
     }
   }
+
+  /**
+   * Upload Unsplash image to media library
+   */
+  static async uploadUnsplashImage(
+    unsplashImage: { id: string; urls: { regular: string }; alt_description: string; user: { name: string } },
+    userId: string,
+    searchQuery?: string
+  ): Promise<MediaItem> {
+    try {
+      // Download the image from Unsplash
+      const imageFile = await urlToFile(unsplashImage.urls.regular, `unsplash-${unsplashImage.id}.jpg`);
+      
+      // Upload image to storage
+      const uploadedImage = await ImageUploadService.uploadImage(imageFile, userId);
+      
+      // Generate AI tags using the downloaded image file
+      const aiResult = await this.generateAITagsWithGemini(imageFile);
+      
+      // Create description from Unsplash data and AI analysis
+      const description = aiResult.description || unsplashImage.alt_description || searchQuery || 'Unsplash image';
+      
+      // Add Unsplash-specific tags
+      const unsplashTags = ['unsplash', 'stock photo'];
+      if (searchQuery) {
+        unsplashTags.push(searchQuery.toLowerCase());
+      }
+      const combinedTags = [...aiResult.tags, ...unsplashTags].slice(0, 7);
+      
+      // Save to media library table
+      const { data, error } = await supabase
+        .from('media_library')
+        .insert({
+          user_id: userId,
+          description,
+          tags: combinedTags,
+          category: aiResult.category,
+          location: aiResult.location,
+          image_url: uploadedImage.url,
+          thumbnail_url: uploadedImage.url,
+          file_size: imageFile.size,
+          file_type: imageFile.type,
+          ai_generated: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error uploading Unsplash image:', error);
+      throw error;
+    }
+  }
 } 

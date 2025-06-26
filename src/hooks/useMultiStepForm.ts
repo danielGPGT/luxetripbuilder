@@ -12,6 +12,15 @@ export function useMultiStepForm() {
     defaultValues: {
       travelerInfo: {
         name: '',
+        email: '',
+        phone: '',
+        address: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: '',
+        },
         travelType: 'solo',
         transportType: 'plane',
         startDate: '',
@@ -61,6 +70,29 @@ export function useMultiStepForm() {
   const nextStep = async () => {
     // Get specific fields to validate for the current step
     const fieldsToValidate = getFieldsForStep(currentStep);
+    
+    // For step 1, we need special validation logic since it's client selection
+    if (currentStep === 1) {
+      const clientId = form.getValues('clientId');
+      const travelerName = form.getValues('travelerInfo.name');
+      
+      console.log('Step 1 validation check:', { clientId, travelerName });
+      
+      // Check if either a client is selected OR traveler info is filled
+      if (!clientId && !travelerName) {
+        // Trigger validation error for traveler name to show error message
+        await form.trigger('travelerInfo.name');
+        return;
+      }
+      
+      // If client is selected but name is empty, try to trigger validation to clear errors
+      if (clientId && !travelerName) {
+        console.log('Client selected but name is empty, triggering validation');
+        await form.trigger(['travelerInfo.name', 'travelerInfo.email', 'travelerInfo.phone']);
+        return;
+      }
+    }
+    
     const isValid = await form.trigger(fieldsToValidate);
     
     if (isValid && currentStep < totalSteps) {
@@ -77,28 +109,20 @@ export function useMultiStepForm() {
   const getFieldsForStep = (step: number): (keyof TripIntake)[] => {
     switch (step) {
       case 1:
-        // Step 1: Only validate traveler info fields that are actually in step 1
-        return [
-          'travelerInfo.name',
-          'travelerInfo.email', 
-          'travelerInfo.phone',
-          'travelerInfo.address.street',
-          'travelerInfo.address.city',
-          'travelerInfo.address.state',
-          'travelerInfo.address.zipCode',
-          'travelerInfo.address.country',
-          'travelerInfo.travelType',
-          'travelerInfo.travelers.adults',
-          'travelerInfo.travelers.children'
-        ] as any;
+        // Step 1: Only validate that we have either a client ID or traveler name
+        // The actual validation will be handled in nextStep() for step 1
+        return [];
       case 2:
-        // Step 2: Only validate destinations and the moved fields
+        // Step 2: Validate destinations, travel dates, transport type, traveler count, and travel type
         return [
           'destinations.from',
           'destinations.primary',
           'travelerInfo.transportType',
           'travelerInfo.startDate',
-          'travelerInfo.endDate'
+          'travelerInfo.endDate',
+          'travelerInfo.travelers.adults',
+          'travelerInfo.travelers.children',
+          'travelerInfo.travelType'
         ] as any;
       case 3:
         return ['style.tone', 'style.interests'] as any;

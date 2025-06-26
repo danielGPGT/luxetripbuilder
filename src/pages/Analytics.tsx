@@ -15,7 +15,7 @@ export default function Analytics() {
 
   useEffect(() => {
     async function fetchData() {
-      const userQuotes = await QuoteService.getUserQuotes();
+      const userQuotes = await QuoteService.getQuotes();
       setQuotes(userQuotes);
       // Example: build conversion rate data by day
       const byDay: Record<string, { date: string; total: number; confirmed: number }> = {};

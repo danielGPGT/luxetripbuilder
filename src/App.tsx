@@ -34,6 +34,10 @@ import TeamInvitation from './pages/TeamInvitation';
 import TeamInvitationSignup from './pages/TeamInvitationSignup';
 import { RateHawkTest } from './components/RateHawkTest';
 import Analytics from './pages/Analytics';
+import CRM from './pages/Crm';
+import ClientDetail from './pages/ClientDetail';
+import NewClient from './pages/NewClient';
+import EditClient from './pages/EditClient';
 import "./App.css";
 
 function App() {
@@ -159,6 +163,13 @@ function AppContent() {
                   <Route path="/media-library" element={<MediaLibrary />} />
                   <Route path="/quote/:quoteId" element={<ViewQuote />} />
                   <Route path="/order/success" element={<OrderConfirmation />} />
+                  
+                  {/* CRM Routes */}
+                  <Route path="/crm" element={<CRM />} />
+                  <Route path="/crm/new-client" element={<NewClient />} />
+                  <Route path="/crm/client/:clientId" element={<ClientDetail />} />
+                  <Route path="/crm/client/:clientId/edit" element={<EditClient />} />
+                  
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </MainLayout>

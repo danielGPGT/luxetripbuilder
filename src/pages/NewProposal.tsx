@@ -76,6 +76,9 @@ export default function NewProposal() {
   const navigate = useNavigate();
 
   const onSubmit = async (data: any) => {
+    console.log('🚀 Form submission started with data:', data);
+    console.log('🔍 Form validation state:', form.formState.errors);
+    
     setIsGenerating(true);
     setGenerationError(null);
     clearError();
@@ -155,7 +158,7 @@ export default function NewProposal() {
                 <Stepper 
                   currentStep={currentStep} 
                   totalSteps={totalSteps} 
-                  labels={["Traveler Info", "Destinations", "Trip Style", "Experience", "Budget", "Hotel", "Events", "Review"]} 
+                  labels={["Client Selection", "Destinations", "Trip Style", "Experience", "Budget", "Hotel", "Events", "Review"]} 
                   vertical 
                 />
               </div>
@@ -164,7 +167,7 @@ export default function NewProposal() {
 
           {/* Form Card (right) */}
           <div className="w-full">
-            <Card className="w-full bg-card backdrop-blur-sm shadow-xl border border-border/50">
+            <Card className="w-full bg-card backdrop-blur-sm shadow-xl border border-border/50 py-0">
               <FormProvider {...form}>
                 <form
                   onSubmit={e => {
@@ -179,7 +182,7 @@ export default function NewProposal() {
                 >
                   <CardHeader className="px-8 py-6 border-b border-border/30">
                     <CardTitle className="text-2xl font-bold text-foreground">
-                      {currentStep === 1 && "Traveler Information"}
+                      {currentStep === 1 && "Client Selection"}
                       {currentStep === 2 && "Destinations"}
                       {currentStep === 3 && "Trip Style"}
                       {currentStep === 4 && "Experience Preferences"}
@@ -191,37 +194,6 @@ export default function NewProposal() {
                     <p className="text-sm text-muted-foreground mt-1">
                       Step {currentStep} of {totalSteps}
                     </p>
-                    {/* Debug button - remove in production */}
-                    {process.env.NODE_ENV === 'development' && (
-                      <div className="mt-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            // Set some default values to bypass validation
-                            form.setValue('travelerInfo.name', 'Test User');
-                            form.setValue('travelerInfo.email', 'test@example.com');
-                            form.setValue('travelerInfo.phone', '1234567890');
-                            form.setValue('travelerInfo.address.street', '123 Test St');
-                            form.setValue('travelerInfo.address.city', 'Test City');
-                            form.setValue('travelerInfo.address.state', 'Test State');
-                            form.setValue('travelerInfo.address.zipCode', '12345');
-                            form.setValue('travelerInfo.address.country', 'Test Country');
-                            form.setValue('destinations.from', 'New York');
-                            form.setValue('destinations.primary', 'Paris');
-                            form.setValue('travelerInfo.startDate', '2025-09-15');
-                            form.setValue('travelerInfo.endDate', '2025-09-20');
-                            form.setValue('style.interests', ['fine-dining']);
-                            form.setValue('budget.amount', 5000);
-                            // Jump to hotel selection step
-                            setCurrentStep(6);
-                          }}
-                        >
-                          Debug: Jump to Hotel Selection
-                        </Button>
-                      </div>
-                    )}
                   </CardHeader>
 
                   <CardContent className="px-8 py-6 flex-1">
@@ -278,9 +250,17 @@ export default function NewProposal() {
                           disabled={isGenerating}
                           className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md"
                           onClick={() => {
-                            setTimeout(() => {
-                              document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                            }, 0);
+                            console.log('🔘 Generate Quote button clicked');
+                            console.log('📋 Form data before submission:', form.getValues());
+                            console.log('❌ Form errors:', form.formState.errors);
+                            console.log('📍 Address fields:', {
+                              street: form.getValues('travelerInfo.address.street'),
+                              city: form.getValues('travelerInfo.address.city'),
+                              state: form.getValues('travelerInfo.address.state'),
+                              zipCode: form.getValues('travelerInfo.address.zipCode'),
+                              country: form.getValues('travelerInfo.address.country')
+                            });
+                            form.handleSubmit(onSubmit)();
                           }}
                         >
                           {isGenerating ? (

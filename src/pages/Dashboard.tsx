@@ -208,7 +208,7 @@ export function Dashboard() {
     setLoading(true);
     try {
       const [userQuotes, userBookings, stats] = await Promise.all([
-        QuoteService.getUserQuotes(),
+        QuoteService.getQuotes(),
         BookingService.getUserBookings(),
         BookingService.getBookingStats()
       ]);
