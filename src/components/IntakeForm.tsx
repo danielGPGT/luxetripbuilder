@@ -70,7 +70,7 @@ export function IntakeForm({ onSubmit, isLoading }: IntakeFormProps) {
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 w-full">
       <div className="space-y-4">
         <div>
           <label className="text-sm font-medium">Client Name</label>

@@ -716,7 +716,7 @@ export function Step2Destinations({ disabled = false }: { disabled?: boolean }) 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="max-w-4xl mx-auto space-y-8"
+        className="mx-auto space-y-8"
       >
 
         {/* Travel Route Section */}
