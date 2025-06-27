@@ -32,12 +32,14 @@ import Settings from "./pages/Settings";
 import UndrawGallery from "./pages/UndrawGallery";
 import TeamInvitation from './pages/TeamInvitation';
 import TeamInvitationSignup from './pages/TeamInvitationSignup';
+import HubSpotCallback from './pages/HubSpotCallback';
 import { RateHawkTest } from './components/RateHawkTest';
 import Analytics from './pages/Analytics';
 import CRM from './pages/Crm';
 import ClientDetail from './pages/ClientDetail';
 import NewClient from './pages/NewClient';
 import EditClient from './pages/EditClient';
+import Integrations from './pages/Integrations';
 import "./App.css";
 
 function App() {
@@ -169,6 +171,10 @@ function AppContent() {
                   <Route path="/crm/new-client" element={<NewClient />} />
                   <Route path="/crm/client/:clientId" element={<ClientDetail />} />
                   <Route path="/crm/client/:clientId/edit" element={<EditClient />} />
+                  
+                  {/* Integration Routes */}
+                  <Route path="/integrations" element={<Integrations />} />
+                  <Route path="/auth/callback" element={<HubSpotCallback />} />
                   
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>

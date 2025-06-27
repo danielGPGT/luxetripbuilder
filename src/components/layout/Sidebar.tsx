@@ -24,6 +24,7 @@ import {
   Bell,
   CreditCard,
   BarChart3,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthProvider";
 import {
@@ -94,6 +95,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
   const crmItems = [
     { label: "Clients", icon: Users, href: "/crm" },
     { label: "New Client", icon: User, href: "/crm/new-client" },
+    { label: "Integrations", icon: Building2, href: "/integrations" },
   ];
 
   // Documents section

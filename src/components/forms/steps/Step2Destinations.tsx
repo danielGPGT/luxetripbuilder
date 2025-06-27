@@ -906,7 +906,7 @@ export function Step2Destinations({ disabled = false }: { disabled?: boolean }) 
                           )}
                         >
                           <Calendar className="mr-2 h-4 w-4" />
-                          {startDate ? format(startDate, "MMM dd") : "Start"}
+                          {startDate ? format(startDate, "MMM dd, yyyy") : "Start"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -966,7 +966,7 @@ export function Step2Destinations({ disabled = false }: { disabled?: boolean }) 
                           disabled={!startDate}
                         >
                           <Calendar className="mr-2 h-4 w-4" />
-                          {endDate ? format(endDate, "MMM dd") : "End"}
+                          {endDate ? format(endDate, "MMM dd, yyyy") : "End"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -1025,7 +1025,7 @@ export function Step2Destinations({ disabled = false }: { disabled?: boolean }) 
                     <>
                       <ArrowRight className="h-4 w-4 text-[var(--primary)]/60" />
                       <span className="text-sm text-[var(--primary)]/80">
-                        {format(startDate, 'MMM dd')} - {format(endDate, 'MMM dd, yyyy')}
+                        {format(startDate, 'MMM dd, yyyy')} - {format(endDate, 'MMM dd, yyyy')}
                       </span>
                     </>
                   )}

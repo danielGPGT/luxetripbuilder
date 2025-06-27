@@ -304,3 +304,9 @@
   background-size: 200% 200%;
   animation: gradient 3s ease infinite;
 }
+
+.integration-dialog-content {
+  max-width: 1200px !important;
+  width: 100vw !important;
+  min-width: 0 !important;
+}

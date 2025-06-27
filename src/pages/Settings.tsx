@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SubscriptionManager } from '@/components/SubscriptionManager';
-import { User, KeyRound, CreditCard, Settings as SettingsIcon, Users, Building2, Phone, Upload, Loader2, Sparkles, Shield, Mail } from 'lucide-react';
+import { HubSpotIntegration } from '@/components/HubSpotIntegration';
+import { User, KeyRound, CreditCard, Settings as SettingsIcon, Users, Building2, Phone, Upload, Loader2, Sparkles, Shield, Mail, Link } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { useStripeSubscription } from '@/hooks/useStripeSubscription';
 import { Badge } from '@/components/ui/badge';
@@ -1023,6 +1024,10 @@ export function Settings() {
                 <Users className="mr-2 h-4 w-4" />
                 Team
               </TabsTrigger>
+              <TabsTrigger value="integrations" className="transition-all duration-200 text-base py-4 rounded-xl">
+                <Link className="mr-2 h-4 w-4" />
+                Integrations
+              </TabsTrigger>
               <TabsTrigger value="security" className="transition-all duration-200 text-base py-4 rounded-xl">
                 <KeyRound className="mr-2 h-4 w-4" />
                 Security
@@ -1042,6 +1047,15 @@ export function Settings() {
             </TabsContent>
             <TabsContent value="team" className="space-y-4 p-8">
               <TeamManagement />
+            </TabsContent>
+            <TabsContent value="integrations" className="space-y-4 p-8">
+              {(teamRole === 'admin' || teamRole === 'owner') ? (
+                <HubSpotIntegration />
+              ) : (
+                <div className="text-muted-foreground">
+                  You do not have permission to manage integrations.
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="security" className="space-y-4 p-8">
               <SecuritySettings />
