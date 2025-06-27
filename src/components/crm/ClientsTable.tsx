@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronUp,
@@ -152,6 +152,7 @@ export function ClientsTable({
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [selectedClientForTimeline, setSelectedClientForTimeline] = useState<Client | null>(null);
+  const navigate = useNavigate();
 
   const columns: Column[] = [
     {
@@ -619,18 +620,24 @@ export function ClientsTable({
   };
 
   const handleViewClient = (client: Client) => {
-    // Navigate to client detail page or open client detail modal
-    console.log('Viewing client:', client);
+    // Navigate to client detail page
+    navigate(`/crm/client/${client.id}`);
   };
 
   const handleEditClient = (client: Client) => {
-    // Navigate to edit client page or open edit modal
-    console.log('Editing client:', client);
+    // Navigate to edit client page
+    navigate(`/crm/client/${client.id}/edit`);
   };
 
-  const handleDeleteClient = (clientId: string) => {
-    // Handle client deletion
-    console.log('Deleting client:', clientId);
+  const handleDeleteClient = async (clientId: string) => {
+    if (window.confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
+      try {
+        await onDeleteClient(clientId);
+        toast.success('Client deleted successfully');
+      } catch (error) {
+        toast.error('Failed to delete client');
+      }
+    }
   };
 
   const handleBulkEmailSend = async (emailData: any) => {
