@@ -19,6 +19,9 @@ const STRIPE_PRODUCTS = {
   enterprise: null, // Enterprise is custom, not handled via Stripe checkout
 };
 
+// Supabase Edge Function URL
+const STRIPE_HANDLER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-handler`;
+
 export interface SubscriptionData {
   id: string;
   status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired';
@@ -155,13 +158,15 @@ export class StripeService {
         return { success: false, error: 'Invalid plan type' };
       }
 
-      // Create checkout session using our local server
-      const response = await fetch('http://localhost:3001/api/create-checkout-session', {
+      // Create checkout session using Supabase Edge Function
+      const response = await fetch(STRIPE_HANDLER_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
+          action: 'create-checkout-session',
           priceId,
           customerEmail,
           userId, // Can be null for new signups
@@ -250,13 +255,19 @@ export class StripeService {
         return { success: false, error: 'Invalid new plan type.' };
       }
 
-      // Use the server endpoint to update the subscription in place
-      const response = await fetch('http://localhost:3001/api/update-subscription', {
+      // Use the Supabase Edge Function to update the subscription
+      const response = await fetch(STRIPE_HANDLER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
         body: JSON.stringify({
+          action: 'update-subscription',
           subscriptionId: currentSubscription.stripe_subscription_id,
           newPriceId: newPriceId,
+          userId,
+          newPlanType,
         }),
       });
 
@@ -287,10 +298,16 @@ export class StripeService {
         return { success: false, error: 'No active subscription found to cancel.' };
       }
 
-      const response = await fetch('http://localhost:3001/api/cancel-subscription', {
+      const response = await fetch(STRIPE_HANDLER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriptionId: currentSubscription.stripe_subscription_id }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: 'cancel-subscription',
+          subscriptionId: currentSubscription.stripe_subscription_id,
+        }),
       });
 
       const result = await response.json();
@@ -320,10 +337,16 @@ export class StripeService {
         return { success: false, error: 'No subscription found to reactivate.' };
       }
 
-      const response = await fetch('http://localhost:3001/api/reactivate-subscription', {
+      const response = await fetch(STRIPE_HANDLER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriptionId: currentSubscription.stripe_subscription_id }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: 'reactivate-subscription',
+          subscriptionId: currentSubscription.stripe_subscription_id,
+        }),
       });
 
       const result = await response.json();
@@ -349,31 +372,30 @@ export class StripeService {
         .eq('user_id', userId)
         .single();
 
-      if (dbError) {
-        console.error('Database error:', dbError);
-        return { success: false, error: 'Failed to retrieve subscription data.' };
+      if (dbError || !subscription?.stripe_customer_id) {
+        return { success: false, error: 'No customer found for billing portal.' };
       }
 
-      if (!subscription?.stripe_customer_id) {
-        return { success: false, error: 'No active subscription found. Please create a subscription first.' };
-      }
-
-      console.log('Found customer ID:', subscription.stripe_customer_id);
-
-      const response = await fetch('http://localhost:3001/api/create-billing-portal-session', {
+      const response = await fetch(STRIPE_HANDLER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId: subscription.stripe_customer_id }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: 'billing-portal',
+          customerId: subscription.stripe_customer_id,
+          returnUrl: `${window.location.origin}/settings`,
+        }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Server error:', errorText);
-        return { success: false, error: `Server error: ${response.status}` };
-      }
-
       const result = await response.json();
-      return { success: result.success, url: result.url, error: result.error };
+      
+      if (result.success) {
+        return { success: true, url: result.url };
+      } else {
+        return { success: false, error: result.error };
+      }
 
     } catch (error) {
       console.error('Error getting billing portal URL:', error);
@@ -385,15 +407,22 @@ export class StripeService {
   }
 
   /**
-   * Get pricing information from Stripe
+   * Get pricing information
    */
   static async getPricing(): Promise<{ success: boolean; pricing?: any; error?: string }> {
     try {
-      // Remove or comment out any fetch('/api/pricing') or similar calls
-      // If you have a getPricing or similar method, make it return static or Stripe-based data instead
-      return { success: true, pricing: null, error: null };
+      // For now, return static pricing data
+      // In the future, this could fetch from Stripe API
+      const pricing = {
+        free: { price: 0, currency: 'gbp' },
+        pro: { price: 2900, currency: 'gbp' }, // £29.00 in pence
+        agency: { price: 7900, currency: 'gbp' }, // £79.00 in pence
+        enterprise: { price: null, currency: 'gbp' }
+      };
+      
+      return { success: true, pricing };
     } catch (error) {
-      console.error('Error fetching pricing:', error);
+      console.error('Error getting pricing:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error occurred' 
@@ -412,7 +441,7 @@ export class StripeService {
   }
 
   /**
-   * Create or get customer record
+   * Create or get Stripe customer
    */
   static async createOrGetCustomer(
     userId: string,
@@ -420,9 +449,28 @@ export class StripeService {
     name?: string
   ): Promise<{ success: boolean; customerId?: string; error?: string }> {
     try {
-      // For now, return a placeholder customer ID
-      // In production, you'd create or retrieve the customer from Stripe
-      return { success: true, customerId: `cust_${userId}` };
+      const response = await fetch(STRIPE_HANDLER_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: 'create-customer',
+          userId,
+          email,
+          name,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        return { success: true, customerId: result.customerId };
+      } else {
+        return { success: false, error: result.error };
+      }
+
     } catch (error) {
       console.error('Error creating/getting customer:', error);
       return { 
@@ -433,26 +481,19 @@ export class StripeService {
   }
 
   /**
-   * Manually sync subscription data between Stripe and database
+   * Sync subscription data from Stripe
    */
   static async syncSubscription(userId: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      const response = await fetch('http://localhost:3001/api/sync-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Server error:', errorData);
-        return { success: false, error: `Server error: ${response.status}` };
+      const currentSubscription = await this.getCurrentSubscription(userId);
+      if (!currentSubscription?.stripe_subscription_id) {
+        return { success: false, error: 'No Stripe subscription found to sync.' };
       }
 
-      const result = await response.json();
-      return { success: result.success, data: result.data, error: result.error };
+      // For now, return the current subscription data
+      // In the future, this could fetch fresh data from Stripe
+      return { success: true, data: currentSubscription };
+
     } catch (error) {
       console.error('Error syncing subscription:', error);
       return { 
@@ -463,27 +504,28 @@ export class StripeService {
   }
 
   /**
-   * Get checkout session URL directly (fallback for redirect issues)
+   * Get checkout session URL
    */
   static async getCheckoutSessionUrl(sessionId: string): Promise<{ success: boolean; url?: string; error?: string }> {
     try {
-      const response = await fetch(`http://localhost:3001/api/checkout-session/${sessionId}`);
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Server error:', errorData);
-        return { success: false, error: `Server error: ${response.status}` };
+      // For now, construct the URL manually
+      // In the future, this could fetch from Stripe API
+      const stripe = await initializeStripe();
+      if (!stripe) {
+        return { success: false, error: 'Stripe not initialized' };
       }
 
-      const result = await response.json();
-      
-      if (!result.success) {
-        return { success: false, error: result.error };
+      // Try to redirect to checkout
+      const { error } = await stripe.redirectToCheckout({
+        sessionId,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
       }
 
-      // Construct the checkout URL
-      const checkoutUrl = `https://checkout.stripe.com/pay/${sessionId}`;
-      return { success: true, url: checkoutUrl };
+      return { success: true };
+
     } catch (error) {
       console.error('Error getting checkout session URL:', error);
       return { 

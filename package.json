@@ -5,10 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "node server.cjs",
-    "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
-    "test:webhook": "node test-webhook.cjs",
-    "test:webhook:simple": "node test-webhook-simple.cjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
