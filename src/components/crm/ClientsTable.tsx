@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
@@ -38,7 +38,10 @@ import {
   Crown,
   AlertCircle,
   Clock,
-  History
+  History,
+  Loader2,
+  Building2,
+  CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,6 +105,9 @@ import { toast } from 'sonner';
 import type { Client } from '@/types/crm';
 import { BulkEmailDialog } from './BulkEmailDialog';
 import { ClientTimeline } from './ClientTimeline';
+import { HubSpotService } from '@/lib/hubspotService';
+import { supabase } from '@/lib/supabase';
+import { SiHubspot, SiSalesforce, SiZoho } from 'react-icons/si';
 
 interface ClientsTableProps {
   clients: Client[];
@@ -113,6 +119,7 @@ interface ClientsTableProps {
   onBulkAddTags?: (clientIds: string[], tags: string[]) => Promise<void>;
   onBulkRemoveTags?: (clientIds: string[], tags: string[]) => Promise<void>;
   onImportClients?: (clients: Partial<Client>[]) => Promise<void>;
+  teamId?: string | null;
 }
 
 type SortField = 'name' | 'email' | 'company' | 'status' | 'source' | 'lastContactAt' | 'createdAt' | 'updatedAt';
@@ -135,7 +142,8 @@ export function ClientsTable({
   onBulkUpdateStatus,
   onBulkAddTags,
   onBulkRemoveTags,
-  onImportClients
+  onImportClients,
+  teamId
 }: ClientsTableProps) {
   const [selectedClients, setSelectedClients] = useState<Client[]>([]);
   const [sortField, setSortField] = useState<SortField>('updatedAt');
@@ -153,6 +161,9 @@ export function ClientsTable({
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [selectedClientForTimeline, setSelectedClientForTimeline] = useState<Client | null>(null);
   const navigate = useNavigate();
+  const [integrationStatus, setIntegrationStatus] = useState<any>(null);
+  const [integrationLoading, setIntegrationLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const columns: Column[] = [
     {
@@ -646,6 +657,54 @@ export function ClientsTable({
     setBulkEmailOpen(false);
   };
 
+  useEffect(() => {
+    if (!teamId) return;
+    const loadIntegrationStatus = async () => {
+      setIntegrationLoading(true);
+      try {
+        const status = await HubSpotService.getIntegrationStatus(teamId);
+        setIntegrationStatus(status);
+      } catch (e) {
+        setIntegrationStatus(null);
+      } finally {
+        setIntegrationLoading(false);
+      }
+    };
+    loadIntegrationStatus();
+  }, [teamId]);
+
+  const handleSync = async () => {
+    if (!teamId) return;
+    try {
+      setSyncing(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      const functionUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL?.replace(/\/$/, '') + '/hubspot-sync' || '/functions/v1/hubspot-sync';
+      const res = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ team_id: teamId }),
+      });
+      let data;
+      try { data = await res.json(); } catch { data = { error: 'Non-JSON response', status: res.status }; }
+      if (res.ok) {
+        toast.success(`Sync complete! Created: ${data.created}, Updated: ${data.updated}, Failed: ${data.failed}`);
+        // Refresh status
+        const status = await HubSpotService.getIntegrationStatus(teamId);
+        setIntegrationStatus(status);
+      } else {
+        toast.error(`Sync failed: ${data.error || data.details || 'Unknown error'}`);
+      }
+    } catch (error) {
+      toast.error('Sync failed. Please try again.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Bulk Email Dialog */}
@@ -666,7 +725,7 @@ export function ClientsTable({
       <Card className="border border-border rounded-2xl shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <CardTitle className="text-lg">Clients</CardTitle>
               <Badge variant="secondary" className="text-sm">
                 {filteredAndSortedClients.length} of {clients.length}
@@ -675,6 +734,45 @@ export function ClientsTable({
                 <Badge variant="default" className="text-sm">
                   {selectedClients.length} selected
                 </Badge>
+              )}
+              {/* Inline CRM Integration Status */}
+              {teamId && (
+                <div className="ml-2 flex items-center gap-2 px-3 py-1 rounded-lg bg-muted/40 border border-border min-h-[40px]">
+                  {integrationLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : integrationStatus?.isConnected ? (
+                    <>
+                      {/* Show CRM logo for connected CRM */}
+                      <span className="flex items-center gap-1">
+                        <SiHubspot className="h-5 w-5 text-[#FF7A59]" title="HubSpot" />
+                        <span className="text-xs text-muted-foreground font-medium">HubSpot</span>
+                      </span>
+                      <Badge variant="default" className="bg-green-100 text-success border-green-200 text-xs px-2 py-0.5 ml-1">Active</Badge>
+                      <Button onClick={handleSync} disabled={syncing} size="icon" variant="ghost" className="h-7 w-7 ml-1">
+                        {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      </Button>
+                      <Link to="/integrations" className="ml-1">
+                        <Button size="icon" variant="ghost" className="h-7 w-7">
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      {/* Row of faded CRM logos */}
+                      <span className="flex items-center gap-1 opacity-60">
+                        <SiHubspot className="h-5 w-5" title="HubSpot" />
+                        <SiSalesforce className="h-5 w-5" title="Salesforce" />
+                        <SiZoho className="h-5 w-5" title="Zoho" />
+                      </span>
+                      <Link to="/integrations" className="ml-1">
+                        <Button size="sm" className="text-xs h-7">
+                          Connect CRM
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </div>
               )}
             </div>
             

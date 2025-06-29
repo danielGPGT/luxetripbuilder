@@ -415,6 +415,7 @@ export function Step2Destinations({ disabled = false }: { disabled?: boolean }) 
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // Get date range from form values
   const watchStartDate = form.watch('travelerInfo.startDate');
@@ -425,18 +426,36 @@ export function Step2Destinations({ disabled = false }: { disabled?: boolean }) 
 
   // Update form when date range changes
   const handleDateRangeChange = (range: DateRange | undefined) => {
-    if (range?.from) {
-      const startDateString = format(range.from, 'yyyy-MM-dd');
-      form.setValue('travelerInfo.startDate', startDateString);
-    } else {
-      form.setValue('travelerInfo.startDate', '');
-    }
+    setDateRange(range);
     
-    if (range?.to) {
-      const endDateString = format(range.to, 'yyyy-MM-dd');
-      form.setValue('travelerInfo.endDate', endDateString);
-    } else {
-      form.setValue('travelerInfo.endDate', '');
+    if (range?.from && range?.to) {
+      const startDate = format(range.from, 'yyyy-MM-dd');
+      const endDate = format(range.to, 'yyyy-MM-dd');
+      const duration = differenceInDays(range.to, range.from) + 1;
+      
+      form.setValue('travelerInfo.startDate', startDate);
+      form.setValue('travelerInfo.endDate', endDate);
+      form.setValue('destinations.duration', duration);
+      
+      // Set flight route information for package components
+      const fromLocation = form.getValues('destinations.from');
+      const toLocation = form.getValues('destinations.primary');
+      
+      if (fromLocation && toLocation) {
+        // Set outbound flight (from origin to destination on start date)
+        form.setValue('destinations.outboundFlight', {
+          from: fromLocation,
+          to: toLocation,
+          date: startDate
+        });
+        
+        // Set inbound flight (from destination to origin on end date)
+        form.setValue('destinations.inboundFlight', {
+          from: toLocation,
+          to: fromLocation,
+          date: endDate
+        });
+      }
     }
   };
 
@@ -493,7 +512,7 @@ export function Step2Destinations({ disabled = false }: { disabled?: boolean }) 
         fromPlace.country
       ].filter(Boolean).join(', ');
       
-      form.setValue('destinations.from', locationString);
+      handleFromLocationSelect(locationString);
     }
   }, [fromPlace]);
 
@@ -506,7 +525,7 @@ export function Step2Destinations({ disabled = false }: { disabled?: boolean }) 
         primaryPlace.country
       ].filter(Boolean).join(', ');
       
-      form.setValue('destinations.primary', locationString);
+      handleToLocationSelect(locationString);
     }
   }, [primaryPlace]);
 
@@ -696,6 +715,56 @@ export function Step2Destinations({ disabled = false }: { disabled?: boolean }) 
       setEndDateOpen(false);
       // Update end calendar to show the month of the selected end date
       setSelectedEndMonth(date);
+    }
+  };
+
+  const handleFromLocationSelect = (locationString: string) => {
+    form.setValue('destinations.from', locationString);
+    
+    // Update flight routes if dates are already set
+    const startDate = form.getValues('travelerInfo.startDate');
+    const endDate = form.getValues('travelerInfo.endDate');
+    const toLocation = form.getValues('destinations.primary');
+    
+    if (startDate && toLocation) {
+      form.setValue('destinations.outboundFlight', {
+        from: locationString,
+        to: toLocation,
+        date: startDate
+      });
+    }
+    
+    if (endDate && toLocation) {
+      form.setValue('destinations.inboundFlight', {
+        from: toLocation,
+        to: locationString,
+        date: endDate
+      });
+    }
+  };
+
+  const handleToLocationSelect = (locationString: string) => {
+    form.setValue('destinations.primary', locationString);
+    
+    // Update flight routes if dates are already set
+    const startDate = form.getValues('travelerInfo.startDate');
+    const endDate = form.getValues('travelerInfo.endDate');
+    const fromLocation = form.getValues('destinations.from');
+    
+    if (startDate && fromLocation) {
+      form.setValue('destinations.outboundFlight', {
+        from: fromLocation,
+        to: locationString,
+        date: startDate
+      });
+    }
+    
+    if (endDate && fromLocation) {
+      form.setValue('destinations.inboundFlight', {
+        from: locationString,
+        to: fromLocation,
+        date: endDate
+      });
     }
   };
 

@@ -125,6 +125,37 @@ const integrations = [
       // Disconnect via service
       await HubSpotService.disconnect(teamId);
     },
+    sync: async (teamId: string) => {
+      // Trigger sync via service
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      
+      const functionUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL?.replace(/\/$/, '') + '/hubspot-sync' || '/functions/v1/hubspot-sync';
+      
+      const res = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ team_id: teamId }),
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = { error: 'Non-JSON response', status: res.status };
+      }
+
+      if (res.ok) {
+        toast.success(`Sync complete! Created: ${data.created}, Updated: ${data.updated}, Failed: ${data.failed}`);
+        return data;
+      } else {
+        toast.error(`Sync failed: ${data.error || data.details || 'Unknown error'}`);
+        throw new Error(data.error || 'Sync failed');
+      }
+    },
   },
   {
     id: 'salesforce',
@@ -216,6 +247,7 @@ export default function Integrations() {
   const [dialogIntegration, setDialogIntegration] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingIntegration, setLoadingIntegration] = useState<string | null>(null);
+  const [syncingIntegration, setSyncingIntegration] = useState<string | null>(null);
   const { currentPlan } = useTier();
 
   useEffect(() => {
@@ -267,6 +299,21 @@ export default function Integrations() {
       }
     } finally {
       setLoadingIntegration(null);
+    }
+  };
+
+  const handleSync = async (integration: any) => {
+    if (!teamId || !integration.sync) return;
+    setSyncingIntegration(integration.id);
+    try {
+      await integration.sync(teamId);
+      // Refresh status after sync
+      if (integration.getStatus) {
+        const status = await integration.getStatus(teamId);
+        setIntegrationStates((prev) => ({ ...prev, [integration.id]: status }));
+      }
+    } finally {
+      setSyncingIntegration(null);
     }
   };
 
@@ -387,10 +434,29 @@ export default function Integrations() {
                             <FiLink className="w-4 h-4 mr-1" /> Connect
                           </Button>
                         )}
-                        {!integration.comingSoon && isConnected && integration.disconnect && (
-                          <Button size="sm" variant="outline" onClick={() => handleDisconnect(integration)} disabled={loadingIntegration === integration.id}>
-                            <FiXCircle className="w-4 h-4 mr-1" /> Disconnect
-                          </Button>
+                        {!integration.comingSoon && isConnected && (
+                          <>
+                            {integration.sync && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleSync(integration)} 
+                                disabled={syncingIntegration === integration.id}
+                              >
+                                {syncingIntegration === integration.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-4 h-4" />
+                                )}
+                                Sync Now
+                              </Button>
+                            )}
+                            {integration.disconnect && (
+                              <Button size="sm" variant="outline" onClick={() => handleDisconnect(integration)} disabled={loadingIntegration === integration.id}>
+                                <FiXCircle className="w-4 h-4 mr-1" /> Disconnect
+                              </Button>
+                            )}
+                          </>
                         )}
                         {isConnected && (
                           <Dialog open={dialogIntegration === integration.id && dialogOpen} onOpenChange={open => { setDialogOpen(open); if (!open) setDialogIntegration(null); }}>
@@ -492,6 +558,39 @@ export default function Integrations() {
                                       <li><a href="#" className="text-primary underline hover:underline">Terms</a></li>
                                     </ul>
                                   </div>
+                                  
+                                  {/* Action Buttons for Connected Integrations */}
+                                  {isConnected && (
+                                    <div className="space-y-3">
+                                      <div className="uppercase text-xs tracking-wide font-semibold text-muted-foreground mb-2">Actions</div>
+                                      {integration.sync && (
+                                        <Button 
+                                          onClick={() => handleSync(integration)} 
+                                          disabled={syncingIntegration === integration.id}
+                                          className="w-full flex items-center gap-2"
+                                        >
+                                          {syncingIntegration === integration.id ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <RefreshCw className="h-4 w-4" />
+                                          )}
+                                          Sync Now
+                                        </Button>
+                                      )}
+                                      {integration.disconnect && (
+                                        <Button 
+                                          variant="outline" 
+                                          onClick={() => handleDisconnect(integration)} 
+                                          disabled={loadingIntegration === integration.id}
+                                          className="w-full flex items-center gap-2"
+                                        >
+                                          <FiXCircle className="h-4 w-4" />
+                                          Disconnect
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                  
                                   <div className="flex-1 flex items-end justify-end">
                                     <Button asChild variant="outline" className="mt-4">
                                       <Link to="/settings?tab=integrations">Manage Integration</Link>

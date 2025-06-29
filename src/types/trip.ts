@@ -92,6 +92,95 @@ export const agentContextSchema = z.object({
   marginOverride: z.number().optional(),
 });
 
+// Package Components Types
+export const packageComponentSchema = z.object({
+  id: z.string(),
+  type: z.enum(['outboundFlight', 'inboundFlight', 'hotel', 'event', 'transfer', 'activity', 'insurance']),
+  title: z.string(),
+  description: z.string(),
+  price: z.number(),
+  currency: z.string(),
+  rating: z.number().optional(),
+  image: z.string().optional(),
+  data: z.any(),
+  aiReasoning: z.string(),
+  selected: z.boolean(),
+});
+
+export const packageBundleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  totalPrice: z.number(),
+  currency: z.string(),
+  savings: z.number(),
+  components: z.array(packageComponentSchema),
+  aiSummary: z.string(),
+  selected: z.boolean(),
+});
+
+export const packageComponentsSchema = z.object({
+  recommendations: z.array(packageComponentSchema).default([]),
+  bundles: z.array(packageBundleSchema).default([]),
+  selectedItems: z.array(z.string()).default([]),
+  aiAnalysis: z.string().optional(),
+});
+
+export interface IndividualTraveler {
+  id: string;
+  name: string;
+  type: 'adult' | 'child';
+  age?: number;
+  preferences: {
+    flightClass?: 'economy' | 'premium_economy' | 'business' | 'first';
+    hotelRoom?: 'shared' | 'single' | 'suite';
+    transferType?: 'shared' | 'private';
+    specialNeeds?: string[];
+    dietaryRestrictions?: string[];
+  };
+  groupAssignments: {
+    flightGroup?: string; // Group ID for shared flights
+    hotelGroup?: string;  // Group ID for shared rooms
+    transferGroup?: string; // Group ID for shared transfers
+  };
+}
+
+export interface TravelerGroup {
+  id: string;
+  name: string;
+  type: 'flight' | 'hotel' | 'transfer';
+  travelers: string[]; // Array of traveler IDs
+  preferences: {
+    flightClass?: 'economy' | 'premium_economy' | 'business' | 'first';
+    hotelRoomType?: 'standard' | 'deluxe' | 'suite' | 'connecting';
+    transferVehicle?: 'sedan' | 'suv' | 'minivan' | 'bus';
+    sharedPreferences?: string[];
+  };
+}
+
+export interface GroupBookingScenario {
+  travelers: IndividualTraveler[];
+  groups: TravelerGroup[];
+  sharedPreferences: {
+    destination: string;
+    dates: {
+      arrival: string;
+      departure: string;
+    };
+    budget: {
+      total: number;
+      currency: string;
+      allocation: {
+        flights: number; // percentage
+        hotels: number;  // percentage
+        transfers: number; // percentage
+        activities: number; // percentage
+      };
+    };
+  };
+}
+
+// Update the existing tripIntakeSchema to include group booking
 export const tripIntakeSchema = z.object({
   // CRM Integration
   clientId: z.string().optional(),
@@ -116,6 +205,38 @@ export const tripIntakeSchema = z.object({
       adults: z.number().min(1, 'At least one adult is required'),
       children: z.number().min(0).default(0),
     }),
+    // New: Individual traveler details for group bookings
+    individualTravelers: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.enum(['adult', 'child']),
+      age: z.number().optional(),
+      preferences: z.object({
+        flightClass: z.enum(['economy', 'premium_economy', 'business', 'first']).optional(),
+        hotelRoom: z.enum(['shared', 'single', 'suite']).optional(),
+        transferType: z.enum(['shared', 'private']).optional(),
+        specialNeeds: z.array(z.string()).optional(),
+        dietaryRestrictions: z.array(z.string()).optional(),
+      }).optional(),
+      groupAssignments: z.object({
+        flightGroup: z.string().optional(),
+        hotelGroup: z.string().optional(),
+        transferGroup: z.string().optional(),
+      }).optional(),
+    })).optional(),
+    // New: Traveler groups for shared bookings
+    travelerGroups: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.enum(['flight', 'hotel', 'transfer']),
+      travelers: z.array(z.string()),
+      preferences: z.object({
+        flightClass: z.enum(['economy', 'premium_economy', 'business', 'first']).optional(),
+        hotelRoomType: z.enum(['standard', 'deluxe', 'suite', 'connecting']).optional(),
+        transferVehicle: z.enum(['sedan', 'suv', 'minivan', 'bus']).optional(),
+        sharedPreferences: z.array(z.string()).optional(),
+      }).optional(),
+    })).optional(),
   }),
 
   // Step 2: Destination Preferences
@@ -124,6 +245,16 @@ export const tripIntakeSchema = z.object({
     primary: z.string().min(2, 'Primary destination is required'),
     additional: z.array(z.string()).default([]),
     duration: z.number().default(0),
+    outboundFlight: z.object({
+      from: z.string().min(2, 'Outbound departure airport is required'),
+      to: z.string().min(2, 'Outbound arrival airport is required'),
+      date: z.string().min(1, 'Outbound date is required'),
+    }).optional(),
+    inboundFlight: z.object({
+      from: z.string().min(2, 'Inbound departure airport is required'),
+      to: z.string().min(2, 'Inbound arrival airport is required'),
+      date: z.string().min(1, 'Inbound date is required'),
+    }).optional(),
   }),
 
   // Step 3: Trip Style
@@ -147,20 +278,8 @@ export const tripIntakeSchema = z.object({
     travelClass: travelClassEnum,
   }),
 
-  // Step 6: Hotel Selection (NEW)
-  hotelSelection: z.object({
-    skipHotelSelection: z.boolean().default(false),
-    selectedHotel: selectedHotelSchema.optional(),
-    searchParams: z.object({
-      destination: z.string(),
-      checkIn: z.string(),
-      checkOut: z.string(),
-      adults: z.number(),
-      children: z.number(),
-      rooms: z.number(),
-      currency: z.string(),
-    }).optional(),
-  }),
+  // Step 6: Package Components
+  packageComponents: packageComponentsSchema.optional(),
 
   // Step 7: Events
   eventRequests: z.string().default(''),
@@ -187,4 +306,7 @@ export type EventFilters = z.infer<typeof eventFiltersSchema>;
 export type AgentContext = z.infer<typeof agentContextSchema>;
 export type RateHawkHotel = z.infer<typeof rateHawkHotelSchema>;
 export type RateHawkRoom = z.infer<typeof rateHawkRoomSchema>;
-export type SelectedHotel = z.infer<typeof selectedHotelSchema>; 
+export type SelectedHotel = z.infer<typeof selectedHotelSchema>;
+export type PackageComponent = z.infer<typeof packageComponentSchema>;
+export type PackageBundle = z.infer<typeof packageBundleSchema>;
+export type PackageComponents = z.infer<typeof packageComponentsSchema>; 

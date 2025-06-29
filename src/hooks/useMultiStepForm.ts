@@ -51,11 +51,6 @@ export function useMultiStepForm() {
         experienceType: 'exclusive',
         travelClass: 'business',
       },
-      hotelSelection: {
-        skipHotelSelection: false,
-        selectedHotel: undefined,
-        searchParams: undefined,
-      },
       eventRequests: '',
       eventTypes: [],
       includeInventory: { flights: false, hotels: false, events: false },
@@ -131,7 +126,7 @@ export function useMultiStepForm() {
       case 5:
         return ['budget.amount', 'budget.currency', 'budget.experienceType', 'budget.travelClass'] as any;
       case 6:
-        return []; // Hotel selection step - no validation needed (optional step)
+        return []; // Package components step - no validation needed (AI recommendations)
       case 7:
         return ['eventRequests', 'eventTypes'] as any;
       case 8:

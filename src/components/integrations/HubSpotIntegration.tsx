@@ -11,7 +11,9 @@ import {
   CheckCircle,
   Clock,
   Zap,
-  Globe
+  Globe,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -151,6 +153,7 @@ export const HubSpotIntegration: React.FC<HubSpotIntegrationProps> = ({ teamId }
         onSync={handleSync}
         onSettings={handleSettings}
         showSettings={true}
+        syncing={syncing}
       />
 
       {/* Sync Logs */}
@@ -173,6 +176,28 @@ export const HubSpotIntegration: React.FC<HubSpotIntegrationProps> = ({ teamId }
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* Sync Action Button */}
+              {integrationStatus?.isConnected && (
+                <div className="p-4 bg-white/50 rounded-xl border">
+                  <h4 className="font-semibold mb-3">Manual Sync</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Trigger an immediate sync of your HubSpot data.
+                  </p>
+                  <Button 
+                    onClick={handleSync} 
+                    disabled={syncing}
+                    className="flex items-center gap-2"
+                  >
+                    {syncing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    {syncing ? 'Syncing...' : 'Sync Now'}
+                  </Button>
+                </div>
+              )}
+              
               <div className="p-4 bg-white/50 rounded-xl border">
                 <h4 className="font-semibold mb-3">Sync Frequency</h4>
                 <p className="text-sm text-muted-foreground mb-4">

@@ -11,21 +11,29 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   User, 
   Users, 
+  Plane, 
+  Bed, 
+  Car, 
   Plus, 
-  Search, 
-  CheckCircle, 
-  UserPlus, 
-  Building2,
+  Trash2, 
+  Settings,
+  UserPlus,
+  Group,
+  Search,
+  CheckCircle,
   Mail,
   Phone,
+  Building2,
   MapPin,
   Sparkles,
   AlertCircle
-} from 'lucide-react';
+} from "lucide-react";
 import ClientSelector from '@/components/crm/ClientSelector';
 import { CRMService } from '@/lib/crmService';
 import { Client } from '@/types/crm';
-import { TripIntake } from '@/types/trip';
+import { TripIntake, IndividualTraveler, TravelerGroup } from '@/types/trip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Step1TravelerInfoProps {
   disabled?: boolean;
@@ -36,6 +44,8 @@ export function Step1TravelerInfo({ disabled }: Step1TravelerInfoProps) {
   const [clientMode, setClientMode] = useState<'select' | 'create'>('select');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isCreatingClient, setIsCreatingClient] = useState(false);
+  const [showAdvancedGrouping, setShowAdvancedGrouping] = useState(false);
+  const [editingTraveler, setEditingTraveler] = useState<string | null>(null);
 
   // Form state for new client creation
   const [newClientData, setNewClientData] = useState({
@@ -53,6 +63,10 @@ export function Step1TravelerInfo({ disabled }: Step1TravelerInfoProps) {
     },
     notes: ''
   });
+
+  const totalTravelers = (form.watch('travelerInfo.travelers.adults') || 0) + (form.watch('travelerInfo.travelers.children') || 0);
+  const individualTravelers = form.watch('travelerInfo.individualTravelers') || [];
+  const travelerGroups = form.watch('travelerInfo.travelerGroups') || [];
 
   // Auto-fill form when client is selected
   useEffect(() => {
@@ -149,6 +163,110 @@ export function Step1TravelerInfo({ disabled }: Step1TravelerInfoProps) {
       console.error('Error creating client:', error);
     } finally {
       setIsCreatingClient(false);
+    }
+  };
+
+  const addIndividualTraveler = () => {
+    const newTraveler: IndividualTraveler = {
+      id: `traveler-${Date.now()}`,
+      name: '',
+      type: 'adult',
+      preferences: {},
+      groupAssignments: {}
+    };
+    
+    const currentTravelers = form.getValues('travelerInfo.individualTravelers') || [];
+    form.setValue('travelerInfo.individualTravelers', [...currentTravelers, newTraveler]);
+  };
+
+  const removeIndividualTraveler = (travelerId: string) => {
+    const currentTravelers = form.getValues('travelerInfo.individualTravelers') || [];
+    const updatedTravelers = currentTravelers.filter(t => t.id !== travelerId);
+    form.setValue('travelerInfo.individualTravelers', updatedTravelers);
+  };
+
+  const updateTraveler = (travelerId: string, updates: Partial<IndividualTraveler>) => {
+    const currentTravelers = form.getValues('travelerInfo.individualTravelers') || [];
+    const updatedTravelers = currentTravelers.map(t => 
+      t.id === travelerId ? { ...t, ...updates } : t
+    );
+    form.setValue('travelerInfo.individualTravelers', updatedTravelers);
+  };
+
+  const createTravelerGroup = (type: 'flight' | 'hotel' | 'transfer') => {
+    const newGroup: TravelerGroup = {
+      id: `group-${type}-${Date.now()}`,
+      name: `${type.charAt(0).toUpperCase() + type.slice(1)} Group`,
+      type,
+      travelers: [],
+      preferences: {}
+    };
+    
+    const currentGroups = form.getValues('travelerInfo.travelerGroups') || [];
+    form.setValue('travelerInfo.travelerGroups', [...currentGroups, newGroup]);
+  };
+
+  const assignTravelerToGroup = (travelerId: string, groupId: string, groupType: 'flight' | 'hotel' | 'transfer') => {
+    // Update traveler's group assignment
+    updateTraveler(travelerId, {
+      groupAssignments: {
+        ...individualTravelers.find(t => t.id === travelerId)?.groupAssignments,
+        [`${groupType}Group`]: groupId
+      }
+    });
+
+    // Update group's traveler list
+    const currentGroups = form.getValues('travelerInfo.travelerGroups') || [];
+    const updatedGroups = currentGroups.map(g => {
+      if (g.id === groupId) {
+        return {
+          ...g,
+          travelers: [...g.travelers, travelerId]
+        };
+      }
+      return g;
+    });
+    form.setValue('travelerInfo.travelerGroups', updatedGroups);
+  };
+
+  const removeTravelerFromGroup = (travelerId: string, groupId: string, groupType: 'flight' | 'hotel' | 'transfer') => {
+    // Remove from traveler's group assignment
+    updateTraveler(travelerId, {
+      groupAssignments: {
+        ...individualTravelers.find(t => t.id === travelerId)?.groupAssignments,
+        [`${groupType}Group`]: undefined
+      }
+    });
+
+    // Remove from group's traveler list
+    const currentGroups = form.getValues('travelerInfo.travelerGroups') || [];
+    const updatedGroups = currentGroups.map(g => {
+      if (g.id === groupId) {
+        return {
+          ...g,
+          travelers: g.travelers.filter(t => t !== travelerId)
+        };
+      }
+      return g;
+    });
+    form.setValue('travelerInfo.travelerGroups', updatedGroups);
+  };
+
+  const getGroupIcon = (type: string) => {
+    switch (type) {
+      case 'flight': return <Plane className="h-4 w-4" />;
+      case 'hotel': return <Bed className="h-4 w-4" />;
+      case 'transfer': return <Car className="h-4 w-4" />;
+      default: return <Group className="h-4 w-4" />;
+    }
+  };
+
+  const getGroupColor = (type: string) => {
+    switch (type) {
+      case 'flight': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'hotel': return 'bg-green-100 text-green-800 border-green-200';
+      case 'transfer': return 'bg-purple-100 text-purple-800 border-purple-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -493,6 +611,425 @@ export function Step1TravelerInfo({ disabled }: Step1TravelerInfoProps) {
           )}
         </div>
       </motion.div>
+
+      {/* Advanced Grouping Section */}
+      {totalTravelers > 1 && (
+        <>
+          {/* Advanced Grouping Toggle */}
+          <Card className="bg-gradient-to-b from-[var(--card)]/95 to-[var(--background)]/20 border border-[var(--border)] rounded-2xl shadow-sm overflow-hidden">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="advanced-grouping"
+                    checked={showAdvancedGrouping}
+                    onCheckedChange={(checked) => setShowAdvancedGrouping(checked as boolean)}
+                    disabled={disabled}
+                  />
+                  <label htmlFor="advanced-grouping" className="text-sm font-medium text-[var(--foreground)]">
+                    Advanced Group Preferences
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {totalTravelers} travelers
+                  </Badge>
+                  {totalTravelers === 3 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Create demo scenario: 3 people with mixed preferences
+                        const demoTravelers = [
+                          {
+                            id: 'traveler-1',
+                            name: 'John Smith',
+                            type: 'adult' as const,
+                            preferences: {
+                              flightClass: 'business' as const,
+                              hotelRoom: 'shared' as const,
+                              transferType: 'shared' as const,
+                            },
+                            groupAssignments: {}
+                          },
+                          {
+                            id: 'traveler-2',
+                            name: 'Sarah Johnson',
+                            type: 'adult' as const,
+                            preferences: {
+                              flightClass: 'business' as const,
+                              hotelRoom: 'shared' as const,
+                              transferType: 'shared' as const,
+                            },
+                            groupAssignments: {}
+                          },
+                          {
+                            id: 'traveler-3',
+                            name: 'Mike Wilson',
+                            type: 'adult' as const,
+                            preferences: {
+                              flightClass: 'economy' as const,
+                              hotelRoom: 'single' as const,
+                              transferType: 'private' as const,
+                            },
+                            groupAssignments: {}
+                          }
+                        ];
+
+                        const demoGroups = [
+                          {
+                            id: 'flight-group-1',
+                            name: 'Business Class Group',
+                            type: 'flight' as const,
+                            travelers: ['traveler-1', 'traveler-2'],
+                            preferences: {
+                              flightClass: 'business' as const,
+                            }
+                          },
+                          {
+                            id: 'flight-group-2',
+                            name: 'Economy Group',
+                            type: 'flight' as const,
+                            travelers: ['traveler-3'],
+                            preferences: {
+                              flightClass: 'economy' as const,
+                            }
+                          },
+                          {
+                            id: 'hotel-group-1',
+                            name: 'Shared Room Group',
+                            type: 'hotel' as const,
+                            travelers: ['traveler-1', 'traveler-2'],
+                            preferences: {
+                              hotelRoomType: 'deluxe' as const,
+                            }
+                          },
+                          {
+                            id: 'hotel-group-2',
+                            name: 'Single Room Group',
+                            type: 'hotel' as const,
+                            travelers: ['traveler-3'],
+                            preferences: {
+                              hotelRoomType: 'standard' as const,
+                            }
+                          },
+                          {
+                            id: 'transfer-group-1',
+                            name: 'Shared Transfer Group',
+                            type: 'transfer' as const,
+                            travelers: ['traveler-1', 'traveler-2'],
+                            preferences: {
+                              transferVehicle: 'sedan' as const,
+                            }
+                          },
+                          {
+                            id: 'transfer-group-2',
+                            name: 'Private Transfer Group',
+                            type: 'transfer' as const,
+                            travelers: ['traveler-3'],
+                            preferences: {
+                              transferVehicle: 'sedan' as const,
+                            }
+                          }
+                        ];
+
+                        form.setValue('travelerInfo.individualTravelers', demoTravelers);
+                        form.setValue('travelerInfo.travelerGroups', demoGroups);
+                        setShowAdvancedGrouping(true);
+                      }}
+                      disabled={disabled}
+                      className="h-8 text-xs"
+                    >
+                      Load Demo Scenario
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)] mt-2">
+                Enable to set individual traveler preferences and group assignments for complex booking scenarios.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Individual Travelers - Only show when advanced grouping is enabled */}
+          {showAdvancedGrouping && (
+            <Card className="bg-gradient-to-b from-[var(--card)]/95 to-[var(--background)]/20 border border-[var(--border)] rounded-2xl shadow-sm overflow-hidden">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-[var(--card-foreground)]">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                      <Users className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <span>Individual Travelers</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addIndividualTraveler}
+                    disabled={disabled}
+                    className="h-8"
+                  >
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    Add Traveler
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {individualTravelers.map((traveler, index) => (
+                  <div key={traveler.id} className="border border-[var(--border)] rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-[var(--muted-foreground)]" />
+                        <span className="font-medium">Traveler {index + 1}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeIndividualTraveler(traveler.id)}
+                        disabled={disabled}
+                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-[var(--muted-foreground)]">Name</label>
+                        <Input
+                          value={traveler.name}
+                          onChange={(e) => updateTraveler(traveler.id, { name: e.target.value })}
+                          placeholder="Traveler name"
+                          className="h-8 text-sm"
+                          disabled={disabled}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-[var(--muted-foreground)]">Type</label>
+                        <Select
+                          value={traveler.type}
+                          onValueChange={(value) => updateTraveler(traveler.id, { type: value as 'adult' | 'child' })}
+                          disabled={disabled}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="adult">Adult</SelectItem>
+                            <SelectItem value="child">Child</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-[var(--muted-foreground)]">Flight Class</label>
+                        <Select
+                          value={traveler.preferences?.flightClass || ''}
+                          onValueChange={(value) => updateTraveler(traveler.id, { 
+                            preferences: { ...traveler.preferences, flightClass: value as any }
+                          })}
+                          disabled={disabled}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Any class" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="economy">Economy</SelectItem>
+                            <SelectItem value="premium_economy">Premium Economy</SelectItem>
+                            <SelectItem value="business">Business</SelectItem>
+                            <SelectItem value="first">First Class</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-[var(--muted-foreground)]">Hotel Room</label>
+                        <Select
+                          value={traveler.preferences?.hotelRoom || ''}
+                          onValueChange={(value) => updateTraveler(traveler.id, { 
+                            preferences: { ...traveler.preferences, hotelRoom: value as any }
+                          })}
+                          disabled={disabled}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Any room type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="shared">Shared Room</SelectItem>
+                            <SelectItem value="single">Single Room</SelectItem>
+                            <SelectItem value="suite">Suite</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-[var(--muted-foreground)]">Transfer Type</label>
+                        <Select
+                          value={traveler.preferences?.transferType || ''}
+                          onValueChange={(value) => updateTraveler(traveler.id, { 
+                            preferences: { ...traveler.preferences, transferType: value as any }
+                          })}
+                          disabled={disabled}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Any transfer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="shared">Shared Transfer</SelectItem>
+                            <SelectItem value="private">Private Transfer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Traveler Groups - Only show when advanced grouping is enabled */}
+          {showAdvancedGrouping && (
+            <Card className="bg-gradient-to-b from-[var(--card)]/95 to-[var(--background)]/20 border border-[var(--border)] rounded-2xl shadow-sm overflow-hidden">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-[var(--card-foreground)]">
+                    <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                      <Group className="h-4 w-4 text-green-500" />
+                    </div>
+                    <span>Traveler Groups</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => createTravelerGroup('flight')}
+                      disabled={disabled}
+                      className="h-8"
+                    >
+                      <Plane className="h-3 w-3 mr-1" />
+                      Flight Group
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => createTravelerGroup('hotel')}
+                      disabled={disabled}
+                      className="h-8"
+                    >
+                      <Bed className="h-3 w-3 mr-1" />
+                      Hotel Group
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => createTravelerGroup('transfer')}
+                      disabled={disabled}
+                      className="h-8"
+                    >
+                      <Car className="h-3 w-3 mr-1" />
+                      Transfer Group
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {travelerGroups.map((group) => (
+                  <div key={group.id} className="border border-[var(--border)] rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {getGroupIcon(group.type)}
+                        <span className="font-medium">{group.name}</span>
+                        <Badge className={`text-xs ${getGroupColor(group.type)}`}>
+                          {group.travelers.length} travelers
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-[var(--muted-foreground)]">Group Name</label>
+                        <Input
+                          value={group.name}
+                          onChange={(e) => {
+                            const currentGroups = form.getValues('travelerInfo.travelerGroups') || [];
+                            const updatedGroups = currentGroups.map(g => 
+                              g.id === group.id ? { ...g, name: e.target.value } : g
+                            );
+                            form.setValue('travelerInfo.travelerGroups', updatedGroups);
+                          }}
+                          placeholder="Group name"
+                          className="h-8 text-sm"
+                          disabled={disabled}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-[var(--muted-foreground)]">Travelers</label>
+                        <div className="flex flex-wrap gap-1">
+                          {individualTravelers
+                            .filter(t => !group.travelers.includes(t.id))
+                            .map(traveler => (
+                              <Button
+                                key={traveler.id}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => assignTravelerToGroup(traveler.id, group.id, group.type)}
+                                disabled={disabled}
+                                className="h-6 text-xs"
+                              >
+                                {traveler.name || `Traveler ${traveler.id}`}
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {group.travelers.length > 0 && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-[var(--muted-foreground)]">Assigned Travelers</label>
+                        <div className="flex flex-wrap gap-1">
+                          {group.travelers.map(travelerId => {
+                            const traveler = individualTravelers.find(t => t.id === travelerId);
+                            return traveler ? (
+                              <Badge
+                                key={travelerId}
+                                variant="secondary"
+                                className="flex items-center gap-1"
+                              >
+                                {traveler.name || `Traveler ${travelerId}`}
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeTravelerFromGroup(travelerId, group.id, group.type)}
+                                  disabled={disabled}
+                                  className="h-3 w-3 p-0 hover:bg-transparent"
+                                >
+                                  ×
+                                </Button>
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
     </motion.div>
   );
 } 

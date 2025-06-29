@@ -6,7 +6,7 @@ import { Step4Experience } from '@/components/forms/steps/Step4Experience';
 import { Step5Budget } from '@/components/forms/steps/Step5Budget';
 import { Step6Events } from '@/components/forms/steps/Step6Events';
 import { Step6Review } from '@/components/forms/steps/Step6Review';
-import { StepHotelSelection } from '@/components/forms/steps/StepHotelSelection';
+import { StepPackageComponents } from '@/components/forms/steps/StepPackageComponents';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -143,13 +143,13 @@ const proTips = [
   },
   {
     step: 6,
-    title: "Hotel Selection",
+    title: "Package Components",
     tips: [
-      "Check commission rates - luxury hotels often offer 10-15%",
-      "Verify availability before including in proposals",
-      "Consider location convenience for client's planned activities"
+      "AI recommendations are based on all previous form data and preferences",
+      "Bundle packages offer significant savings over individual components",
+      "Review AI reasoning to understand why each option was recommended"
     ],
-    icon: Hotel
+    icon: Sparkles
   },
   {
     step: 7,
@@ -180,7 +180,7 @@ const stepConfig = [
   { id: 3, title: "Trip Style", icon: Star, color: "var(--color-primary-600)" },
   { id: 4, title: "Experience", icon: Activity, color: "var(--color-secondary-700)" },
   { id: 5, title: "Budget", icon: DollarSign, color: "var(--color-primary-700)" },
-  { id: 6, title: "Hotel Selection", icon: Hotel, color: "var(--color-secondary-800)" },
+  { id: 6, title: "Package Components", icon: Sparkles, color: "var(--color-secondary-800)" },
   { id: 7, title: "Events & Activities", icon: Calendar, color: "var(--color-primary-800)" },
   { id: 8, title: "Review & Generate", icon: CheckCircle, color: "var(--color-secondary-900)" }
 ];
@@ -282,7 +282,7 @@ export default function NewProposal() {
                       {currentStep === 3 && "Choose the style and tone of the trip"}
                       {currentStep === 4 && "Set experience preferences and pace"}
                       {currentStep === 5 && "Define budget and travel class"}
-                      {currentStep === 6 && "Select accommodation preferences"}
+                      {currentStep === 6 && "AI-powered package recommendations"}
                       {currentStep === 7 && "Add events and activities"}
                       {currentStep === 8 && "Review and generate the final proposal"}
                     </p>
@@ -330,7 +330,7 @@ export default function NewProposal() {
                         <Step5Budget />
                       </StepTransition>
                       <StepTransition step={6} currentStep={currentStep}>
-                        <StepHotelSelection />
+                        <StepPackageComponents />
                       </StepTransition>
                       <StepTransition step={7} currentStep={currentStep}>
                         <Step6Events />

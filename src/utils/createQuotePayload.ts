@@ -1,4 +1,4 @@
-import { TripIntake, FlightFilters, HotelFilters, EventFilters, AgentContext } from '@/types/trip';
+import { TripIntake, FlightFilters, HotelFilters, EventFilters, AgentContext, PackageComponents } from '@/types/trip';
 import { useIntakeStore } from '@/store/intake';
 
 export interface QuoteInput {
@@ -100,6 +100,7 @@ export interface QuoteInput {
     };
     selectedAt: string;
   };
+  packageComponents?: PackageComponents;
 }
 
 export function createQuotePayload(formData: TripIntake): QuoteInput {
@@ -118,17 +119,17 @@ export function createQuotePayload(formData: TripIntake): QuoteInput {
   const eventSpecialRequests = selectedEvent ? 
     `EVENT FOCUSED TRIP: The main purpose of this trip is to attend ${selectedEvent.name} on ${selectedEvent.dateOfEvent}. Ticket type: ${selectedTicket?.categoryName}. This event should be the absolute centerpiece of the entire itinerary. All activities should be planned around this event, including proper transportation to/from the venue, accommodation near the event location, and complementary activities that enhance the event experience.` : 
     undefined;
-  
-  // Create hotel-specific special requests if a hotel is selected
-  const hotelSpecialRequests = formData.hotelSelection.selectedHotel ? 
-    `HOTEL CONFIRMED: ${formData.hotelSelection.selectedHotel.hotel.name} - ${formData.hotelSelection.selectedHotel.room.name}. Price: ${formData.hotelSelection.selectedHotel.room.price.amount} ${formData.hotelSelection.selectedHotel.room.price.currency} per night. Board type: ${formData.hotelSelection.selectedHotel.room.boardType || 'Room Only'}. Cancellation policy: ${formData.hotelSelection.selectedHotel.room.cancellationPolicy || 'Standard'}.` : 
+
+  // Create package components special requests if components are selected
+  const packageSpecialRequests = formData.packageComponents?.selectedItems.length ? 
+    `PACKAGE COMPONENTS SELECTED: ${formData.packageComponents.selectedItems.length} components chosen. AI Analysis: ${formData.packageComponents.aiAnalysis}. Selected items: ${formData.packageComponents.selectedItems.join(', ')}.` : 
     undefined;
   
-  // Combine existing special requests with event and hotel requests
+  // Combine existing special requests with event and package requests
   const combinedSpecialRequests = [
     formData.experience.specialRequests, 
     eventSpecialRequests,
-    hotelSpecialRequests
+    packageSpecialRequests
   ]
     .filter(Boolean)
     .join(' ');
@@ -182,6 +183,6 @@ export function createQuotePayload(formData: TripIntake): QuoteInput {
       currency: selectedTicket.currency,
       available: selectedTicket.available,
     } : undefined,
-    selectedHotel: formData.hotelSelection.selectedHotel || undefined,
+    packageComponents: formData.packageComponents || undefined,
   };
 } 

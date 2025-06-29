@@ -37,6 +37,7 @@ import {
 import { CRMService } from '@/lib/crmService';
 import type { Client, ClientStats, ClientFilters } from '@/types/crm';
 import { ClientsTable } from '@/components/crm/ClientsTable';
+import { supabase } from '@/lib/supabase';
 
 export default function CRM() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -47,10 +48,12 @@ export default function CRM() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('updatedAt');
+  const [teamId, setTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     loadClients();
     loadStats();
+    loadTeamId();
   }, []);
 
   useEffect(() => {
@@ -75,6 +78,22 @@ export default function CRM() {
       setStats(statsData);
     } catch (error) {
       console.error('Failed to load stats:', error);
+    }
+  };
+
+  const loadTeamId = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: teamMember } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+      setTeamId(teamMember?.team_id || null);
+    } catch (error) {
+      console.error('Failed to load team ID:', error);
     }
   };
 
@@ -244,15 +263,17 @@ export default function CRM() {
             Manage your client relationships and track interactions
           </p>
         </div>
-        <Button asChild className="rounded-xl">
-          <Link to="/crm/new-client">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add New Client
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild className="rounded-xl">
+            <Link to="/crm/new-client">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add New Client
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Table-based Clients List */}
+      {/* Table-based Clients List - Full Width */}
       <ClientsTable
         clients={filteredClients}
         isLoading={isLoading}
@@ -269,6 +290,7 @@ export default function CRM() {
         onBulkAddTags={handleBulkAddTags}
         onBulkRemoveTags={handleBulkRemoveTags}
         onImportClients={handleImportClients}
+        teamId={teamId}
       />
     </div>
   );

@@ -39,6 +39,8 @@ import { CRMService } from '@/lib/crmService';
 import { QuoteService } from '@/lib/quoteService';
 import type { Client, ClientInteraction, ClientTravelHistory } from '@/types/crm';
 import type { QuoteResponse } from '@/lib/quoteService';
+import { ClientIntegrationStatus } from '@/components/crm/ClientIntegrationStatus';
+import { supabase } from '@/lib/supabase';
 
 export default function ClientDetail() {
   const { clientId } = useParams<{ clientId: string }>();
@@ -48,10 +50,12 @@ export default function ClientDetail() {
   const [travelHistory, setTravelHistory] = useState<ClientTravelHistory[]>([]);
   const [quotes, setQuotes] = useState<QuoteResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [teamId, setTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     if (clientId) {
       loadClientData();
+      loadTeamId();
     }
   }, [clientId]);
 
@@ -81,6 +85,22 @@ export default function ClientDetail() {
       console.error('Failed to load client data:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadTeamId = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: teamMember } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+      setTeamId(teamMember?.team_id || null);
+    } catch (error) {
+      console.error('Failed to load team ID:', error);
     }
   };
 
@@ -395,6 +415,11 @@ export default function ClientDetail() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Integration Status */}
+              {teamId && clientId && (
+                <ClientIntegrationStatus clientId={clientId} teamId={teamId} />
+              )}
 
               {client.budgetPreference && (
                 <Card>

@@ -41,8 +41,7 @@ import {
   SiAsana,
   SiTrello,
   SiNotion,
-  SiAirtable,
-  SiMicrosoftoffice365
+  SiAirtable
 } from 'react-icons/si';
 import { 
   FaMicrosoft
@@ -96,6 +95,7 @@ interface IntegrationCardProps {
   onSync: () => Promise<void>;
   onSettings?: () => void;
   showSettings?: boolean;
+  syncing?: boolean;
   children?: React.ReactNode;
 }
 
@@ -154,9 +154,9 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
   onSync,
   onSettings,
   showSettings = false,
+  syncing = false,
   children
 }) => {
-  const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
@@ -165,13 +165,10 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
 
   const handleManualSync = async () => {
     try {
-      setSyncing(true);
       await onSync();
     } catch (error) {
       console.error('Sync error:', error);
       toast.error('Sync failed. Please try again.');
-    } finally {
-      setSyncing(false);
     }
   };
 
