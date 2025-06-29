@@ -50,7 +50,9 @@ import {
   CalendarDays,
   User,
   Building2,
-  Car as CarIcon
+  Car as CarIcon,
+  Download,
+  Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -92,17 +94,107 @@ interface EditModalProps {
 
 export function StepPackageComponents() {
   const form = useFormContext<TripIntake>();
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedComponents, setSelectedComponents] = useState<PackageComponent[]>([]);
-  const [alternatives, setAlternatives] = useState<Record<string, QuickAlternative[]>>({});
-  const [expandedComponent, setExpandedComponent] = useState<string | null>(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editingComponent, setEditingComponent] = useState<PackageComponent | null>(null);
-  const [allAvailableData, setAllAvailableData] = useState<any>({});
+  const [selectedComponent, setSelectedComponent] = useState<PackageComponent | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAlternatives, setShowAlternatives] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [availableData, setAvailableData] = useState<any>({});
+  const [smartDefaults, setSmartDefaults] = useState<PackageComponent[]>([]);
+  const [alternatives, setAlternatives] = useState<PackageComponent[]>([]);
+  const [showTravelerAssignment, setShowTravelerAssignment] = useState<string | null>(null);
 
   // Get form data
-  const formData = form.getValues();
-  const { travelerInfo, destinations, style, experience, budget } = formData;
+  const travelerInfo = form.watch('travelerInfo');
+  const destinations = form.watch('destinations');
+  const style = form.watch('style');
+  const experience = form.watch('experience');
+  const budget = form.watch('budget');
+  const individualTravelers = form.watch('travelerInfo.individualTravelers') || [];
+  const travelerGroups = form.watch('travelerInfo.travelerGroups') || [];
+
+  // Enhanced: Per-traveler component tracking
+  const [travelerComponents, setTravelerComponents] = useState<Record<string, PackageComponent[]>>({});
+  const [componentAssignments, setComponentAssignments] = useState<Record<string, string[]>>({});
+
+  // Calculate per-traveler totals
+  const calculateTravelerTotals = () => {
+    const totals: Record<string, number> = {};
+    
+    individualTravelers.forEach(traveler => {
+      const travelerComps = travelerComponents[traveler.id] || [];
+      totals[traveler.id] = travelerComps.reduce((sum, comp) => sum + comp.price, 0);
+    });
+    
+    return totals;
+  };
+
+  const travelerTotals = calculateTravelerTotals();
+  const groupTotal = Object.values(travelerTotals).reduce((sum, total) => sum + total, 0);
+
+  // Assign component to travelers
+  const assignComponentToTravelers = (componentId: string, travelerIds: string[]) => {
+    const component = smartDefaults.find(c => c.id === componentId) || alternatives.find(c => c.id === componentId);
+    if (!component) return;
+
+    // Update component assignments
+    setComponentAssignments(prev => ({
+      ...prev,
+      [componentId]: travelerIds
+    }));
+
+    // Update traveler components
+    setTravelerComponents(prev => {
+      const newState = { ...prev };
+      
+      // Remove component from all travelers first
+      Object.keys(newState).forEach(travelerId => {
+        newState[travelerId] = newState[travelerId].filter(c => c.id !== componentId);
+      });
+      
+      // Add component to selected travelers
+      travelerIds.forEach(travelerId => {
+        if (!newState[travelerId]) newState[travelerId] = [];
+        newState[travelerId].push(component);
+      });
+      
+      return newState;
+    });
+  };
+
+  // Get travelers assigned to a component
+  const getAssignedTravelers = (componentId: string) => {
+    return componentAssignments[componentId] || [];
+  };
+
+  // Check if a traveler is assigned to a component
+  const isTravelerAssigned = (componentId: string, travelerId: string) => {
+    return getAssignedTravelers(componentId).includes(travelerId);
+  };
+
+  // Toggle traveler assignment
+  const toggleTravelerAssignment = (componentId: string, travelerId: string) => {
+    const currentAssignments = getAssignedTravelers(componentId);
+    const isAssigned = currentAssignments.includes(travelerId);
+    
+    if (isAssigned) {
+      assignComponentToTravelers(componentId, currentAssignments.filter(id => id !== travelerId));
+    } else {
+      assignComponentToTravelers(componentId, [...currentAssignments, travelerId]);
+    }
+  };
+
+  // Get component price for specific travelers
+  const getComponentPriceForTravelers = (component: PackageComponent, travelerIds: string[]) => {
+    if (travelerIds.length === 0) return 0;
+    
+    // For shared components, divide price among travelers
+    if (component.type === 'hotel' || component.type === 'transfer') {
+      return component.price / Math.max(1, travelerIds.length);
+    }
+    
+    // For individual components, multiply by number of travelers
+    return component.price * travelerIds.length;
+  };
 
   useEffect(() => {
     generateSmartDefaults();
@@ -111,12 +203,47 @@ export function StepPackageComponents() {
   // Save selections to form
   useEffect(() => {
     form.setValue('packageComponents', {
-      recommendations: selectedComponents,
-      bundles: [],
-      selectedItems: selectedComponents.filter(c => c.selected).map(c => c.id),
-      aiAnalysis: 'AI-powered recommendations based on your preferences'
+      components: smartDefaults.map(comp => ({
+        id: comp.id,
+        type: (comp.type === 'outboundFlight' || comp.type === 'inboundFlight' ? 'flight' : comp.type) as 'flight' | 'hotel' | 'transfer' | 'event' | 'activity' | 'insurance',
+        title: comp.title,
+        description: comp.description,
+        price: comp.price,
+        currency: comp.currency,
+        rating: comp.rating,
+        image: comp.image,
+        data: comp.data,
+        selected: comp.selected || false,
+        isSmartRecommendation: comp.isSmartRecommendation || false,
+        aiReasoning: comp.aiReasoning,
+        dates: comp.dates,
+        duration: comp.duration,
+        capacity: comp.capacity,
+        amenities: comp.amenities,
+        travelerAssignments: individualTravelers.map(traveler => ({
+          travelerId: traveler.id,
+          assigned: getAssignedTravelers(comp.id).includes(traveler.id),
+          customPrice: undefined,
+          notes: undefined,
+        })),
+        componentPricing: {
+          basePrice: comp.price,
+          markup: 0,
+          totalPrice: comp.price,
+          perTraveler: comp.price,
+          currency: comp.currency,
+        }
+      })),
+      groupSummary: {
+        totalTravelers: individualTravelers.length,
+        totalCost: groupTotal,
+        costPerTraveler: travelerTotals,
+        currency: 'GBP',
+        markup: 0,
+        commission: 0,
+      }
     });
-  }, [selectedComponents, form]);
+  }, [smartDefaults, individualTravelers, groupTotal, travelerTotals, form]);
 
   const generateSmartDefaults = async () => {
     setIsLoading(true);
@@ -124,7 +251,7 @@ export function StepPackageComponents() {
     try {
       // Get all available data
       const availableData = await collectAvailableData();
-      setAllAvailableData(availableData);
+      setAvailableData(availableData);
       
       // Generate smart defaults based on form preferences
       const defaults = await generateSmartDefaultsHelper(availableData);
@@ -143,8 +270,8 @@ export function StepPackageComponents() {
         }));
       });
       
-      setSelectedComponents(defaults);
-      setAlternatives(alts);
+      setSmartDefaults(defaults);
+      setAlternatives(defaults);
       
     } catch (error) {
       console.error('Error generating smart defaults:', error);
@@ -665,38 +792,30 @@ export function StepPackageComponents() {
   };
 
   const selectAlternative = (componentId: string, alternative: QuickAlternative) => {
-    setSelectedComponents(prev => 
-      prev.map(comp => 
-        comp.id === componentId 
-          ? { ...comp, data: alternative.data, price: alternative.price, title: alternative.title }
-          : comp
-      )
+    setSelectedComponent(prev => 
+      prev ? { ...prev, data: alternative.data, price: alternative.price, title: alternative.title } : null
     );
   };
 
   const openEditModal = (component: PackageComponent) => {
-    setEditingComponent(component);
-    setEditModalOpen(true);
+    setSelectedComponent(component);
+    setShowEditModal(true);
   };
 
   const handleEditSelection = (option: any) => {
-    if (editingComponent) {
-      setSelectedComponents(prev => 
-        prev.map(comp => 
-          comp.id === editingComponent.id 
-            ? { 
-                ...comp, 
-                data: option, 
-                price: getOptionPrice(option), 
-                title: getOptionTitle(option),
-                description: getOptionDescription(option)
-              }
-            : comp
-        )
+    if (selectedComponent) {
+      setSelectedComponent(prev => 
+        prev ? { 
+          ...prev, 
+          data: option, 
+          price: getOptionPrice(option), 
+          title: getOptionTitle(option),
+          description: getOptionDescription(option)
+        } : null
       );
     }
-    setEditModalOpen(false);
-    setEditingComponent(null);
+    setShowEditModal(false);
+    setSelectedComponent(null);
   };
 
   const getOptionTitle = (option: any) => {
@@ -745,7 +864,7 @@ export function StepPackageComponents() {
   };
 
   const getTotalPrice = () => {
-    return selectedComponents.reduce((total, comp) => total + comp.price, 0);
+    return selectedComponent ? selectedComponent.price : 0;
   };
 
   const getIcon = (type: string) => {
@@ -1091,7 +1210,7 @@ export function StepPackageComponents() {
         className="space-y-6"
       >
         <AnimatePresence>
-          {selectedComponents.map((component, index) => (
+          {smartDefaults.map((component, index) => (
             <motion.div
               key={component.id}
               initial={{ opacity: 0, y: 20 }}
@@ -1101,10 +1220,10 @@ export function StepPackageComponents() {
             >
               <ComponentCard
                 component={component}
-                alternatives={alternatives[component.id] || []}
-                isExpanded={expandedComponent === component.id}
-                onToggleExpand={() => setExpandedComponent(
-                  expandedComponent === component.id ? null : component.id
+                alternatives={alternatives.filter(c => c.type === component.type)}
+                isExpanded={showAlternatives === component.id}
+                onToggleExpand={() => setShowAlternatives(
+                  showAlternatives === component.id ? null : component.id
                 )}
                 onSelectAlternative={selectAlternative}
                 onEditAll={openEditModal}
@@ -1115,17 +1234,242 @@ export function StepPackageComponents() {
         </AnimatePresence>
       </motion.div>
 
+      {/* Traveler Assignment Section */}
+      {individualTravelers.length > 0 && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-[var(--foreground)]">Traveler Assignments</h3>
+            <Badge variant="secondary" className="text-sm">
+              Group Total: £{groupTotal.toLocaleString()}
+            </Badge>
+          </div>
+
+          {/* Per-Traveler Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {individualTravelers.map(traveler => (
+              <Card key={traveler.id} className="bg-gradient-to-b from-[var(--card)]/95 to-[var(--background)]/20 border border-[var(--border)] rounded-xl shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-[var(--primary)]" />
+                      <span>{traveler.name || `Traveler ${traveler.id}`}</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      £{travelerTotals[traveler.id]?.toLocaleString() || '0'}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {travelerComponents[traveler.id]?.map(comp => (
+                    <div key={comp.id} className="flex items-center justify-between text-xs">
+                      <span className="text-[var(--muted-foreground)]">{comp.title}</span>
+                      <span className="font-medium">£{comp.price.toLocaleString()}</span>
+                    </div>
+                  ))}
+                  {(!travelerComponents[traveler.id] || travelerComponents[traveler.id].length === 0) && (
+                    <p className="text-xs text-[var(--muted-foreground)] italic">No components assigned</p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Component Assignment Controls */}
+          <div className="space-y-4">
+            <h4 className="text-md font-medium text-[var(--foreground)]">Assign Components to Travelers</h4>
+            {smartDefaults.map(component => (
+              <Card key={component.id} className="bg-gradient-to-b from-[var(--card)]/95 to-[var(--background)]/20 border border-[var(--border)] rounded-xl shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      {getIcon(component.type)}
+                      <span>{component.title}</span>
+                      {component.isSmartRecommendation && (
+                        <Badge variant="secondary" className="text-xs">AI Recommended</Badge>
+                      )}
+                    </div>
+                    <span className="font-medium">£{component.price.toLocaleString()}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {individualTravelers.map(traveler => (
+                        <Button
+                          key={traveler.id}
+                          variant={isTravelerAssigned(component.id, traveler.id) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => toggleTravelerAssignment(component.id, traveler.id)}
+                          className="h-8 text-xs"
+                        >
+                          <User className="h-3 w-3 mr-1" />
+                          {traveler.name || `Traveler ${traveler.id}`}
+                          {isTravelerAssigned(component.id, traveler.id) && (
+                            <CheckCircle className="h-3 w-3 ml-1" />
+                          )}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
+                      <span>
+                        Assigned to {getAssignedTravelers(component.id).length} traveler{getAssignedTravelers(component.id).length !== 1 ? 's' : ''}
+                      </span>
+                      <span>
+                        Total: £{getComponentPriceForTravelers(component, getAssignedTravelers(component.id)).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Final Quote Summary */}
+      {individualTravelers.length > 0 && groupTotal > 0 && (
+        <Card className="bg-gradient-to-b from-[var(--card)]/95 to-[var(--background)]/20 border border-[var(--border)] rounded-2xl shadow-sm overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-[var(--card-foreground)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <div className="text-lg font-semibold">Group Quote Summary</div>
+                  <div className="text-sm font-normal text-[var(--muted-foreground)]">
+                    Complete breakdown for {individualTravelers.length} travelers
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-[var(--foreground)]">
+                  £{groupTotal.toLocaleString()}
+                </div>
+                <div className="text-sm text-[var(--muted-foreground)]">Total Group Cost</div>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Per-Traveler Summary Table */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-[var(--foreground)]">Per-Traveler Breakdown</h4>
+              <div className="border border-[var(--border)] rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-[var(--muted)]/50">
+                    <tr>
+                      <th className="text-left p-3 font-medium text-[var(--foreground)]">Traveler</th>
+                      <th className="text-left p-3 font-medium text-[var(--foreground)]">Components</th>
+                      <th className="text-right p-3 font-medium text-[var(--foreground)]">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {individualTravelers.map((traveler, index) => (
+                      <tr key={traveler.id} className={index % 2 === 0 ? 'bg-[var(--background)]' : 'bg-[var(--muted)]/20'}>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-[var(--primary)]" />
+                            <span className="font-medium">{traveler.name || `Traveler ${traveler.id}`}</span>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="space-y-1">
+                            {travelerComponents[traveler.id]?.map(comp => (
+                              <div key={comp.id} className="flex items-center gap-2 text-xs">
+                                {getIcon(comp.type)}
+                                <span className="text-[var(--muted-foreground)]">{comp.title}</span>
+                                <span className="font-medium">£{comp.price.toLocaleString()}</span>
+                              </div>
+                            ))}
+                            {(!travelerComponents[traveler.id] || travelerComponents[traveler.id].length === 0) && (
+                              <span className="text-xs text-[var(--muted-foreground)] italic">No components assigned</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="font-bold text-[var(--foreground)]">
+                            £{travelerTotals[traveler.id]?.toLocaleString() || '0'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-[var(--primary)]/10 border-t border-[var(--border)]">
+                    <tr>
+                      <td className="p-3 font-medium text-[var(--foreground)]">Group Total</td>
+                      <td className="p-3 text-[var(--muted-foreground)]">
+                        {Object.keys(componentAssignments).length} components assigned
+                      </td>
+                      <td className="p-3 text-right font-bold text-[var(--foreground)]">
+                        £{groupTotal.toLocaleString()}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* Component Summary */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-[var(--foreground)]">Component Summary</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {smartDefaults.map(component => {
+                  const assignedTravelers = getAssignedTravelers(component.id);
+                  const componentTotal = getComponentPriceForTravelers(component, assignedTravelers);
+                  
+                  return (
+                    <div key={component.id} className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg">
+                      <div className="flex items-center gap-2">
+                        {getIcon(component.type)}
+                        <div>
+                          <div className="text-sm font-medium">{component.title}</div>
+                          <div className="text-xs text-[var(--muted-foreground)]">
+                            {assignedTravelers.length} traveler{assignedTravelers.length !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium">£{componentTotal.toLocaleString()}</div>
+                        <div className="text-xs text-[var(--muted-foreground)]">
+                          £{(componentTotal / Math.max(1, assignedTravelers.length)).toLocaleString()} each
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t border-[var(--border)]">
+              <Button className="flex-1 bg-[var(--primary)] hover:bg-[var(--primary)]/90">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Generate Quote
+              </Button>
+              <Button variant="outline" className="flex-1">
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </Button>
+              <Button variant="outline" className="flex-1">
+                <Mail className="h-4 w-4 mr-2" />
+                Send to Client
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Edit Modal */}
-      {editingComponent && (
+      {selectedComponent && (
         <EditModal
-          component={editingComponent}
-          allOptions={getAllOptionsForType(editingComponent.type)}
+          component={selectedComponent}
+          allOptions={getAllOptionsForType(selectedComponent.type)}
           onSelect={handleEditSelection}
           onClose={() => {
-            setEditModalOpen(false);
-            setEditingComponent(null);
+            setShowEditModal(false);
+            setSelectedComponent(null);
           }}
-          isOpen={editModalOpen}
+          isOpen={showEditModal}
         />
       )}
     </motion.div>
@@ -1136,13 +1480,13 @@ export function StepPackageComponents() {
       case 'outboundFlight':
       case 'inboundFlight':
         // Return flight recommendations instead of individual flights
-        return allAvailableData.flightRecommendations || [];
+        return availableData.flightRecommendations || [];
       case 'hotel':
-        return allAvailableData.hotels || [];
+        return availableData.hotels || [];
       case 'transfer':
-        return allAvailableData.transfers || [];
+        return availableData.transfers || [];
       case 'insurance':
-        return allAvailableData.insurance || [];
+        return availableData.insurance || [];
       default:
         return [];
     }
@@ -1164,10 +1508,10 @@ export function StepPackageComponents() {
 
 interface ComponentCardProps {
   component: PackageComponent;
-  alternatives: QuickAlternative[];
+  alternatives: PackageComponent[];
   isExpanded: boolean;
   onToggleExpand: () => void;
-  onSelectAlternative: (componentId: string, alternative: QuickAlternative) => void;
+  onSelectAlternative: (componentId: string, alternative: PackageComponent) => void;
   onEditAll: (component: PackageComponent) => void;
   getIcon: (type: string) => any;
 }

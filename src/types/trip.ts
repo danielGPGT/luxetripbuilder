@@ -119,11 +119,100 @@ export const packageBundleSchema = z.object({
   selected: z.boolean(),
 });
 
+export interface TravelerComponent {
+  id: string;
+  type: 'flight' | 'hotel' | 'transfer' | 'event' | 'activity' | 'insurance';
+  travelerIds: string[]; // Which travelers this component applies to
+  componentData: any; // The actual component data (flight, hotel, etc.)
+  pricing: {
+    basePrice: number;
+    markup: number;
+    totalPrice: number;
+    currency: string;
+    perTraveler: number; // Price per traveler (for shared components)
+  };
+  status: 'selected' | 'alternative' | 'rejected';
+  notes?: string;
+}
+
+export interface GroupQuote {
+  id: string;
+  groupId: string;
+  travelers: IndividualTraveler[];
+  components: TravelerComponent[];
+  tripInfo: {
+    destination: string;
+    startDate: string;
+    endDate: string;
+    duration: number;
+  };
+  pricing: {
+    totalGroupCost: number;
+    costPerTraveler: Record<string, number>; // travelerId -> total cost
+    currency: string;
+    markup: number;
+    commission: number;
+  };
+  status: 'draft' | 'sent' | 'accepted' | 'rejected';
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface ComponentAssignment {
+  componentId: string;
+  travelerIds: string[];
+  pricing: {
+    basePrice: number;
+    markup: number;
+    totalPrice: number;
+    perTraveler: number;
+  };
+}
+
+// Enhanced package components schema to support per-traveler assignments
 export const packageComponentsSchema = z.object({
-  recommendations: z.array(packageComponentSchema).default([]),
-  bundles: z.array(packageBundleSchema).default([]),
-  selectedItems: z.array(z.string()).default([]),
-  aiAnalysis: z.string().optional(),
+  components: z.array(z.object({
+    id: z.string(),
+    type: z.enum(['flight', 'hotel', 'transfer', 'event', 'activity', 'insurance']),
+    title: z.string(),
+    description: z.string(),
+    price: z.number(),
+    currency: z.string(),
+    rating: z.number().optional(),
+    image: z.string().optional(),
+    data: z.any(),
+    selected: z.boolean(),
+    isSmartRecommendation: z.boolean(),
+    aiReasoning: z.string().optional(),
+    dates: z.string().optional(),
+    duration: z.string().optional(),
+    capacity: z.number().optional(),
+    amenities: z.array(z.string()).optional(),
+    // New: Per-traveler assignment
+    travelerAssignments: z.array(z.object({
+      travelerId: z.string(),
+      assigned: z.boolean(),
+      customPrice: z.number().optional(),
+      notes: z.string().optional(),
+    })).optional(),
+    // New: Component-specific pricing
+    componentPricing: z.object({
+      basePrice: z.number(),
+      markup: z.number(),
+      totalPrice: z.number(),
+      perTraveler: z.number(),
+      currency: z.string(),
+    }).optional(),
+  })),
+  // New: Group-level summary
+  groupSummary: z.object({
+    totalTravelers: z.number(),
+    totalCost: z.number(),
+    costPerTraveler: z.record(z.string(), z.number()), // travelerId -> cost
+    currency: z.string(),
+    markup: z.number(),
+    commission: z.number(),
+  }).optional(),
 });
 
 export interface IndividualTraveler {
@@ -180,7 +269,7 @@ export interface GroupBookingScenario {
   };
 }
 
-// Update the existing tripIntakeSchema to include group booking
+// Update the existing tripIntakeSchema to include enhanced group booking
 export const tripIntakeSchema = z.object({
   // CRM Integration
   clientId: z.string().optional(),
@@ -205,7 +294,7 @@ export const tripIntakeSchema = z.object({
       adults: z.number().min(1, 'At least one adult is required'),
       children: z.number().min(0).default(0),
     }),
-    // New: Individual traveler details for group bookings
+    // Enhanced: Individual traveler details for group bookings
     individualTravelers: z.array(z.object({
       id: z.string(),
       name: z.string(),
@@ -217,24 +306,44 @@ export const tripIntakeSchema = z.object({
         transferType: z.enum(['shared', 'private']).optional(),
         specialNeeds: z.array(z.string()).optional(),
         dietaryRestrictions: z.array(z.string()).optional(),
+        departureAirport: z.string().optional(), // For different origins
+        arrivalAirport: z.string().optional(),
       }).optional(),
       groupAssignments: z.object({
         flightGroup: z.string().optional(),
         hotelGroup: z.string().optional(),
         transferGroup: z.string().optional(),
+        eventGroup: z.string().optional(),
+      }).optional(),
+      // New: Per-traveler pricing and status
+      pricing: z.object({
+        totalCost: z.number().default(0),
+        components: z.array(z.string()).default([]), // Component IDs assigned to this traveler
+        markup: z.number().default(0),
+        commission: z.number().default(0),
       }).optional(),
     })).optional(),
-    // New: Traveler groups for shared bookings
+    // Enhanced: Traveler groups for shared bookings
     travelerGroups: z.array(z.object({
       id: z.string(),
       name: z.string(),
-      type: z.enum(['flight', 'hotel', 'transfer']),
+      type: z.enum(['flight', 'hotel', 'transfer', 'event']),
       travelers: z.array(z.string()),
       preferences: z.object({
         flightClass: z.enum(['economy', 'premium_economy', 'business', 'first']).optional(),
         hotelRoomType: z.enum(['standard', 'deluxe', 'suite', 'connecting']).optional(),
         transferVehicle: z.enum(['sedan', 'suv', 'minivan', 'bus']).optional(),
         sharedPreferences: z.array(z.string()).optional(),
+        departureAirport: z.string().optional(),
+        arrivalAirport: z.string().optional(),
+      }).optional(),
+      // New: Group-specific pricing
+      pricing: z.object({
+        basePrice: z.number().default(0),
+        markup: z.number().default(0),
+        totalPrice: z.number().default(0),
+        perTraveler: z.number().default(0),
+        currency: z.string().default('GBP'),
       }).optional(),
     })).optional(),
   }),
